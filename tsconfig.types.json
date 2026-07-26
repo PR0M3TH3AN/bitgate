@@ -1,9 +1,21 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
+    "noEmit": false,
     "emitDeclarationOnly": true,
     "declaration": true,
-    "outDir": "dist/types"
+    "declarationMap": true,
+    "outDir": "dist/types",
+    "rootDir": "."
   },
-  "include": ["packages/**/src/*.js"]
+  "include": [
+    "packages/**/src/**/*.js"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "coverage",
+    "**/test/**",
+    "**/*.test.js"
+  ]
 }

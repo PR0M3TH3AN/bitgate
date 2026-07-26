@@ -1,25 +1,39 @@
 # Reference Map
 
-## Pinned Versions
+BitVid and BitRoad are **read-only reference repositories**.
+This repo must not import their source trees.
 
-- **BitVid:** `4525c1c` (2026-07-26)
-- **BitRoad:** `bcd6c8e` (2026-07-26)
+## Pinned reference commits
 
-## Core Module References
+| Repo | Short | Full |
+| --- | --- | --- |
+| BitVid | `726c0d26` | `726c0d26ed98bf08e923ab895d23d0b5ac9ae173` |
+| BitRoad | `bcd6c8e` | `bcd6c8efbd142d8923e7d4110432bdfa0a6cd2a2` |
 
-| Module | BitVid Source | BitRoad Source | Purpose |
-|--------|---------------|----------------|---------|
-| identifiers | - | `src/commerce/address.mjs` | Coordinate parsing |
-| targets | `js/services/moderationUtils.js` | `src/commerce/storefronts.mjs` | Addressable target model |
-| authority | `js/accessControl.js` | - | Role resolution |
-| policy | `js/services/moderationService.js` | - | Threshold handling |
+Pinned on 2026-07-26 from local checkouts under `/home/user/Documents/GitHub/`.
 
-## License Provenance
+## Behavioral references (BitVid)
 
-BitVid is licensed under GPL-3.0-or-later. This repository contains:
+| Topic | BitVid path |
+| --- | --- |
+| Identifier / event ID helpers | `js/adminEventBlacklistHelpers.js` |
+| Access control / roles | `js/accessControl.js` |
+| Admin list persistence | `js/adminListStore.js` |
+| Community blacklist batching | `js/adminListBatch.js` |
+| Trust seeds | `js/services/trustBootstrap.js` |
+| Report / mute aggregation | `js/services/moderationService.js` |
+| Threshold / utility helpers | `js/services/moderationUtils.js` |
+| Video presentation mapping | `js/services/moderationDecorator.js` |
 
-- **Original work:** New architecture, neutral target model
-- **Derivative work:** Behavior extracted from BitVid fixtures
-- **Reference-only:** BitRoad address semantics
+## Structural references (BitRoad)
 
-Consult `docs/license-and-provenance.md` for detailed audit trails.
+| Topic | BitRoad path |
+| --- | --- |
+| Address coordinates | `src/commerce/address.mjs` |
+| Storefront replaceables | `src/commerce/storefronts.mjs` |
+| Product replaceables | `src/commerce/product.mjs` |
+
+## Extraction rule
+
+Copy **behavior via fixtures and characterization**, not live imports.
+Package source that imports BitVid/BitRoad fails `npm run check:references`.

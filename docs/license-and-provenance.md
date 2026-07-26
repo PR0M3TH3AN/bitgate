@@ -1,40 +1,46 @@
 # License and Provenance
 
-## Source Licenses
+## Reality check
 
-- **BitVid:** GPL-3.0-or-later
-- **BitRoad:** MIT
+BitVid is GPL-3.0-or-later. Direct ports of BitVid logic or structure into this
+repository create a derivative-work obligation. Do not pretend extracted
+behavior is clean-room MIT unless it truly is independent work.
 
-## Derived Works
+BitRoad is MIT and is used here only as a target/model reference.
 
-This repository combines:
+## Working stance for this repo
 
-1. **Original architectural work** (MIT)
-   - Workspace structure
-   - Core target model
-   - Policy engine design
+Until a lawyer-ready SPDX audit is done, treat the repository as:
 
-2. **GPL-encumbered behavior** (must remain GPL-compatible)
-   - BitVid moderation thresholds
-   - Trust seed behavior
-   - Report aggregation rules
+1. **Tooling / scaffolding** — original workspace layout, CI, docs structure.
+2. **Likely GPL-encumbered governance behavior** — anything characterized from
+   BitVid moderation thresholds, trust seeds, admin lists, report dedupe, mute
+   expiry, and related evaluator precedence.
+3. **MIT-compatible address concepts** — BitRoad coordinate shapes, used as
+   consumer validation cases rather than copied UI/runtime code.
 
-3. **MIT-licensed reference concepts**
-   - BitRoad addressable targets
-   - Storefront/product identifiers
+## Package boundary intention
 
-## Compliance Strategy
+| Package | Intention |
+| --- | --- |
+| `@nostr-governance/core` | Clean API surface + pure evaluator. Avoid BitVid names. |
+| `@nostr-governance/nostr` | Codecs. Legacy BitVid codec is provenance-sensitive. |
+| `@nostr-governance/runtime` | Transport/storage orchestration. |
+| `@nostr-governance/bitvid-compat` | Explicit BitVid-facing adapter. Most provenance-exposed. |
+| `@nostr-governance/testing` | Fakes and fixture loaders. |
 
-- Core policy engine is MIT-licensed original work
-- BitVid-compat adapter is GPL-3.0-or-later
-- Clear separation between:
-  - Generic governance interfaces (MIT)
-  - BitVid-specific behavior (GPL)
+## Rules
 
-## Audit Trails
+- No direct imports from BitVid or BitRoad source trees.
+- Fixtures copied into this repo must record the source commit in README or metadata.
+- If a module is ported from BitVid rather than rewritten cleanly, document it in
+  the PR and keep SPDX compatible with GPL-3.0-or-later.
+- Do not dual-license the whole monorepo casually. Prefer one root LICENSE once
+  chosen, and call out adapter exceptions only if they are scoped carefully.
 
-All extracted behavior is documented in:
+## Open decision (checkpoint 0)
 
-- `fixtures/bitvid/` (input/output pairs)
-- `docs/reference-map.md` (source locations)
-- Commit history (clean room steps)
+Root license has not been finalized in this bootstrap.
+Recommended default for continued extraction work: **GPL-3.0-or-later**.
+
+Decision needed from owner before publishing packages.

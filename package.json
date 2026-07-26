@@ -6,10 +6,10 @@
   "description": "Headless Nostr governance SDK for decentralized moderation and access control",
   "scripts": {
     "test": "npm run test:unit && npm run test:conformance",
-    "test:unit": "vitest run",
-    "test:conformance": "vitest run tests/conformance",
-    "typecheck": "tsc --noEmit",
-    "build:types": "tsc --emitDeclarationOnly",
+    "test:unit": "vitest run --passWithNoTests",
+    "test:conformance": "vitest run tests/conformance --passWithNoTests",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build:types": "tsc -p tsconfig.types.json",
     "lint": "npm run check:references && npm run check:types",
     "check:references": "node scripts/verify-no-reference-imports.mjs",
     "check:types": "npm run typecheck"
@@ -21,6 +21,7 @@
     "packages/*"
   ],
   "devDependencies": {
+    "@types/node": "^22.10.0",
     "typescript": "^5.4.5",
     "vitest": "^1.6.0"
   }
