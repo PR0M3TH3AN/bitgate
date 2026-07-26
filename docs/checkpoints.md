@@ -48,11 +48,11 @@ Documentation: See `docs/phase1-summary.md` for full details.
 
 Delivered:
 - identifiers module (`packages/core/src/identifiers.js`)
-- target creation and normalization utilities
-- comprehensive test suite for identifiers
+- targets module (`packages/core/src/targets.js`)
+- target creation, validation, and hierarchy utilities
+- comprehensive test suites for both modules
 
 In progress:
-- targets module
 - authority resolution
 - policy engine
 
