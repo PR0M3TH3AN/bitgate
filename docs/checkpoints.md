@@ -44,6 +44,20 @@ Gate: Do not implement evaluator until at least 3 real characterization cases ar
 
 Documentation: See `docs/phase1-summary.md` for full details.
 
+## Checkpoint 2 — Pure core implementation (in progress)
+
+Delivered:
+- identifiers module (`packages/core/src/identifiers.js`)
+- target creation and normalization utilities
+- comprehensive test suite for identifiers
+
+In progress:
+- targets module
+- authority resolution
+- policy engine
+
+Gate: Complete core implementation before moving to Nostr codecs.
+
 ## Next checkpoint
 
-Checkpoint 2 — Pure core implementation (target normalization, authority resolution, policy engine)
+Checkpoint 3 — Nostr codecs implementation (event parsing, legacy support)
