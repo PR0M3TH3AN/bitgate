@@ -49,11 +49,12 @@ Documentation: See `docs/phase1-summary.md` for full details.
 Delivered:
 - identifiers module (`packages/core/src/identifiers.js`)
 - targets module (`packages/core/src/targets.js`)
+- authority module (`packages/core/src/authority.js`)
 - target creation, validation, and hierarchy utilities
-- comprehensive test suites for both modules
+- role and capability management
+- comprehensive test suites for all modules
 
 In progress:
-- authority resolution
 - policy engine
 
 Gate: Complete core implementation before moving to Nostr codecs.
