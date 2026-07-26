@@ -50,12 +50,11 @@ Delivered:
 - identifiers module (`packages/core/src/identifiers.js`)
 - targets module (`packages/core/src/targets.js`)
 - authority module (`packages/core/src/authority.js`)
+- policy module (`packages/core/src/policy.js`)
 - target creation, validation, and hierarchy utilities
 - role and capability management
+- policy definitions, decision making, and effect composition
 - comprehensive test suites for all modules
-
-In progress:
-- policy engine
 
 Gate: Complete core implementation before moving to Nostr codecs.
 
