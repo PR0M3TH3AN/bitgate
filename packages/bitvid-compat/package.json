@@ -1,0 +1,15 @@
+{
+  "name": "@nostr-governance/bitvid-compat",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "src/index.js",
+  "types": "dist/types/src/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@nostr-governance/core": "workspace:*",
+    "@nostr-governance/nostr": "workspace:*"
+  }
+}

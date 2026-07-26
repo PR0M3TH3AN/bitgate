@@ -1,0 +1,27 @@
+{
+  "name": "nostr-governance",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Headless Nostr governance SDK for decentralized moderation and access control",
+  "scripts": {
+    "test": "npm run test:unit && npm run test:conformance",
+    "test:unit": "vitest run",
+    "test:conformance": "vitest run tests/conformance",
+    "typecheck": "tsc --noEmit",
+    "build:types": "tsc --emitDeclarationOnly",
+    "lint": "npm run check:references && npm run check:types",
+    "check:references": "node scripts/verify-no-reference-imports.mjs",
+    "check:types": "npm run typecheck"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  }
+}
