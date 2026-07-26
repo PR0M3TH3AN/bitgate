@@ -23,7 +23,7 @@ npm run build:types
 
 Gate: do not add runtime or BitVid codecs until fixture corpus exists.
 
-## Checkpoint 1 — BitVid fixture and conformance corpus (current)
+## Checkpoint 1 — BitVid fixture and conformance corpus (completed)
 
 Delivered:
 - fixture folders for BitVid cases (admin-state, reports, trusted-mutes, overrides, expectations)
@@ -41,6 +41,8 @@ npm test                  # now includes conformance tests
 Status: Ready for real fixture extraction from BitVid.
 
 Gate: Do not implement evaluator until at least 3 real characterization cases are imported with expectations.
+
+Documentation: See `docs/phase1-summary.md` for full details.
 
 ## Next checkpoint
 
