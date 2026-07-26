@@ -1,0 +1,21 @@
+[
+  "personal-block-precedence",
+  "user-deny",
+  "event-deny",
+  "address-deny",
+  "allowlist-miss",
+  "protected-target",
+  "trusted-report-threshold-reached",
+  "duplicate-reporter-dedupe",
+  "blocked-reporter-ignored",
+  "trusted-mute-below-threshold",
+  "trusted-mute-at-threshold",
+  "expired-trusted-mute",
+  "viewer-override",
+  "author-override",
+  "cache-fallback-effective",
+  "report-category-thresholds",
+  "mute-aggregation-rules",
+  "hide-vs-restrict-vs-downrank",
+  "moderation-decorator-fields"
+]

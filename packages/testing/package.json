@@ -1,20 +1,8 @@
 {
   "name": "@nostr-governance/testing",
-  "version": "0.1.0",
   "type": "module",
-  "main": "src/index.js",
-  "types": "dist/types/src/index.d.ts",
-  "files": ["src", "dist"],
-  "exports": {
-    ".": {
-      "types": "./dist/types/src/index.d.ts",
-      "import": "./src/index.js"
-    }
-  },
+  "private": true,
   "scripts": {
     "test": "vitest run"
-  },
-  "dependencies": {
-    "@nostr-governance/core": "*"
   }
 }

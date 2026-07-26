@@ -1,2 +1,2 @@
-// Placeholder for testing module exports
+// Testing package exports
 export {};
