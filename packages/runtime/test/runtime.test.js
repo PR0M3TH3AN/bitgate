@@ -169,17 +169,59 @@ describe("ingestEvent", () => {
     expect(runtime.mutes.toRecordMap().get(`user:${CREATOR}`)).toHaveLength(1);
   });
 
-  it("emits a policy document rather than applying it blindly", () => {
+  it("rejects a policy document from anyone but the root", () => {
     const { runtime } = makeRuntime();
-    const handler = vi.fn();
-    runtime.on("policy-document", handler);
+    runtime.ingestEvent(rolesEvent());
+
+    const rejected = vi.fn();
+    runtime.on("policy-rejected", rejected);
     runtime.ingestEvent(
       event({
+        pubkey: MODERATOR,
         tags: [["d", canonicalIdentifier("app", "policy")]],
-        content: JSON.stringify({ id: "x" }),
+        content: JSON.stringify({ id: "x", version: "1", profiles: { f: { name: "f" } } }),
       }),
     );
-    expect(handler).toHaveBeenCalled();
+
+    expect(rejected).toHaveBeenCalledWith(expect.objectContaining({ reason: "not-root" }));
+    expect(runtime.policies.rootPolicy).toBeNull();
+  });
+
+  it("applies a root-published policy", () => {
+    const { runtime } = makeRuntime();
+    runtime.ingestEvent(rolesEvent());
+
+    runtime.ingestEvent(
+      event({
+        pubkey: ROOT,
+        tags: [["d", canonicalIdentifier("app", "policy")]],
+        content: JSON.stringify({
+          id: "root-policy",
+          version: "3.0.0",
+          profiles: { feed: { name: "feed" } },
+        }),
+      }),
+    );
+
+    expect(runtime.policies.policy.id).toBe("root-policy");
+  });
+
+  it("keeps the working policy when the root publishes a malformed one", () => {
+    const { runtime } = makeRuntime();
+    runtime.ingestEvent(rolesEvent());
+
+    const rejected = vi.fn();
+    runtime.on("policy-rejected", rejected);
+    runtime.ingestEvent(
+      event({
+        pubkey: ROOT,
+        tags: [["d", canonicalIdentifier("app", "policy")]],
+        content: JSON.stringify({ id: "broken" }),
+      }),
+    );
+
+    expect(rejected).toHaveBeenCalledWith(expect.objectContaining({ reason: "invalid" }));
+    expect(runtime.policies.policy.id).toBe("app");
   });
 
   it("counts unrecognized events instead of throwing", () => {

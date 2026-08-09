@@ -7,9 +7,13 @@
 import {
   NEUTRAL_POLICY,
   evaluateTarget,
+  getActorCapabilities,
   getTargetKey,
+  hasCapability,
   isValidTarget,
+  normalizePolicyDefinition,
   normalizePubkey,
+  serializeAdminState,
 } from "@nostr-governance/core";
 import {
   CANONICAL_KIND,
@@ -23,6 +27,7 @@ import {
   decodeReport,
   decodeRoles,
   selectReplaceable,
+  verifyEvents,
 } from "@nostr-governance/nostr";
 
 import { snapshotFingerprint } from "@nostr-governance/core";
@@ -104,6 +109,8 @@ export class GovernanceRuntime extends Emitter {
    * @param {() => number} [options.now] - Injected clock, unix seconds
    * @param {number} [options.chunkSize]
    * @param {number} [options.muteWindowSeconds]
+   * @param {import('@nostr-governance/nostr').SignatureVerifier} [options.verifySignature]
+   * @param {string} [options.root] - Root administrator pubkey, from deployment config
    */
   constructor({
     applicationId,
@@ -115,6 +122,8 @@ export class GovernanceRuntime extends Emitter {
     now,
     chunkSize = DEFAULT_CHUNK_SIZE,
     muteWindowSeconds = 0,
+    verifySignature,
+    root,
   }) {
     super();
 
@@ -134,6 +143,12 @@ export class GovernanceRuntime extends Emitter {
     this.chunkSize = chunkSize;
     this.schemaVersion = "v1";
 
+    // Verification is injected: signature checking needs a crypto library, and
+    // forcing one into this package would make it unusable where the host
+    // already has its own. When absent, the runtime says so in diagnostics
+    // rather than pretending state was verified.
+    this.verifySignature = verifySignature;
+
     this.admin = new GovernanceAdminStore();
     this.trust = new TrustGraphStore();
     this.reports = new ReportStore();
@@ -141,6 +156,14 @@ export class GovernanceRuntime extends Emitter {
     /** @type {PolicyStore} */
     this.policies = new PolicyStore(policy ?? NEUTRAL_POLICY);
     this.overrides = new OverrideStore({ now: this.now });
+
+    // The root administrator is deployment configuration, not discovered state.
+    // Seeding it here keeps the storage key stable from construction; without
+    // it, hydration could not find its own cache, because the key is derived
+    // from the root fingerprint the cache would have to supply.
+    if (root) {
+      this.admin.setRoles({ root });
+    }
 
     /** @type {string} */
     this.viewerPubkey = "";
@@ -150,6 +173,14 @@ export class GovernanceRuntime extends Emitter {
     this.subscriptions = new Set();
     /** @type {boolean} */
     this.destroyed = false;
+
+    // True when the last relay load failed and the runtime is serving the
+    // previous state. Surfaced in diagnostics so an application can tell a
+    // viewer that moderation data may be out of date.
+    /** @type {boolean} */
+    this.stale = false;
+    /** @type {number} */
+    this.lastLoadedAt = 0;
 
     /** @type {Array<() => void>} */
     this.storeUnsubscribes = [
@@ -196,13 +227,14 @@ export class GovernanceRuntime extends Emitter {
     /** @type {string} */
     this.cachedSnapshotFingerprint = "";
 
-    /** @type {{ eventsIngested: number, unknownEvents: number, subscriptions: number, cacheHits: number, cacheMisses: number }} */
     this.diagnostics = {
       eventsIngested: 0,
       unknownEvents: 0,
       subscriptions: 0,
       cacheHits: 0,
       cacheMisses: 0,
+      rejectedSignatures: 0,
+      hydratedFromCache: false,
     };
   }
 
@@ -263,9 +295,9 @@ export class GovernanceRuntime extends Emitter {
         return true;
       }
 
-      const policy = decodePolicy(event);
-      if (policy) {
-        this.emit("policy-document", { policy });
+      const policyDocument = decodePolicy(event);
+      if (policyDocument) {
+        this.applyRootPolicy(policyDocument, event.pubkey);
         return true;
       }
 
@@ -289,29 +321,250 @@ export class GovernanceRuntime extends Emitter {
   }
 
   /**
+   * Apply a root-published policy document.
+   *
+   * Only the root administrator may set policy, and a malformed document is
+   * rejected rather than replacing a working policy: a bad publish must not be
+   * able to disable governance.
+   *
+   * @param {unknown} document
+   * @param {string} publisher
+   * @returns {boolean} Whether the policy was accepted
+   */
+  applyRootPolicy(document, publisher) {
+    const root = this.admin.authority.root;
+    if (!root || normalizePubkey(publisher) !== root) {
+      this.emit("policy-rejected", { reason: "not-root", publisher });
+      return false;
+    }
+
+    try {
+      const policy = normalizePolicyDefinition(/** @type {any} */ (document));
+      this.policies.setRootPolicy(policy);
+      this.emit("policy-document", { policy });
+      return true;
+    } catch (error) {
+      this.emit("policy-rejected", { reason: "invalid", publisher, error: String(error) });
+      return false;
+    }
+  }
+
+  /**
+   * Persist administrative and trust state.
+   *
+   * Keys are namespaced by root-authority fingerprint, so rotating the root
+   * administrator cannot silently reuse the previous administration's cache.
+   *
+   * @returns {Promise<void>}
+   */
+  async persist() {
+    await this.storage.write(this.storageKeyFor("admin"), {
+      schemaVersion: this.schemaVersion,
+      savedAt: this.now(),
+      authority: {
+        root: this.admin.authority.root ?? "",
+        actors: this.admin.authority.actors,
+        protectedActors: this.admin.authority.protectedActors,
+      },
+      contributions: this.admin.contributions,
+    });
+
+    if (this.viewerPubkey) {
+      await this.storage.write(this.storageKeyFor("viewer", true), {
+        schemaVersion: this.schemaVersion,
+        savedAt: this.now(),
+        contacts: Array.from(this.trust.contacts),
+        blocks: Array.from(this.trust.blocks),
+        mutes: Array.from(this.trust.mutes),
+        overrides: Array.from(this.overrides.overrides.entries()),
+      });
+    }
+  }
+
+  /**
+   * Restore state written by {@link persist}.
+   *
+   * This is what keeps administrative state effective when relays are
+   * unreachable. A cache written under a different schema version is ignored
+   * rather than migrated.
+   *
+   * @returns {Promise<boolean>} Whether anything was restored
+   */
+  async hydrate() {
+    let restored = false;
+
+    const admin = /** @type {any} */ (await this.storage.read(this.storageKeyFor("admin")));
+    if (admin?.schemaVersion === this.schemaVersion) {
+      if (admin.authority) {
+        this.admin.setRoles(admin.authority);
+      }
+      if (Array.isArray(admin.contributions)) {
+        this.admin.setContributions(admin.contributions);
+      }
+      restored = true;
+    }
+
+    if (this.viewerPubkey) {
+      const viewer = /** @type {any} */ (
+        await this.storage.read(this.storageKeyFor("viewer", true))
+      );
+      if (viewer?.schemaVersion === this.schemaVersion) {
+        this.trust.setContacts(viewer.contacts ?? []);
+        this.trust.setBlocks(viewer.blocks ?? []);
+        this.trust.setMutes(viewer.mutes ?? []);
+        for (const [key, override] of viewer.overrides ?? []) {
+          this.overrides.set(key, override);
+        }
+        restored = true;
+      }
+    }
+
+    this.diagnostics.hydratedFromCache = restored;
+    return restored;
+  }
+
+  /**
+   * Verify a batch of events when a verifier is configured.
+   * @param {NostrEvent[]} events
+   * @returns {Promise<NostrEvent[]>}
+   */
+  async #verified(events) {
+    if (!this.verifySignature) {
+      return events;
+    }
+    const verified = await verifyEvents(events, this.verifySignature);
+    this.diagnostics.rejectedSignatures += events.length - verified.length;
+    return verified;
+  }
+
+  /**
    * Load administrative state from relays.
    *
-   * Replaceable selection runs before ingestion so that only the newest
-   * document per coordinate reaches the stores.
+   * Signatures are verified before anything authoritative is accepted, and
+   * replaceable selection runs before ingestion so only the newest document per
+   * coordinate reaches the stores.
+   *
+   * On relay failure the previous state is left intact and the runtime is
+   * marked stale, rather than emptying moderation state because a relay blinked.
    *
    * @param {Object} [options]
    * @param {string[]} [options.authors] - Restrict to known contributor pubkeys
+   * @param {boolean} [options.hydrateFirst] - Restore cached state before querying
+   * @param {boolean} [options.persistAfter] - Persist state after a successful load
    * @returns {Promise<number>} Number of events ingested
    */
-  async loadAdministrativeState({ authors } = {}) {
+  async loadAdministrativeState({ authors, hydrateFirst = true, persistAfter = true } = {}) {
+    if (hydrateFirst) {
+      await this.hydrate();
+    }
+
     /** @type {any} */
     const filter = { kinds: [CANONICAL_KIND, LEGACY_KIND] };
     if (authors?.length) {
       filter.authors = authors;
     }
 
-    const events = await this.transport.list([filter]);
-    const effective = Array.from(selectReplaceable(events).values());
+    let events;
+    try {
+      events = await this.transport.list([filter]);
+    } catch (error) {
+      this.stale = true;
+      this.emit("stale", { reason: "relay-unreachable", error: String(error) });
+      throw error;
+    }
 
+    const effective = Array.from(selectReplaceable(await this.#verified(events)).values());
     for (const event of effective) {
       this.ingestEvent(event);
     }
+
+    this.stale = false;
+    this.lastLoadedAt = this.now();
+
+    if (persistAfter) {
+      await this.persist();
+    }
+
     return effective.length;
+  }
+
+  /**
+   * Subscribe to the mute lists published by the viewer's trusted contacts.
+   *
+   * Without this the trusted-mute store never populates in a real deployment:
+   * mute lists are published by each contact under their own key, so they have
+   * to be fetched per author rather than per target.
+   *
+   * @returns {{ close: () => void }}
+   */
+  subscribeToTrustedMuteLists() {
+    const owners = Array.from(this.trust.trustSet);
+
+    /** @type {Array<{ close: () => void }>} */
+    const opened = [];
+    for (const authorChunk of chunk(owners, this.chunkSize)) {
+      if (!authorChunk.length) continue;
+      opened.push(
+        this.transport.subscribe([{ kinds: [MUTE_LIST_KIND], authors: authorChunk }], {
+          onEvent: (event) => this.ingestEvent(event),
+        }),
+      );
+    }
+
+    const handle = {
+      close: () => {
+        for (const subscription of opened) {
+          subscription.close();
+        }
+        this.subscriptions.delete(handle);
+        this.diagnostics.subscriptions = this.subscriptions.size;
+      },
+    };
+
+    this.subscriptions.add(handle);
+    this.diagnostics.subscriptions = this.subscriptions.size;
+    return handle;
+  }
+
+  /**
+   * Resolve community-curated lists the root has pointed at.
+   *
+   * Curators publish under their own keys; the root only publishes references.
+   * Each resolved list is merged with a source marker so a consumer can tell a
+   * federated denial from a direct administrative one.
+   *
+   * @param {Array<{ curator: string, identifier: string, kind: number }>} sources
+   * @returns {Promise<number>} Number of curator lists merged
+   */
+  async loadCommunitySources(sources) {
+    let merged = 0;
+
+    for (const source of sources ?? []) {
+      let events;
+      try {
+        events = await this.transport.list([
+          { kinds: [source.kind], authors: [source.curator], "#d": [source.identifier] },
+        ]);
+      } catch (error) {
+        this.emit("stale", { reason: "community-source-unreachable", source, error: String(error) });
+        continue;
+      }
+
+      const effective = Array.from(selectReplaceable(await this.#verified(events)).values());
+      for (const event of effective) {
+        const contribution = decodeContribution(event) ?? decodeLegacyList(event);
+        if (!contribution) {
+          continue;
+        }
+        this.admin.upsertContribution({
+          ...contribution,
+          source: `${source.curator}:${source.identifier}`,
+        });
+        merged += 1;
+      }
+    }
+
+    return merged;
   }
 
   /**
@@ -542,6 +795,94 @@ export class GovernanceRuntime extends Emitter {
     return results;
   }
 
+  /**
+   * Export governance state as a portable, JSON-serializable snapshot.
+   *
+   * Contributions are exported as published rather than as reduced state, so an
+   * import re-derives effective state against whatever roster is current. A
+   * snapshot of *conclusions* would silently outlive the authority that
+   * produced them.
+   *
+   * @returns {Object}
+   */
+  exportState() {
+    return {
+      schemaVersion: this.schemaVersion,
+      applicationId: this.applicationId,
+      namespace: this.namespace,
+      exportedAt: this.now(),
+      authority: {
+        root: this.admin.authority.root ?? "",
+        actors: this.admin.authority.actors,
+        protectedActors: this.admin.authority.protectedActors,
+      },
+      contributions: this.admin.contributions,
+      effectiveState: serializeAdminState(this.admin.state),
+      policy: { id: this.policies.policy.id, version: this.policies.policy.version },
+      fingerprints: {
+        root: this.admin.rootFingerprint,
+        admin: this.admin.fingerprint,
+        trust: this.trust.fingerprint,
+      },
+    };
+  }
+
+  /**
+   * Import a snapshot produced by {@link exportState}.
+   *
+   * Rejects a snapshot from a different schema version or namespace rather than
+   * attempting a migration.
+   *
+   * @param {any} snapshot
+   * @returns {boolean} Whether the snapshot was applied
+   */
+  importState(snapshot) {
+    if (!snapshot || typeof snapshot !== "object") {
+      return false;
+    }
+    if (snapshot.schemaVersion !== this.schemaVersion) {
+      return false;
+    }
+    if (snapshot.namespace && snapshot.namespace !== this.namespace) {
+      return false;
+    }
+
+    if (snapshot.authority) {
+      this.admin.setRoles(snapshot.authority);
+    }
+    if (Array.isArray(snapshot.contributions)) {
+      this.admin.setContributions(snapshot.contributions);
+    }
+    return true;
+  }
+
+  /**
+   * Whether an actor holds a capability under the current roster.
+   * @param {string} pubkey
+   * @param {import('@nostr-governance/core').GovernanceCapability} capability
+   * @returns {boolean}
+   */
+  can(pubkey, capability) {
+    return hasCapability(pubkey, capability, this.admin.authority);
+  }
+
+  /**
+   * Every capability an actor holds under the current roster.
+   * @param {string} pubkey
+   * @returns {import('@nostr-governance/core').GovernanceCapability[]}
+   */
+  capabilitiesOf(pubkey) {
+    return getActorCapabilities(pubkey, this.admin.authority);
+  }
+
+  /**
+   * What the current viewer is allowed to do.
+   * @returns {import('@nostr-governance/core').GovernanceCapability[]}
+   */
+  viewerCapabilities() {
+    return this.viewerPubkey ? this.capabilitiesOf(this.viewerPubkey) : [];
+  }
+
   /** Diagnostic summary for support and debugging. */
   describe() {
     return {
@@ -554,6 +895,9 @@ export class GovernanceRuntime extends Emitter {
       adminFingerprint: this.admin.fingerprint,
       trustFingerprint: this.trust.fingerprint,
       activeTargets: this.activeTargets.size,
+      stale: this.stale,
+      lastLoadedAt: this.lastLoadedAt,
+      signatureVerification: this.verifySignature ? "enabled" : "disabled",
       ...this.diagnostics,
     };
   }

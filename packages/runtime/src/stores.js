@@ -90,9 +90,15 @@ export class GovernanceAdminStore extends Emitter {
     this.#recompute();
   }
 
-  /** The root-authority fingerprint, used to namespace cached state. */
+  /**
+   * The root-authority fingerprint, used to namespace cached state.
+   *
+   * Derived from the root identity alone, not the full roster: rotating the
+   * root administrator must invalidate the cache, but adding a moderator must
+   * not, or the cache would be discarded on every roster change.
+   */
   get rootFingerprint() {
-    return fingerprint({ root: this.authority.root ?? "", actors: this.authority.actors });
+    return fingerprint({ root: this.authority.root ?? "" });
   }
 
   #recompute() {

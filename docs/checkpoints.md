@@ -72,6 +72,13 @@ close on destroy; report subscriptions are chunked (200 per filter) rather than
 opened per target; author evidence is queryable in batches; expired mute lists
 prune against the injected clock.
 
+### Correction
+
+An earlier revision of this file claimed storage acceptance that was not met:
+storage was injected and then never used, so nothing persisted or hydrated and
+the characterized cache-fallback behavior existed only at the reduction level.
+Closed in Checkpoint 8.
+
 ## Checkpoint 5 — Public commands (completed)
 
 Delivered: contribution, role, policy, community-source, report, and override
@@ -117,9 +124,38 @@ keys) are properties of the injected signer and of operational practice rather
 than of this code; the root-authorized contributor model is what removes the
 need for a shared moderator key.
 
+## Checkpoint 8 — Runtime wiring (completed)
+
+Closes the gaps between interfaces that existed and pipelines that used them.
+
+Delivered:
+- **Storage**: `persist()` / `hydrate()`, hydrate-before-query on load, and
+  last-known-good state retained with a `stale` flag when relays fail. Cache
+  keys are namespaced by root identity — not by the full roster, which would
+  rotate the key every time a moderator was added.
+- **Signature verification** wired into the load path through an injected
+  verifier, with rejected counts in diagnostics and an explicit
+  `signatureVerification: enabled|disabled` readout.
+- **Trusted mute-list subscriptions** by author, chunked. Without this the
+  trusted-mute store never populated in a real deployment.
+- **Community source resolution**: curator lists are fetched and merged with a
+  source marker, still subject to the curator's capabilities.
+- **Root policy application**: policy documents are now applied rather than
+  merely announced, accepted only from the root, and a malformed document
+  leaves the working policy in place.
+- **Import/export** (§10.14) exporting contributions rather than conclusions,
+  so an import re-derives effective state against the importing roster.
+- **Capability queries** (§10.8): `can()`, `capabilitiesOf()`,
+  `viewerCapabilities()`.
+
+Design note: the root administrator is now a constructor option, because it is
+deployment configuration rather than discovered state. Hydration could not
+otherwise find its own cache — the key derives from the root fingerprint the
+cache itself would have had to supply.
+
 ## Status
 
-CI gates green: reference guard, typecheck, 605 tests, per-package type build.
+CI gates green: reference guard, typecheck, 634 tests, per-package type build.
 Typecheck and the declaration build both pass from a cold checkout with no
 `dist/` present.
 
