@@ -124,6 +124,7 @@ export function maxEffect(dimension, a, b) {
  * @property {string} [policyProfile] - Profile name; defaults to the policy's default profile
  * @property {PolicyDefinition} [policy] - Policy definition to evaluate against
  * @property {number} [now] - Evaluation time in unix seconds (injected clock)
+ * @property {string} [snapshotFingerprint] - Precomputed fingerprint, reused across a batch
  * @property {Object} [enforcement]
  * @property {boolean} [enforcement.allowOverrides] - Hard switch for viewer overrides
  */

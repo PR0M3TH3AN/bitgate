@@ -268,13 +268,19 @@ export function evaluateTarget(target, snapshot, context = { surface: "default" 
   decision.policyProfile = profile.name;
   decision.policyVersion = policy.version;
   decision.evaluatedAt = now;
-  decision.snapshotFingerprint = snapshotFingerprint({
-    authority: snapshot.authority,
-    admin: snapshot.admin,
-    reports: snapshot.reports,
-    trustedMutes: snapshot.trustedMutes,
-    policy: { id: policy.id, version: policy.version, profile: profile.name },
-  });
+
+  // Fingerprinting walks the whole snapshot, so a caller evaluating many
+  // targets against one snapshot should compute it once and pass it in.
+  // Recomputing per target makes a large feed quadratic in state size.
+  decision.snapshotFingerprint =
+    context.snapshotFingerprint ??
+    snapshotFingerprint({
+      authority: snapshot.authority,
+      admin: snapshot.admin,
+      reports: snapshot.reports,
+      trustedMutes: snapshot.trustedMutes,
+      policy: { id: policy.id, version: policy.version, profile: profile.name },
+    });
 
   const evidence = createEmptyEvidence();
 
@@ -550,6 +556,21 @@ export function evaluateMany(targets, snapshot, context, viewerState) {
   /** @type {Map<string, GovernanceDecision>} */
   const results = new Map();
 
+  const policy = context?.policy ?? NEUTRAL_POLICY;
+  const profile = resolveProfile(policy, context);
+  const sharedContext = {
+    ...(context ?? { surface: "default" }),
+    snapshotFingerprint:
+      context?.snapshotFingerprint ??
+      snapshotFingerprint({
+        authority: snapshot.authority,
+        admin: snapshot.admin,
+        reports: snapshot.reports,
+        trustedMutes: snapshot.trustedMutes,
+        policy: { id: policy.id, version: policy.version, profile: profile.name },
+      }),
+  };
+
   for (const target of targets) {
     if (!isValidTarget(target)) {
       continue;
@@ -558,7 +579,7 @@ export function evaluateMany(targets, snapshot, context, viewerState) {
     if (results.has(key)) {
       continue;
     }
-    results.set(key, evaluateTarget(target, snapshot, context, viewerState));
+    results.set(key, evaluateTarget(target, snapshot, sharedContext, viewerState));
   }
 
   return results;

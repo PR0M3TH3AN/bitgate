@@ -34,6 +34,15 @@ public API changes with it.
   them.
 - **Commerce proof-of-fit** (`examples/commerce`) demonstrating the engine
   outside a video application using only the public API.
+- **Decision caching** keyed by (profile, target) with targeted invalidation:
+  report and mute changes invalidate only the targets they touch, while
+  administrative, trust, policy, and viewer changes drop the whole cache.
+  Cached decisions are deeply frozen so a consumer cannot corrupt later reads.
+- **Performance fixture** (`tests/performance/`) over 5,000 targets, 500
+  authors, and 100 trusted muters per author, asserting no network access,
+  bounded subscription counts, and targeted invalidation.
+- **Security requirements suite** (`tests/security/`) covering the enumerated
+  requirements testable at this layer.
 - GPL-3.0-or-later `LICENSE`, `README`, and an integration guide.
 
 ### Fixed
@@ -50,6 +59,12 @@ public API changes with it.
   governed by several targets lost the evidence that drove its verdict.
 - `OverrideStore.clear()` shadowed the inherited listener `clear()`, leaking
   subscribers on teardown. Now `clearOverrides()`.
+- Evaluation was quadratic in state size: both the snapshot and its fingerprint
+  were rebuilt for every target, so each call walked every report and mute
+  list. A 5,000-target pass took ~47s. The runtime now memoizes the snapshot
+  and its fingerprint until a store changes, and `evaluateMany` computes the
+  fingerprint once for the batch. The same pass now takes ~85ms cold and ~6ms
+  warm.
 
 ### Changed
 

@@ -6,7 +6,6 @@
 
 import {
   NEUTRAL_POLICY,
-  evaluateMany,
   evaluateTarget,
   getTargetKey,
   isValidTarget,
@@ -25,6 +24,8 @@ import {
   decodeRoles,
   selectReplaceable,
 } from "@nostr-governance/nostr";
+
+import { snapshotFingerprint } from "@nostr-governance/core";
 
 import { Emitter } from "./emitter.js";
 import { createMemoryStorage, createNullSigner, storageKey } from "./interfaces.js";
@@ -73,6 +74,22 @@ export function chunk(items, size) {
     chunks.push(items.slice(index, index + size));
   }
   return chunks;
+}
+
+/**
+ * Recursively freeze a decision so cached instances cannot be mutated.
+ * @template T
+ * @param {T} value
+ * @returns {T}
+ */
+function deepFreeze(value) {
+  if (value && typeof value === "object" && !Object.isFrozen(value)) {
+    Object.freeze(value);
+    for (const entry of Object.values(value)) {
+      deepFreeze(entry);
+    }
+  }
+  return value;
 }
 
 export class GovernanceRuntime extends Emitter {
@@ -136,16 +153,57 @@ export class GovernanceRuntime extends Emitter {
 
     /** @type {Array<() => void>} */
     this.storeUnsubscribes = [
-      this.admin.on("change", () => this.emit("change", { source: "admin" })),
-      this.trust.on("change", () => this.emit("change", { source: "trust" })),
-      this.reports.on("change", (detail) => this.emit("change", { source: "reports", ...detail })),
-      this.mutes.on("change", () => this.emit("change", { source: "mutes" })),
-      this.policies.on("change", () => this.emit("change", { source: "policy" })),
-      this.overrides.on("change", () => this.emit("change", { source: "overrides" })),
+      // Administrative, trust, and policy changes can alter any decision, so
+      // they drop the whole cache. Report and mute changes name the targets
+      // they touch, so only those entries are invalidated.
+      this.admin.on("change", () => {
+        this.invalidateDecisions();
+        this.emit("change", { source: "admin" });
+      }),
+      this.trust.on("change", () => {
+        this.invalidateDecisions();
+        this.emit("change", { source: "trust" });
+      }),
+      this.reports.on("change", (detail) => {
+        this.invalidateDecisions(detail?.targetKey ? [detail.targetKey] : undefined);
+        this.emit("change", { source: "reports", ...detail });
+      }),
+      this.mutes.on("change", (detail) => {
+        this.invalidateDecisions(detail?.targetKeys);
+        this.emit("change", { source: "mutes" });
+      }),
+      this.policies.on("change", () => {
+        this.invalidateDecisions();
+        this.emit("change", { source: "policy" });
+      }),
+      this.overrides.on("change", (detail) => {
+        this.invalidateDecisions(detail?.targetKey ? [detail.targetKey] : undefined);
+        this.emit("change", { source: "overrides" });
+      }),
     ];
 
-    /** @type {{ eventsIngested: number, unknownEvents: number, subscriptions: number }} */
-    this.diagnostics = { eventsIngested: 0, unknownEvents: 0, subscriptions: 0 };
+    // Decisions are cached per (profile, target). A feed re-renders far more
+    // often than governance state changes, and re-deriving an unchanged verdict
+    // for every card is the cost the extraction is supposed to remove.
+    /** @type {Map<string, GovernanceDecision>} */
+    this.decisionCache = new Map();
+
+    // The snapshot and its fingerprint are rebuilt only when a store changes.
+    // Deriving them per target walks every report and mute list, which turns a
+    // large feed into quadratic work.
+    /** @type {GovernanceSnapshot|null} */
+    this.cachedSnapshot = null;
+    /** @type {string} */
+    this.cachedSnapshotFingerprint = "";
+
+    /** @type {{ eventsIngested: number, unknownEvents: number, subscriptions: number, cacheHits: number, cacheMisses: number }} */
+    this.diagnostics = {
+      eventsIngested: 0,
+      unknownEvents: 0,
+      subscriptions: 0,
+      cacheHits: 0,
+      cacheMisses: 0,
+    };
   }
 
   /**
@@ -340,6 +398,7 @@ export class GovernanceRuntime extends Emitter {
       return;
     }
     this.viewerPubkey = normalized;
+    this.decisionCache.clear();
     this.trust.clearViewerState();
     this.overrides.clearOverrides();
     this.emit("viewer", { pubkey: normalized });
@@ -347,16 +406,44 @@ export class GovernanceRuntime extends Emitter {
 
   /**
    * Build a snapshot for the pure evaluator.
+   *
+   * Memoized until a store reports a change, so repeated evaluation over one
+   * feed reuses a single materialized view of state.
+   *
    * @returns {GovernanceSnapshot}
    */
   snapshot() {
-    return {
+    if (this.cachedSnapshot) {
+      return this.cachedSnapshot;
+    }
+
+    this.cachedSnapshot = {
       authority: this.admin.authority,
       admin: this.admin.state,
       trust: { contacts: this.trust.contacts, seeds: this.trust.seeds },
       reports: this.reports.toRecordMap(),
       trustedMutes: this.mutes.toRecordMap(),
     };
+    return this.cachedSnapshot;
+  }
+
+  /**
+   * The current snapshot fingerprint, computed once per snapshot.
+   * @returns {string}
+   */
+  snapshotFingerprint() {
+    if (!this.cachedSnapshotFingerprint) {
+      const snapshot = this.snapshot();
+      const policy = this.policies.policy;
+      this.cachedSnapshotFingerprint = snapshotFingerprint({
+        authority: snapshot.authority,
+        admin: snapshot.admin,
+        reports: snapshot.reports,
+        trustedMutes: snapshot.trustedMutes,
+        policy: { id: policy.id, version: policy.version },
+      });
+    }
+    return this.cachedSnapshotFingerprint;
   }
 
   /** @returns {ViewerState} */
@@ -369,6 +456,34 @@ export class GovernanceRuntime extends Emitter {
   }
 
   /**
+   * Drop cached decisions.
+   *
+   * With no argument every entry is dropped; with target keys, only decisions
+   * for those targets across all profiles.
+   *
+   * @param {string[]} [targetKeys]
+   */
+  invalidateDecisions(targetKeys) {
+    // Any change that reaches a decision also invalidates the materialized
+    // snapshot it was derived from.
+    this.cachedSnapshot = null;
+    this.cachedSnapshotFingerprint = "";
+
+    if (!targetKeys) {
+      this.decisionCache.clear();
+      return;
+    }
+    const affected = new Set(targetKeys);
+    for (const cacheKey of Array.from(this.decisionCache.keys())) {
+      // Cache keys are `${profile}|${targetKey}`.
+      const targetKey = cacheKey.slice(cacheKey.indexOf("|") + 1);
+      if (affected.has(targetKey)) {
+        this.decisionCache.delete(cacheKey);
+      }
+    }
+  }
+
+  /**
    * Evaluate one target.
    * @param {GovernanceTarget} target
    * @param {Object} [options]
@@ -377,7 +492,14 @@ export class GovernanceRuntime extends Emitter {
    * @returns {GovernanceDecision}
    */
   evaluate(target, { profile, surface } = {}) {
-    return evaluateTarget(
+    const cacheKey = `${profile ?? ""}|${getTargetKey(target)}`;
+    const cached = this.decisionCache.get(cacheKey);
+    if (cached) {
+      this.diagnostics.cacheHits += 1;
+      return cached;
+    }
+
+    const decision = evaluateTarget(
       target,
       this.snapshot(),
       {
@@ -385,9 +507,16 @@ export class GovernanceRuntime extends Emitter {
         policyProfile: profile,
         policy: this.policies.policy,
         now: this.now(),
+        snapshotFingerprint: this.snapshotFingerprint(),
       },
       this.viewerState(),
     );
+
+    this.diagnostics.cacheMisses += 1;
+    // Frozen because the cache hands out the same object to every caller; a
+    // consumer mutating a decision would otherwise corrupt later reads.
+    this.decisionCache.set(cacheKey, deepFreeze(decision));
+    return decision;
   }
 
   /**
@@ -399,17 +528,18 @@ export class GovernanceRuntime extends Emitter {
    * @returns {Map<string, GovernanceDecision>}
    */
   evaluateMany(targets, { profile, surface } = {}) {
-    return evaluateMany(
-      targets,
-      this.snapshot(),
-      {
-        surface: surface ?? profile ?? "default",
-        policyProfile: profile,
-        policy: this.policies.policy,
-        now: this.now(),
-      },
-      this.viewerState(),
-    );
+    /** @type {Map<string, GovernanceDecision>} */
+    const results = new Map();
+    for (const target of targets ?? []) {
+      if (!isValidTarget(target)) {
+        continue;
+      }
+      const key = getTargetKey(target);
+      if (!results.has(key)) {
+        results.set(key, this.evaluate(target, { profile, surface }));
+      }
+    }
+    return results;
   }
 
   /** Diagnostic summary for support and debugging. */
@@ -449,6 +579,9 @@ export class GovernanceRuntime extends Emitter {
       unsubscribe();
     }
 
+    this.decisionCache.clear();
+    this.cachedSnapshot = null;
+    this.cachedSnapshotFingerprint = "";
     this.admin.clear();
     this.trust.clear();
     this.reports.clear();

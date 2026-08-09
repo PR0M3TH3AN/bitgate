@@ -328,12 +328,20 @@ export class TrustedMuteStore extends Emitter {
     if (existing && existing.updatedAt > list.updatedAt) {
       return;
     }
+    const affected = new Set();
+    for (const entry of existing?.entries ?? []) {
+      affected.add(`user:${entry.pubkey}`);
+    }
+    for (const entry of list.entries) {
+      affected.add(`user:${entry.pubkey}`);
+    }
+
     this.lists.set(list.owner, {
       owner: list.owner,
       updatedAt: list.updatedAt,
       entries: list.entries,
     });
-    this.#emitChange();
+    this.#emitChange(Array.from(affected));
   }
 
   /**
@@ -345,15 +353,21 @@ export class TrustedMuteStore extends Emitter {
       return 0;
     }
     const cutoff = this.now() - this.windowSeconds;
+    const affected = new Set();
     let pruned = 0;
+
     for (const [owner, list] of this.lists.entries()) {
       if (list.updatedAt < cutoff) {
+        for (const entry of list.entries) {
+          affected.add(`user:${entry.pubkey}`);
+        }
         this.lists.delete(owner);
         pruned += 1;
       }
     }
+
     if (pruned) {
-      this.#emitChange();
+      this.#emitChange(Array.from(affected));
     }
     return pruned;
   }
@@ -389,13 +403,14 @@ export class TrustedMuteStore extends Emitter {
     return counts;
   }
 
-  #emitChange() {
+  /** @param {string[]} [targetKeys] - Targets whose decisions this change affects */
+  #emitChange(targetKeys) {
     this.fingerprint = fingerprint(
       Array.from(this.lists.values())
         .map((list) => [list.owner, list.updatedAt, list.entries.length])
         .sort(),
     );
-    this.emit("change", { fingerprint: this.fingerprint });
+    this.emit("change", { fingerprint: this.fingerprint, targetKeys });
   }
 }
 

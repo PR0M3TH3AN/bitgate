@@ -90,9 +90,38 @@ covering the ten proof-of-fit behaviors the migration plan requires — includin
 that no core change was needed. Plus `README.md`, `docs/integration-guide.md`,
 and `examples/commerce/README.md`.
 
+## Checkpoint 7 — Performance and security fixtures (completed)
+
+Delivered:
+- `tests/performance/large-feed.test.js` — 5,000 targets, 500 authors, 100
+  trusted muters per author, multiple report categories and administrative
+  contributors, viewer switching, and roster changes
+- `tests/security/requirements.test.js` — one case per enumerated security
+  requirement testable at this layer
+
+Acceptance:
+- `evaluateMany(5,000)` performs no network access
+- report subscriptions are chunked, never one per card
+- updating one report invalidates only that target's decisions
+- updating one author's mute state invalidates only that author's targets
+- changing policy, roster, or viewer invalidates everything
+- destroy leaves no subscriptions or cached decisions
+
+This fixture found a real defect: evaluation was quadratic in state size,
+because the snapshot and its fingerprint were rebuilt per target. A
+5,000-target pass took ~47 seconds. After memoizing both, the same pass takes
+~85ms cold and ~6ms warm.
+
+Requirements 15 and 16 (never export signer secrets, avoid shared moderator
+keys) are properties of the injected signer and of operational practice rather
+than of this code; the root-authorized contributor model is what removes the
+need for a shared moderator key.
+
 ## Status
 
-CI gates green: reference guard, typecheck, 556 tests, per-package type build.
+CI gates green: reference guard, typecheck, 605 tests, per-package type build.
+Typecheck and the declaration build both pass from a cold checkout with no
+`dist/` present.
 
 ## Not done here
 
