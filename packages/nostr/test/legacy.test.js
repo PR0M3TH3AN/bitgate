@@ -170,7 +170,7 @@ describe("decodeMixedContributions", () => {
     const legacy = event({ tags: [["d", "bitvid:admin:blacklist"], ["p", CREATOR]] });
     const canonical = event({
       kind: 30078,
-      tags: [["d", "app:governance:user-deny:v1"], ["p", CREATOR]],
+      tags: [["d", "app:bitgate:user-deny:v1"], ["p", CREATOR]],
     });
 
     const contributions = decodeMixedContributions([legacy, canonical], decodeContribution);

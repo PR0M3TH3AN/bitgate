@@ -25,7 +25,7 @@ revision was bad. Most objects want both.
 ## 2. Write an adapter
 
 ```js
-import { createApplicationAdapter } from "@nostr-governance/core";
+import { createApplicationAdapter } from "@bitgate/core";
 
 export const productAdapter = createApplicationAdapter({
   applicationId: "my-shop",
@@ -64,7 +64,7 @@ A policy is a set of named **profiles**, one per surface. Profiles read the same
 evidence and are free to reach different conclusions.
 
 ```js
-import { createPolicyDefinition } from "@nostr-governance/core";
+import { createPolicyDefinition } from "@bitgate/core";
 
 export const policy = createPolicyDefinition({
   id: "my-shop",
@@ -145,13 +145,13 @@ A signer (`getPublicKey`, `signEvent`) and storage (`read`, `write`, `remove`)
 follow the same injection pattern. In-memory versions ship for testing:
 
 ```js
-import { createMemoryTransport, createMemoryStorage } from "@nostr-governance/runtime";
+import { createMemoryTransport, createMemoryStorage } from "@bitgate/runtime";
 ```
 
 ## 5. Wire the pipeline
 
 ```js
-import { collectTargets, evaluateObject } from "@nostr-governance/core";
+import { collectTargets, evaluateObject } from "@bitgate/core";
 
 runtime.setViewer(viewerPubkey);        // do this FIRST — it clears viewer state
 runtime.trust.setContacts(followList);  // then seed trust
@@ -178,7 +178,7 @@ seed contacts, blocks, and overrides *after* it, never before.
 Roles are application-defined bundles over a fixed capability vocabulary:
 
 ```js
-import { createRoleDefinition } from "@nostr-governance/core";
+import { createRoleDefinition } from "@bitgate/core";
 
 const roles = {
   listing_moderator: createRoleDefinition("listing_moderator", [
@@ -227,7 +227,7 @@ systems are deliberately separate.
 The conformance harness takes JSON fixtures and asserts decisions:
 
 ```js
-import { runConformanceCase } from "@nostr-governance/testing/conformance";
+import { runConformanceCase } from "@bitgate/testing/conformance";
 
 const { passed, mismatches } = runConformanceCase(fixture, policy);
 ```

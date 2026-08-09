@@ -1,5 +1,5 @@
 {
-  "name": "@nostr-governance/testing",
+  "name": "@bitgate/testing",
   "version": "0.1.0",
   "type": "module",
   "private": true,
@@ -16,6 +16,6 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@nostr-governance/core": "*"
+    "@bitgate/core": "*"
   }
 }

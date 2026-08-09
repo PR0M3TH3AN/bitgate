@@ -9,8 +9,8 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-import { runConformanceCase } from "@nostr-governance/testing/conformance";
-import { REFERENCE_POLICY } from "@nostr-governance/bitvid-compat/profile";
+import { runConformanceCase } from "@bitgate/testing/conformance";
+import { REFERENCE_POLICY } from "@bitgate/bitvid-compat/profile";
 
 const ROOT = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 const CASES_DIR = join(ROOT, "fixtures", "bitvid", "cases");

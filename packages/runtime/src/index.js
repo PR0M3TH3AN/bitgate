@@ -1,10 +1,12 @@
-// @nostr-governance/runtime
+// @bitgate/runtime
 //
 // Stateful orchestration: stores, transport wiring, viewer lifecycle,
 // evaluation, and commands. Transport, signer, and storage are injected, so the
 // package depends on no particular relay pool or key manager.
 
 export { Emitter } from "./emitter.js";
+
+export { createRelayTransport } from "./relayTransport.js";
 
 export {
   storageKey,
@@ -26,7 +28,7 @@ export {
   DEFAULT_CHUNK_SIZE,
   GovernanceRuntime,
   chunk,
-  createGovernanceRuntime,
+  createBitGate,
 } from "./runtime.js";
 
 export { ERROR_CODES, GovernanceCommands, createCommands } from "./commands.js";

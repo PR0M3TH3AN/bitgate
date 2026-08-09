@@ -35,7 +35,7 @@ Trusted spam-report hide threshold:  5
 Trusted mute validity window:       60 days
 ```
 
-These live in `@nostr-governance/bitvid-compat` as one application's profile,
+These live in `@bitgate/bitvid-compat` as one application's profile,
 not as engine defaults.
 
 Provenance: fixtures are authored from the reference source and its documented

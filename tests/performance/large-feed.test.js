@@ -8,8 +8,8 @@
 
 import { describe, expect, it, vi } from "vitest";
 
-import { createPolicyDefinition } from "@nostr-governance/core";
-import { createGovernanceRuntime, createMemoryTransport } from "@nostr-governance/runtime";
+import { createPolicyDefinition } from "@bitgate/core";
+import { createBitGate, createMemoryTransport } from "@bitgate/runtime";
 
 const AUTHOR_COUNT = 500;
 const TARGET_COUNT = 5_000;
@@ -18,9 +18,9 @@ const NOW = 1_750_000_000;
 
 const hex = (prefix, index) => `${prefix}${index.toString(16).padStart(10, "0")}`.padEnd(64, "0").slice(0, 64);
 
-/** @param {number} index @returns {import('@nostr-governance/core').GovernanceTarget} */
+/** @param {number} index @returns {import('@bitgate/core').GovernanceTarget} */
 const userTarget = (index) => ({ type: "user", pubkey: hex("a", index) });
-/** @param {number} index @param {number} authorIndex @returns {import('@nostr-governance/core').GovernanceTarget} */
+/** @param {number} index @param {number} authorIndex @returns {import('@bitgate/core').GovernanceTarget} */
 const eventTarget = (index, authorIndex) => ({
   type: "event",
   id: hex("c", index),
@@ -55,7 +55,7 @@ const POLICY = createPolicyDefinition({
 /** Build a runtime loaded with a large, realistic governance state. */
 function buildLargeRuntime() {
   const transport = createMemoryTransport();
-  const runtime = createGovernanceRuntime({
+  const runtime = createBitGate({
     applicationId: "perf",
     namespace: "perf",
     transport,

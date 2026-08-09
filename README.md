@@ -1,8 +1,10 @@
-# nostr-governance
+# BitGate
 
-A headless, application-agnostic governance engine for Nostr: moderation,
-access control, and trust-graph policy, with no opinion about what your
-application is.
+Moderation and access control for Nostr apps. Decide what to show, what to
+allow, and what to sell — without writing the policy code yourself.
+
+Pairs with [BitLogin](https://github.com/PR0M3TH3AN/bitlogin): **BitLogin
+answers "who are you." BitGate answers "what may you see, and what may you do."**
 
 The engine carries **no thresholds of its own**. Applications supply a policy
 definition; the engine supplies precedence, aggregation, composition, and
@@ -41,18 +43,52 @@ equivalent to following the operator's seed list.
 
 | Package | Purpose |
 | --- | --- |
-| `@nostr-governance/core` | Pure evaluation. No I/O, no browser globals, no dependencies. |
-| `@nostr-governance/nostr` | Codecs: canonical v1, NIP-56, NIP-51, legacy lists, bech32. |
-| `@nostr-governance/runtime` | Stores, transport orchestration, commands. |
-| `@nostr-governance/testing` | Conformance harness. |
-| `@nostr-governance/widget` | Drop-in custom elements: viewer controls and a moderator console. |
-| `@nostr-governance/bitvid-compat` | Reference application profile for the characterization corpus. |
+| `@bitgate/core` | Pure evaluation. No I/O, no browser globals, no dependencies. |
+| `@bitgate/nostr` | Codecs: canonical v1, NIP-56, NIP-51, legacy lists, bech32. |
+| `@bitgate/runtime` | Stores, transport orchestration, commands. |
+| `@bitgate/testing` | Conformance harness. |
+| `@bitgate/widget` | Drop-in custom elements: viewer controls and a moderator console. |
+| `@bitgate/bitvid-compat` | Reference application profile for the characterization corpus. |
 
-## Quick start
+## Quick start — a static page
+
+No npm install, no bundler. Build the widget once, self-host it, and configure
+everything in markup:
+
+```bash
+npm install && npm run build:widget   # produces packages/widget/dist/bitgate.js
+```
+
+```html
+<script type="module" src="/vendor/bitgate/bitgate.js"></script>
+
+<bitgate-provider relays="wss://relay.example" root="<root-pubkey>" policy="social">
+  <bitgate-veil profile="feed" target-user="<author-pubkey>">
+    <img src="thumbnail.jpg" alt="" />
+  </bitgate-veil>
+</bitgate-provider>
+```
+
+That is the whole integration. The provider builds a runtime, loads
+administrative state, and descendants find it themselves — no wiring code.
+
+Sign in with BitLogin and BitGate knows who the viewer is:
 
 ```js
-import { createPolicyDefinition, evaluateTarget } from "@nostr-governance/core";
-import { createGovernanceRuntime, createMemoryTransport } from "@nostr-governance/runtime";
+const provider = document.querySelector("bitgate-provider");
+await provider.ready;
+await provider.useSigner(window.nostr);   // BitLogin's NIP-07 provider
+```
+
+Policy presets: `social`, `commerce`, `admin-only`. Every number in them is a
+starting point — see the [integration guide](docs/integration-guide.md) to
+write your own.
+
+## Quick start — JavaScript
+
+```js
+import { createPolicyDefinition, evaluateTarget } from "@bitgate/core";
+import { createBitGate, createMemoryTransport } from "@bitgate/runtime";
 
 const policy = createPolicyDefinition({
   id: "my-app",
@@ -72,10 +108,11 @@ const policy = createPolicyDefinition({
   },
 });
 
-const runtime = createGovernanceRuntime({
+const runtime = createBitGate({
   applicationId: "my-app",
   namespace: "myapp",
-  transport: myRelayAdapter,
+  root: ROOT_PUBKEY,
+  transport: createRelayTransport(["wss://relay.example"]),
   policy,
   now: () => Math.floor(Date.now() / 1000),
 });
@@ -94,7 +131,7 @@ Write an adapter saying what your object is in governance terms, and a policy
 saying what the evidence means to you. Nothing else.
 
 ```js
-import { createApplicationAdapter, evaluateObject } from "@nostr-governance/core";
+import { createApplicationAdapter, evaluateObject } from "@bitgate/core";
 
 const productAdapter = createApplicationAdapter({
   applicationId: "my-shop",
@@ -119,25 +156,25 @@ seller-facing explanations. See [`docs/integration-guide.md`](docs/integration-g
 
 ## Plug-and-play UI
 
-`@nostr-governance/widget` ships custom elements that render decisions and issue
+`@bitgate/widget` ships custom elements that render decisions and issue
 commands — and compute no policy of their own:
 
 ```html
-<governance-veil profile="feed"><img src="thumbnail.jpg" alt="" /></governance-veil>
+<bitgate-veil profile="feed"><img src="thumbnail.jpg" alt="" /></bitgate-veil>
 ```
 
 ```js
-import { defineGovernanceElements } from "@nostr-governance/widget";
-defineGovernanceElements();
+import { defineBitGateElements } from "@bitgate/widget";
+defineBitGateElements();
 
-const veil = document.querySelector("governance-veil");
+const veil = document.querySelector("bitgate-veil");
 veil.runtime = runtime;
 veil.target = { type: "event", id, author };
 ```
 
-Viewer elements (`governance-veil`, `governance-report`, `governance-status`)
-and moderator elements (`governance-capabilities`, `governance-action`,
-`governance-admin-panel`) are separate, so a site embeds only what it needs.
+Viewer elements (`bitgate-veil`, `bitgate-report`, `bitgate-status`)
+and moderator elements (`bitgate-capabilities`, `bitgate-action`,
+`bitgate-admin-panel`) are separate, so a site embeds only what it needs.
 See [`packages/widget/README.md`](packages/widget/README.md) and the runnable
 [`examples/commerce/demo.html`](examples/commerce/demo.html).
 
@@ -164,8 +201,12 @@ curators list them.
 npm install
 npm run lint          # reference guard + typecheck
 npm test              # unit + conformance
-npm run build:types   # per-package .d.ts
+npm run build         # .d.ts for every package + the widget bundle
 ```
+
+The widget bundle is **not** committed. Build it from source and self-host the
+result — a moderation widget is exactly the kind of artifact where reading the
+source matters.
 
 BitVid and BitRoad are **read-only reference repositories**, pinned by commit in
 [`docs/reference-map.md`](docs/reference-map.md). Behavior is copied via fixtures

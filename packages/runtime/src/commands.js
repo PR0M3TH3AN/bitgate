@@ -11,8 +11,8 @@ import {
   hasCapability,
   isProtectedActor,
   isValidTarget,
-} from "@nostr-governance/core";
-import { encodeContribution, encodeReport, encodeRoles } from "@nostr-governance/nostr";
+} from "@bitgate/core";
+import { encodeContribution, encodeReport, encodeRoles } from "@bitgate/nostr";
 
 /**
  * Stable error codes. Applications match on these rather than on message text.
@@ -61,7 +61,7 @@ function failure(code, message) {
   return { ok: false, code, message };
 }
 
-/** @type {Record<string, import('@nostr-governance/core').GovernanceCapability>} */
+/** @type {Record<string, import('@bitgate/core').GovernanceCapability>} */
 const KIND_CAPABILITY = {
   "user-allow": "contribute-user-allow",
   "user-deny": "contribute-user-deny",
@@ -131,8 +131,8 @@ export class GovernanceCommands {
   /**
    * Publish a contribution list.
    *
-   * @param {import('@nostr-governance/core').Contribution["kind"]} kind
-   * @param {import('@nostr-governance/core').GovernanceTarget[]} targets
+   * @param {import('@bitgate/core').Contribution["kind"]} kind
+   * @param {import('@bitgate/core').GovernanceTarget[]} targets
    * @param {Object} [options]
    * @param {string} [options.source] - Community list marker
    * @returns {Promise<CommandResult>}
@@ -259,7 +259,7 @@ export class GovernanceCommands {
 
   /**
    * Publish a policy document. Requires `manage-policy`.
-   * @param {import('@nostr-governance/core').PolicyDefinition} policy
+   * @param {import('@bitgate/core').PolicyDefinition} policy
    * @returns {Promise<CommandResult>}
    */
   async setPolicy(policy) {
@@ -281,9 +281,9 @@ export class GovernanceCommands {
       kind: 30078,
       content: JSON.stringify(policy),
       tags: [
-        ["d", `${this.runtime.namespace}:governance:policy:v1`],
+        ["d", `${this.runtime.namespace}:bitgate:policy:v1`],
         ["v", "1"],
-        ["client", "nostr-governance"],
+        ["client", "bitgate"],
         ["scope", "policy"],
       ],
     });
@@ -307,9 +307,9 @@ export class GovernanceCommands {
     }
 
     const tags = [
-      ["d", `${this.runtime.namespace}:governance:community-sources:v1`],
+      ["d", `${this.runtime.namespace}:bitgate:community-sources:v1`],
       ["v", "1"],
-      ["client", "nostr-governance"],
+      ["client", "bitgate"],
       ["scope", "community-sources"],
     ];
     for (const source of sources ?? []) {
@@ -325,7 +325,7 @@ export class GovernanceCommands {
    * Reporting needs no capability: any account may report, and whether the
    * report counts is decided by the viewer's trust graph at evaluation time.
    *
-   * @param {import('@nostr-governance/core').GovernanceTarget} target
+   * @param {import('@bitgate/core').GovernanceTarget} target
    * @param {string} category
    * @param {string} [content]
    * @returns {Promise<CommandResult>}
@@ -349,7 +349,7 @@ export class GovernanceCommands {
    * Set a viewer override. Viewer-local, so no capability is required and
    * nothing is published.
    *
-   * @param {import('@nostr-governance/core').GovernanceTarget} target
+   * @param {import('@bitgate/core').GovernanceTarget} target
    * @param {string} visibility
    * @param {Object} [options]
    * @param {string} [options.reason]
@@ -366,7 +366,7 @@ export class GovernanceCommands {
 
   /**
    * Clear a viewer override.
-   * @param {import('@nostr-governance/core').GovernanceTarget} target
+   * @param {import('@bitgate/core').GovernanceTarget} target
    * @returns {CommandResult}
    */
   clearOverride(target) {

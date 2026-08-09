@@ -1,6 +1,6 @@
 // bech32 decoding for Nostr identifiers.
 //
-// Implemented here rather than pulled from a dependency so that @nostr-governance/core
+// Implemented here rather than pulled from a dependency so that @bitgate/core
 // can stay dependency-free and hex-only: decoding happens at the edge, in the
 // codecs, and the core only ever sees normalized hex.
 

@@ -4,15 +4,15 @@
 // namespaced `d` identifier. The core never learns these details — it receives
 // decoded contributions, roles, and policy.
 
-import { normalizeAddress } from "@nostr-governance/core";
+import { normalizeAddress } from "@bitgate/core";
 
 import { normalizeEventIdInput, normalizePubkeyInput } from "./nip19.js";
 import { getTagValue, getTags } from "./replaceable.js";
 
 /**
  * @typedef {import('./replaceable.js').NostrEvent} NostrEvent
- * @typedef {import('@nostr-governance/core').Contribution} Contribution
- * @typedef {import('@nostr-governance/core').GovernanceCapability} GovernanceCapability
+ * @typedef {import('@bitgate/core').Contribution} Contribution
+ * @typedef {import('@bitgate/core').GovernanceCapability} GovernanceCapability
  */
 
 /** Parameterized-replaceable application-data kind used for governance documents. */
@@ -37,7 +37,7 @@ const SCOPE_TO_KIND = {
  * @returns {string}
  */
 export function canonicalIdentifier(namespace, scope) {
-  return `${namespace}:governance:${scope}:v${CANONICAL_VERSION}`;
+  return `${namespace}:bitgate:${scope}:v${CANONICAL_VERSION}`;
 }
 
 /**
@@ -49,7 +49,7 @@ export function parseIdentifier(identifier) {
   if (typeof identifier !== "string") {
     return null;
   }
-  const match = /^([^:]+):governance:([^:]+):v(\d+)$/.exec(identifier.trim());
+  const match = /^([^:]+):bitgate:([^:]+):v(\d+)$/.exec(identifier.trim());
   if (!match) {
     return null;
   }
@@ -99,7 +99,7 @@ export function decodeContribution(event) {
     return null;
   }
 
-  /** @type {import('@nostr-governance/core').GovernanceTarget[]} */
+  /** @type {import('@bitgate/core').GovernanceTarget[]} */
   const targets = [];
 
   if (kind === "event-deny") {
@@ -139,7 +139,7 @@ export function decodeContribution(event) {
 /**
  * Decode an `a` coordinate (`kind:pubkey:d`) into an address target.
  * @param {string} coordinate
- * @returns {import('@nostr-governance/core').AddressTarget|null}
+ * @returns {import('@bitgate/core').AddressTarget|null}
  */
 export function decodeAddressCoordinate(coordinate) {
   if (typeof coordinate !== "string") {
@@ -166,7 +166,7 @@ export function decodeAddressCoordinate(coordinate) {
 
 /**
  * Encode an address target back into an `a` coordinate.
- * @param {import('@nostr-governance/core').AddressTarget} target
+ * @param {import('@bitgate/core').AddressTarget} target
  * @returns {string}
  */
 export function encodeAddressCoordinate(target) {
@@ -286,7 +286,7 @@ export function encodeContribution(contribution, namespace) {
   const tags = [
     ["d", canonicalIdentifier(namespace, contribution.kind)],
     ["v", CANONICAL_VERSION],
-    ["client", "nostr-governance"],
+    ["client", "bitgate"],
     ["scope", contribution.kind],
   ];
 
@@ -320,7 +320,7 @@ export function encodeRoles(roster, namespace) {
   const tags = [
     ["d", canonicalIdentifier(namespace, "roles")],
     ["v", CANONICAL_VERSION],
-    ["client", "nostr-governance"],
+    ["client", "bitgate"],
     ["scope", "roles"],
   ];
 

@@ -5,7 +5,7 @@
 // and so an application can boot a working runtime before wiring real relays.
 
 /**
- * @typedef {import('@nostr-governance/nostr').NostrEvent} NostrEvent
+ * @typedef {import('@bitgate/nostr').NostrEvent} NostrEvent
  */
 
 /**
@@ -73,7 +73,7 @@ export function storageKey({
   viewerPubkey,
 }) {
   const segments = [
-    "nostr-governance",
+    "bitgate",
     applicationId,
     namespace,
     rootFingerprint,

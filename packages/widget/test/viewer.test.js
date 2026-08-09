@@ -2,15 +2,15 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createPolicyDefinition } from "@nostr-governance/core";
+import { createPolicyDefinition } from "@bitgate/core";
 import {
   createCommands,
-  createGovernanceRuntime,
+  createBitGate,
   createMemoryTransport,
-} from "@nostr-governance/runtime";
+} from "@bitgate/runtime";
 
 import { DEFAULT_REASON_TEXT, describeReasons } from "../src/viewer.js";
-import { defineGovernanceElements } from "../src/index.js";
+import { defineBitGateElements } from "../src/index.js";
 import { escapeHtml, shortenKey } from "../src/base.js";
 
 const ROOT = "a1".repeat(32);
@@ -48,10 +48,10 @@ const POLICY = createPolicyDefinition({
   },
 });
 
-defineGovernanceElements();
+defineBitGateElements();
 
 function makeRuntime() {
-  const runtime = createGovernanceRuntime({
+  const runtime = createBitGate({
     applicationId: "widget-test",
     namespace: "widget",
     transport: createMemoryTransport(),
@@ -140,10 +140,10 @@ describe("describeReasons", () => {
   });
 });
 
-describe("<governance-veil>", () => {
+describe("<bitgate-veil>", () => {
   it("renders content untouched when nothing objects", () => {
     const runtime = makeRuntime();
-    const veil = mount("governance-veil", {
+    const veil = mount("bitgate-veil", {
       runtime,
       target: { type: "user", pubkey: CREATOR },
     });
@@ -154,7 +154,7 @@ describe("<governance-veil>", () => {
   it("hides content behind a disclosure when the decision hides", () => {
     const runtime = makeRuntime();
     denyCreator(runtime);
-    const veil = mount("governance-veil", {
+    const veil = mount("bitgate-veil", {
       runtime,
       target: { type: "user", pubkey: CREATOR },
       profile: "feed",
@@ -167,7 +167,7 @@ describe("<governance-veil>", () => {
   it("explains why rather than vanishing silently", () => {
     const runtime = makeRuntime();
     denyCreator(runtime);
-    const veil = mount("governance-veil", {
+    const veil = mount("bitgate-veil", {
       runtime,
       target: { type: "user", pubkey: CREATOR },
       profile: "feed",
@@ -178,7 +178,7 @@ describe("<governance-veil>", () => {
   it("keeps hidden content out of the accessibility tree", () => {
     const runtime = makeRuntime();
     denyCreator(runtime);
-    const veil = mount("governance-veil", {
+    const veil = mount("bitgate-veil", {
       runtime,
       target: { type: "user", pubkey: CREATOR },
       profile: "feed",
@@ -191,14 +191,14 @@ describe("<governance-veil>", () => {
   it("reveals on request and announces it", () => {
     const runtime = makeRuntime();
     denyCreator(runtime);
-    const veil = mount("governance-veil", {
+    const veil = mount("bitgate-veil", {
       runtime,
       target: { type: "user", pubkey: CREATOR },
       profile: "feed",
     });
 
     const revealed = vi.fn();
-    veil.addEventListener("governance:revealed", revealed);
+    veil.addEventListener("bitgate:revealed", revealed);
     veil.shadowRoot.querySelector("#reveal").click();
 
     expect(revealed).toHaveBeenCalled();
@@ -208,7 +208,7 @@ describe("<governance-veil>", () => {
   it("offers no reveal when the profile forbids overrides", () => {
     const runtime = makeRuntime();
     denyCreator(runtime);
-    const veil = mount("governance-veil", {
+    const veil = mount("bitgate-veil", {
       runtime,
       target: { type: "user", pubkey: CREATOR },
       profile: "locked",
@@ -224,7 +224,7 @@ describe("<governance-veil>", () => {
       { reporter: TRUSTED, category: "spam", createdAt: NOW },
       `user:${CREATOR}`,
     );
-    const veil = mount("governance-veil", {
+    const veil = mount("bitgate-veil", {
       runtime,
       target: { type: "user", pubkey: CREATOR },
       profile: "detail",
@@ -236,7 +236,7 @@ describe("<governance-veil>", () => {
 
   it("re-renders when governance state changes", () => {
     const runtime = makeRuntime();
-    const veil = mount("governance-veil", {
+    const veil = mount("bitgate-veil", {
       runtime,
       target: { type: "user", pubkey: CREATOR },
       profile: "feed",
@@ -249,7 +249,7 @@ describe("<governance-veil>", () => {
 
   it("stops re-rendering once detached", () => {
     const runtime = makeRuntime();
-    const veil = mount("governance-veil", {
+    const veil = mount("bitgate-veil", {
       runtime,
       target: { type: "user", pubkey: CREATOR },
       profile: "feed",
@@ -261,27 +261,27 @@ describe("<governance-veil>", () => {
   });
 
   it("renders plainly without a runtime", () => {
-    const veil = mount("governance-veil", {});
+    const veil = mount("bitgate-veil", {});
     expect(veil.shadowRoot.querySelector("slot")).not.toBeNull();
   });
 
   it("tolerates an invalid target instead of throwing", () => {
     const runtime = makeRuntime();
-    const veil = mount("governance-veil", { runtime });
+    const veil = mount("bitgate-veil", { runtime });
     expect(() => {
       veil.target = { type: "user", pubkey: "not-a-key" };
     }).not.toThrow();
   });
 });
 
-describe("<governance-report>", () => {
+describe("<bitgate-report>", () => {
   it("disables submission with no target or commands", () => {
-    const report = mount("governance-report", { runtime: makeRuntime() });
+    const report = mount("bitgate-report", { runtime: makeRuntime() });
     expect(report.shadowRoot.querySelector("#submit").disabled).toBe(true);
   });
 
   it("states plainly that reports are public", () => {
-    const report = mount("governance-report", { runtime: makeRuntime() });
+    const report = mount("bitgate-report", { runtime: makeRuntime() });
     expect(report.shadowRoot.textContent).toContain("public");
   });
 
@@ -290,12 +290,12 @@ describe("<governance-report>", () => {
     const commands = createCommands(runtime);
     vi.spyOn(commands, "report").mockResolvedValue({ ok: true, accepted: ["wss://a"] });
 
-    const report = mount("governance-report", { runtime });
+    const report = mount("bitgate-report", { runtime });
     report.commands = commands;
     report.target = { type: "event", id: EVENT_ID };
 
     const reported = vi.fn();
-    report.addEventListener("governance:reported", reported);
+    report.addEventListener("bitgate:reported", reported);
 
     report.shadowRoot.querySelector("#category").value = "spam";
     report.shadowRoot.querySelector("form").dispatchEvent(new Event("submit"));
@@ -311,12 +311,12 @@ describe("<governance-report>", () => {
     const commands = createCommands(runtime);
     vi.spyOn(commands, "report").mockResolvedValue({ ok: false, code: "invalid-target" });
 
-    const report = mount("governance-report", { runtime });
+    const report = mount("bitgate-report", { runtime });
     report.commands = commands;
     report.target = { type: "event", id: EVENT_ID };
 
     const failed = vi.fn();
-    report.addEventListener("governance:report-failed", failed);
+    report.addEventListener("bitgate:report-failed", failed);
     report.shadowRoot.querySelector("form").dispatchEvent(new Event("submit"));
     await report.pending;
     expect(failed).toHaveBeenCalled();
@@ -325,11 +325,11 @@ describe("<governance-report>", () => {
   });
 });
 
-describe("<governance-status>", () => {
+describe("<bitgate-status>", () => {
   it("reports the effect and reasons", () => {
     const runtime = makeRuntime();
     denyCreator(runtime);
-    const status = mount("governance-status", {
+    const status = mount("bitgate-status", {
       runtime,
       target: { type: "user", pubkey: CREATOR },
       profile: "feed",
@@ -340,7 +340,7 @@ describe("<governance-status>", () => {
   });
 
   it("says so when there is nothing to report", () => {
-    const status = mount("governance-status", {
+    const status = mount("bitgate-status", {
       runtime: makeRuntime(),
       target: { type: "user", pubkey: CREATOR },
       profile: "feed",
@@ -354,7 +354,7 @@ describe("<governance-status>", () => {
       { reporter: TRUSTED, category: "spam", createdAt: NOW },
       `user:${CREATOR}`,
     );
-    const status = mount("governance-status", {
+    const status = mount("bitgate-status", {
       runtime,
       target: { type: "user", pubkey: CREATOR },
       profile: "feed",
@@ -370,7 +370,7 @@ describe("<governance-status>", () => {
       { reporter: TRUSTED, category: "spam", createdAt: NOW },
       `user:${CREATOR}`,
     );
-    const status = mount("governance-status", {
+    const status = mount("bitgate-status", {
       runtime,
       target: { type: "user", pubkey: CREATOR },
       profile: "detail",
@@ -381,7 +381,7 @@ describe("<governance-status>", () => {
   });
 
   it("renders no status without a target", () => {
-    const status = mount("governance-status", { runtime: makeRuntime() });
+    const status = mount("bitgate-status", { runtime: makeRuntime() });
     expect(status.shadowRoot.querySelector("[part='status']")).toBeNull();
   });
 });

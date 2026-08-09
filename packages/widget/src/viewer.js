@@ -4,11 +4,17 @@
 // no thresholds, no precedence, no "if reports > n". If one of these needs a
 // number, the number belongs in a policy profile.
 
-import { GovernanceElement, defineElement, escapeHtml, shortenKey } from "./base.js";
+import {
+  GovernanceElement,
+  defineElement,
+  escapeHtml,
+  shortenKey,
+  targetFromAttributes,
+} from "./base.js";
 
 /**
- * @typedef {import('@nostr-governance/core').GovernanceDecision} GovernanceDecision
- * @typedef {import('@nostr-governance/core').GovernanceTarget} GovernanceTarget
+ * @typedef {import('@bitgate/core').GovernanceDecision} GovernanceDecision
+ * @typedef {import('@bitgate/core').GovernanceTarget} GovernanceTarget
  */
 
 /**
@@ -50,7 +56,7 @@ export function describeReasons(decision, overrides = {}) {
 }
 
 /**
- * `<governance-veil>` — wraps content and applies a decision to it.
+ * `<bitgate-veil>` — wraps content and applies a decision to it.
  *
  * Slotted content is always in the DOM; the element controls whether it is
  * shown, blurred, or replaced. Hidden content is removed from the accessibility
@@ -58,12 +64,12 @@ export function describeReasons(decision, overrides = {}) {
  * out something the viewer was not meant to see.
  *
  * Usage:
- *   <governance-veil><img src="..."></governance-veil>
+ *   <bitgate-veil><img src="..."></bitgate-veil>
  *   veil.runtime = runtime; veil.target = { type: "event", id, author };
  */
 export class GovernanceVeil extends GovernanceElement {
   static get observedAttributes() {
-    return ["profile"];
+    return ["profile", "target-user", "target-event", "target-author", "target-kind", "target-address"];
   }
 
   constructor() {
@@ -76,7 +82,8 @@ export class GovernanceVeil extends GovernanceElement {
   }
 
   get target() {
-    return this._target;
+    // An explicitly assigned target wins; otherwise read it from markup.
+    return this._target ?? targetFromAttributes(this);
   }
 
   set target(target) {
@@ -95,11 +102,12 @@ export class GovernanceVeil extends GovernanceElement {
 
   /** The decision currently applied, or null when not evaluable. */
   get decision() {
-    if (!this.runtime || !this._target) {
+    const target = this.target;
+    if (!this.runtime || !target) {
       return null;
     }
     try {
-      return this.runtime.evaluate(this._target, { profile: this.profile });
+      return this.runtime.evaluate(target, { profile: this.profile });
     } catch {
       return null;
     }
@@ -136,7 +144,7 @@ export class GovernanceVeil extends GovernanceElement {
       `);
       this.$("#reveal")?.addEventListener("click", () => {
         this._revealed = true;
-        this.emit("revealed", { target: this._target, decision });
+        this.emit("revealed", { target: this.target, decision });
         this.render();
       });
       return;
@@ -173,14 +181,14 @@ export class GovernanceVeil extends GovernanceElement {
 
     this.$("#reveal")?.addEventListener("click", () => {
       this._revealed = true;
-      this.emit("revealed", { target: this._target, decision });
+      this.emit("revealed", { target: this.target, decision });
       this.render();
     });
   }
 }
 
 /**
- * `<governance-report>` — a report dialog.
+ * `<bitgate-report>` — a report dialog.
  *
  * Reporting requires no capability: anyone may report, and whether the report
  * counts is decided later by each viewer's own trust graph. The element makes
@@ -193,7 +201,7 @@ export class GovernanceReport extends GovernanceElement {
     this._target = null;
     /** @type {string[]} */
     this.categories = ["spam", "nudity", "profanity", "illegal", "malware", "impersonation", "other"];
-    /** @type {import('@nostr-governance/runtime').GovernanceCommands|null} */
+    /** @type {import('@bitgate/runtime').GovernanceCommands|null} */
     this.commands = null;
     /**
      * The in-flight submission, or null when idle.
@@ -203,13 +211,21 @@ export class GovernanceReport extends GovernanceElement {
     this._status = "";
   }
 
+  static get observedAttributes() {
+    return ["target-user", "target-event", "target-author", "target-kind", "target-address"];
+  }
+
   get target() {
-    return this._target;
+    return this._target ?? targetFromAttributes(this);
   }
 
   set target(target) {
     this._target = target ?? null;
     this._status = "";
+    this.render();
+  }
+
+  attributeChangedCallback() {
     this.render();
   }
 
@@ -237,7 +253,7 @@ export class GovernanceReport extends GovernanceElement {
           sees depends on their own trust graph.
         </p>
         <div class="row">
-          <button type="submit" id="submit" ${this._target && this.commands ? "" : "disabled"}>
+          <button type="submit" id="submit" ${this.target && this.commands ? "" : "disabled"}>
             Submit report
           </button>
           <span class="reason" id="status">${escapeHtml(this._status)}</span>
@@ -252,7 +268,8 @@ export class GovernanceReport extends GovernanceElement {
   }
 
   async _submit() {
-    if (!this._target || !this.commands) {
+    const target = this.target;
+    if (!target || !this.commands) {
       return;
     }
 
@@ -262,18 +279,18 @@ export class GovernanceReport extends GovernanceElement {
     this._status = "Publishing…";
     this.render();
 
-    const result = await this.commands.report(this._target, category, details);
+    const result = await this.commands.report(target, category, details);
 
     // Partial relay acceptance is success: the event exists on the network.
     this._status = result.ok ? "Report published" : `Failed: ${result.code}`;
-    this.emit(result.ok ? "reported" : "report-failed", { target: this._target, category, result });
+    this.emit(result.ok ? "reported" : "report-failed", { target, category, result });
     this.render();
     this.pending = null;
   }
 }
 
 /**
- * `<governance-status>` — a compact readout of why something was affected.
+ * `<bitgate-status>` — a compact readout of why something was affected.
  *
  * Shows counts when the profile exposes evidence, and contributor identities
  * only when it does. A surface that redacts evidence gets "reported by people
@@ -289,11 +306,11 @@ export class GovernanceStatus extends GovernanceElement {
   }
 
   static get observedAttributes() {
-    return ["profile"];
+    return ["profile", "target-user", "target-event", "target-author", "target-kind", "target-address"];
   }
 
   get target() {
-    return this._target;
+    return this._target ?? targetFromAttributes(this);
   }
 
   set target(target) {
@@ -313,15 +330,23 @@ export class GovernanceStatus extends GovernanceElement {
     if (!this.shadowRoot) {
       return;
     }
-    if (!this.runtime || !this._target) {
+    const target = this.target;
+    if (!this.runtime || !target) {
       this.renderHtml("");
       return;
     }
 
     let decision;
     try {
-      decision = this.runtime.evaluate(this._target, { profile: this.profile });
+      decision = this.runtime.evaluate(target, { profile: this.profile });
     } catch {
+      this.renderHtml("");
+      return;
+    }
+
+    // A runtime that returns nothing usable must not take the page down with
+    // it; rendering no status is the correct degradation.
+    if (!decision?.reasons) {
       this.renderHtml("");
       return;
     }
@@ -380,8 +405,8 @@ export class GovernanceStatus extends GovernanceElement {
  */
 export function defineViewerElements() {
   const registered = [];
-  if (defineElement("governance-veil", GovernanceVeil)) registered.push("governance-veil");
-  if (defineElement("governance-report", GovernanceReport)) registered.push("governance-report");
-  if (defineElement("governance-status", GovernanceStatus)) registered.push("governance-status");
+  if (defineElement("bitgate-veil", GovernanceVeil)) registered.push("bitgate-veil");
+  if (defineElement("bitgate-report", GovernanceReport)) registered.push("bitgate-report");
+  if (defineElement("bitgate-status", GovernanceStatus)) registered.push("bitgate-status");
   return registered;
 }

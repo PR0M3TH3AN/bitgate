@@ -11,8 +11,8 @@ meant to have no dependencies and no encoding opinions.
 
 ## Decision
 
-`@nostr-governance/core` accepts 64-character hex only. Decoding lives in
-`@nostr-governance/nostr` (`normalizePubkeyInput`, `normalizeEventIdInput`),
+`@bitgate/core` accepts 64-character hex only. Decoding lives in
+`@bitgate/nostr` (`normalizePubkeyInput`, `normalizeEventIdInput`),
 and codecs normalize at ingest, so the core only ever sees hex.
 
 ## Consequences

@@ -11,17 +11,17 @@ import {
   normalizePubkey,
   reduceAdminState,
   serializeAdminState,
-} from "@nostr-governance/core";
-import { selectReplaceable, toMuteRecords } from "@nostr-governance/nostr";
+} from "@bitgate/core";
+import { selectReplaceable, toMuteRecords } from "@bitgate/nostr";
 
 import { Emitter } from "./emitter.js";
 
 /**
- * @typedef {import('@nostr-governance/core').PolicyDefinition} PolicyDefinition
- * @typedef {import('@nostr-governance/core').Contribution} Contribution
- * @typedef {import('@nostr-governance/core').AuthorityState} AuthorityState
- * @typedef {import('@nostr-governance/core').AdminState} AdminState
- * @typedef {import('@nostr-governance/nostr').NostrEvent} NostrEvent
+ * @typedef {import('@bitgate/core').PolicyDefinition} PolicyDefinition
+ * @typedef {import('@bitgate/core').Contribution} Contribution
+ * @typedef {import('@bitgate/core').AuthorityState} AuthorityState
+ * @typedef {import('@bitgate/core').AdminState} AdminState
+ * @typedef {import('@bitgate/nostr').NostrEvent} NostrEvent
  */
 
 /**
@@ -248,7 +248,7 @@ export class ReportStore extends Emitter {
    * The target is identified by `targetKey`; a decoded report's own `target`
    * field is accepted but not required, since it would be redundant.
    *
-   * @param {{ reporter: string, category: string, createdAt?: number, target?: import('@nostr-governance/core').GovernanceTarget }} report
+   * @param {{ reporter: string, category: string, createdAt?: number, target?: import('@bitgate/core').GovernanceTarget }} report
    * @param {string} targetKey
    */
   ingest(report, targetKey) {
@@ -349,7 +349,7 @@ export class TrustedMuteStore extends Emitter {
    * A newer list fully replaces the older one; an out-of-order delivery of an
    * older list is ignored rather than resurrecting removed entries.
    *
-   * @param {import('@nostr-governance/nostr').DecodedMuteList} list
+   * @param {import('@bitgate/nostr').DecodedMuteList} list
    */
   replaceList(list) {
     if (!list?.owner) {

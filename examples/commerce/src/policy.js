@@ -1,7 +1,7 @@
 // Commerce policy profiles.
 //
 // This example exists to prove the engine is not video-specific. Nothing here
-// touches @nostr-governance/core internals: it is built entirely from the
+// touches @bitgate/core internals: it is built entirely from the
 // public API, and the core carries none of these numbers.
 //
 // The interesting property is that one product can simultaneously be visible to
@@ -9,7 +9,7 @@
 // blocked from checkout — four different answers from one decision, which a
 // single `hidden` boolean could not express.
 
-import { createPolicyDefinition, createRoleDefinition } from "@nostr-governance/core";
+import { createPolicyDefinition, createRoleDefinition } from "@bitgate/core";
 
 /**
  * Category thresholds for a marketplace.
@@ -18,7 +18,7 @@ import { createPolicyDefinition, createRoleDefinition } from "@nostr-governance/
  * blocks checkout, because the cost of a false negative is a compromised buyer,
  * while an over-eager `misleading` threshold would just suppress lawful listings.
  *
- * @type {Record<string, import('@nostr-governance/core').CategoryThresholds>}
+ * @type {Record<string, import('@bitgate/core').CategoryThresholds>}
  */
 export const MARKETPLACE_REPORT_THRESHOLDS = {
   scam: {
@@ -137,7 +137,7 @@ export const COMMERCE_ROLES = {
 
 /**
  * Role capability map in the shape createAuthorityState expects.
- * @type {Record<string, import('@nostr-governance/core').GovernanceCapability[]>}
+ * @type {Record<string, import('@bitgate/core').GovernanceCapability[]>}
  */
 export const COMMERCE_ROLE_CAPABILITIES = Object.fromEntries(
   Object.values(COMMERCE_ROLES).map((role) => [role.name, role.capabilities]),

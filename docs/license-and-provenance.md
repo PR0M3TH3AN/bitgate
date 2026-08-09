@@ -23,11 +23,11 @@ Until a lawyer-ready SPDX audit is done, treat the repository as:
 
 | Package | Intention |
 | --- | --- |
-| `@nostr-governance/core` | Clean API surface + pure evaluator. Avoid BitVid names. |
-| `@nostr-governance/nostr` | Codecs. Legacy BitVid codec is provenance-sensitive. |
-| `@nostr-governance/runtime` | Transport/storage orchestration. |
-| `@nostr-governance/bitvid-compat` | Explicit BitVid-facing adapter. Most provenance-exposed. |
-| `@nostr-governance/testing` | Fakes and fixture loaders. |
+| `@bitgate/core` | Clean API surface + pure evaluator. Avoid BitVid names. |
+| `@bitgate/nostr` | Codecs. Legacy BitVid codec is provenance-sensitive. |
+| `@bitgate/runtime` | Transport/storage orchestration. |
+| `@bitgate/bitvid-compat` | Explicit BitVid-facing adapter. Most provenance-exposed. |
+| `@bitgate/testing` | Fakes and fixture loaders. |
 
 ## Rules
 

@@ -5,7 +5,7 @@
 // no thresholds, no precedence rules, no policy logic. Those live in the
 // policy definition and the engine respectively.
 
-import { createApplicationAdapter } from "@nostr-governance/core";
+import { createApplicationAdapter } from "@bitgate/core";
 
 /** Parameterized-replaceable kind used for commerce documents in this example. */
 export const PRODUCT_KIND = 30078;
@@ -43,7 +43,7 @@ export const PRODUCT_KIND = 30078;
  * would not. Both are kept, because an exact-event denial must also stay
  * possible for the case where only one revision was bad.
  *
- * @type {import('@nostr-governance/core').GovernanceApplicationAdapter<Product>}
+ * @type {import('@bitgate/core').GovernanceApplicationAdapter<Product>}
  */
 export const productAdapter = createApplicationAdapter({
   applicationId: "commerce-example",
@@ -84,7 +84,7 @@ export const productAdapter = createApplicationAdapter({
 
 /**
  * Storefronts answer to the seller, the storefront address, and the exact event.
- * @type {import('@nostr-governance/core').GovernanceApplicationAdapter<Storefront>}
+ * @type {import('@bitgate/core').GovernanceApplicationAdapter<Storefront>}
  */
 export const storefrontAdapter = createApplicationAdapter({
   applicationId: "commerce-example",
@@ -114,7 +114,7 @@ export const storefrontAdapter = createApplicationAdapter({
  * honest reviews of it, which is exactly the outcome an over-broad target list
  * would produce.
  *
- * @type {import('@nostr-governance/core').GovernanceApplicationAdapter<Review>}
+ * @type {import('@bitgate/core').GovernanceApplicationAdapter<Review>}
  */
 export const reviewAdapter = createApplicationAdapter({
   applicationId: "commerce-example",
@@ -141,7 +141,7 @@ export const reviewAdapter = createApplicationAdapter({
 
 /**
  * Sellers answer only to their own user target.
- * @type {import('@nostr-governance/core').GovernanceApplicationAdapter<{ pubkey: string }>}
+ * @type {import('@bitgate/core').GovernanceApplicationAdapter<{ pubkey: string }>}
  */
 export const sellerAdapter = createApplicationAdapter({
   applicationId: "commerce-example",

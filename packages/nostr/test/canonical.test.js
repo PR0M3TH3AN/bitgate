@@ -37,7 +37,7 @@ const event = (parts) => ({
 describe("canonical identifiers", () => {
   it("builds a namespaced identifier", () => {
     expect(canonicalIdentifier("bitroad", "address-deny")).toBe(
-      "bitroad:governance:address-deny:v1",
+      "bitroad:bitgate:address-deny:v1",
     );
   });
 
@@ -292,6 +292,6 @@ describe("encoders", () => {
   it("stamps the client and version tags", () => {
     const template = encodeContribution({ actor: MODERATOR, kind: "user-deny", targets: [] }, "app");
     expect(template.tags).toContainEqual(["v", "1"]);
-    expect(template.tags).toContainEqual(["client", "nostr-governance"]);
+    expect(template.tags).toContainEqual(["client", "bitgate"]);
   });
 });

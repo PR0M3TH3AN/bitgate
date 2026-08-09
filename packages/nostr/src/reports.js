@@ -9,7 +9,7 @@ import { getTags } from "./replaceable.js";
 
 /**
  * @typedef {import('./replaceable.js').NostrEvent} NostrEvent
- * @typedef {import('@nostr-governance/core').GovernanceTarget} GovernanceTarget
+ * @typedef {import('@bitgate/core').GovernanceTarget} GovernanceTarget
  */
 
 /** NIP-56 report kind. */

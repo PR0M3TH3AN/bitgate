@@ -4,7 +4,7 @@ A marketplace built on `nostr-governance`, using only the published API.
 
 The point is not to ship marketplace moderation. It is to prove the engine did
 not accidentally stay video-specific during extraction: if a commerce consumer
-needs a change to `@nostr-governance/core`, the abstraction is wrong.
+needs a change to `@bitgate/core`, the abstraction is wrong.
 
 ## What it demonstrates
 

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>BitGate drop-in</title>
+  </head>
+  <body>
+    <h1>Drop-in test</h1>
+
+    <!-- Everything below is configured in markup. No setup JavaScript. -->
+    <bitgate-provider relays="wss://relay.example" root="a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1" policy="social">
+      <bitgate-veil profile="feed" target-user="d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4">
+        <p id="content">This content is governed.</p>
+      </bitgate-veil>
+      <bitgate-status profile="playback" target-user="d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4"></bitgate-status>
+    </bitgate-provider>
+
+    <pre id="result">running…</pre>
+
+    <script type="module">
+      import { defineBitGateElements } from "../packages/widget/dist/bitgate.js";
+      defineBitGateElements();
+
+      const out = [];
+      const provider = document.querySelector("bitgate-provider");
+      const veil = document.querySelector("bitgate-veil");
+
+      // Awaiting the promise avoids racing the ready event, which fires during
+      // element upgrade — before this script could attach a listener.
+      provider.ready.then(() => {
+        out.push("provider ready: " + Boolean(provider.runtime));
+        out.push("veil adopted runtime: " + (veil.runtime === provider.runtime));
+        out.push("policy: " + provider.runtime.policies.policy.id);
+        out.push("target from attribute: " + JSON.stringify(veil.target));
+
+        // Deny the creator and confirm the veil reacts with no further wiring.
+        provider.runtime.admin.setRoles({
+          root: "a1".repeat(32),
+          actors: { ["a1".repeat(32)]: ["super_admin"] },
+        });
+        provider.runtime.admin.upsertContribution({
+          actor: "a1".repeat(32),
+          kind: "user-deny",
+          targets: [{ type: "user", pubkey: "d4".repeat(32) }],
+          createdAt: 1,
+        });
+
+        // The social preset's feed profile caps a hide at "restrict", so the
+        // veil blurs rather than hides. Playback enforces the full decision.
+        const feed = provider.runtime.evaluate(veil.target, { profile: "feed" });
+        const playback = provider.runtime.evaluate(veil.target, { profile: "playback" });
+        out.push("feed visibility: " + feed.visibility.effect + " (blurred, not hidden)");
+        out.push("playback visibility: " + playback.visibility.effect);
+        out.push("reasons: " + feed.reasons.map((r) => r.id).join(", "));
+        out.push("veil is blurred: " + Boolean(veil.shadowRoot.querySelector(".blurred")));
+        document.getElementById("result").textContent = out.join("\n");
+      });
+    </script>
+  </body>
+</html>

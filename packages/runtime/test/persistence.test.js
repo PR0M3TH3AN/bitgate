@@ -3,15 +3,15 @@
 
 import { describe, expect, it, vi } from "vitest";
 
-import { createPolicyDefinition } from "@nostr-governance/core";
+import { createPolicyDefinition } from "@bitgate/core";
 import {
   CANONICAL_KIND,
   MUTE_LIST_KIND,
   encodeContribution,
   encodeRoles,
-} from "@nostr-governance/nostr";
+} from "@bitgate/nostr";
 
-import { createGovernanceRuntime } from "../src/runtime.js";
+import { createBitGate } from "../src/runtime.js";
 import { createMemoryStorage, createMemoryTransport } from "../src/interfaces.js";
 
 const ROOT = "a1".repeat(32);
@@ -66,11 +66,11 @@ const denyEvent = () =>
  * @param {Object} [options]
  * @param {import('../src/interfaces.js').GovernanceStorage} [options.storage]
  * @param {any} [options.transport]
- * @param {import('@nostr-governance/nostr').SignatureVerifier} [options.verifySignature]
+ * @param {import('@bitgate/nostr').SignatureVerifier} [options.verifySignature]
  * @param {string} [options.root]
  */
 function makeRuntime({ storage, transport, verifySignature, root = ROOT } = {}) {
-  return createGovernanceRuntime({
+  return createBitGate({
     applicationId: "test",
     namespace: "app",
     transport: transport ?? createMemoryTransport([rolesEvent(), denyEvent()]),
@@ -92,7 +92,7 @@ describe("persistence", () => {
 
     expect(writes).toHaveBeenCalled();
     const [key] = writes.mock.calls[0];
-    expect(key).toMatch(/^nostr-governance:test:app:[0-9a-f]{16}:v1:admin$/);
+    expect(key).toMatch(/^bitgate:test:app:[0-9a-f]{16}:v1:admin$/);
   });
 
   it("restores administrative state without touching a relay", async () => {
@@ -257,7 +257,7 @@ describe("trusted mute list subscriptions", () => {
   it("subscribes by author, chunked", () => {
     const transport = createMemoryTransport();
     const subscribe = vi.spyOn(transport, "subscribe");
-    const runtime = createGovernanceRuntime({
+    const runtime = createBitGate({
       applicationId: "t",
       namespace: "app",
       transport,
@@ -275,7 +275,7 @@ describe("trusted mute list subscriptions", () => {
 
   it("ingests a delivered mute list into evaluation", () => {
     const transport = createMemoryTransport();
-    const runtime = createGovernanceRuntime({
+    const runtime = createBitGate({
       applicationId: "t",
       namespace: "app",
       transport,
@@ -331,13 +331,13 @@ describe("community sources", () => {
     });
 
     const merged = await runtime.loadCommunitySources([
-      { curator: CURATOR, identifier: "app:governance:user-deny:v1", kind: CANONICAL_KIND },
+      { curator: CURATOR, identifier: "app:bitgate:user-deny:v1", kind: CANONICAL_KIND },
     ]);
 
     expect(merged).toBe(1);
     expect(runtime.admin.state.userDeny.has(`user:${CREATOR}`)).toBe(true);
     expect(runtime.admin.state.communitySources.get(`user:${CREATOR}`)).toEqual([
-      `${CURATOR}:app:governance:user-deny:v1`,
+      `${CURATOR}:app:bitgate:user-deny:v1`,
     ]);
   });
 
@@ -357,7 +357,7 @@ describe("community sources", () => {
     runtime.admin.setRoles({ root: ROOT, actors: { [CURATOR]: ["curator"] } });
 
     await runtime.loadCommunitySources([
-      { curator: CURATOR, identifier: "app:governance:event-deny:v1", kind: CANONICAL_KIND },
+      { curator: CURATOR, identifier: "app:bitgate:event-deny:v1", kind: CANONICAL_KIND },
     ]);
 
     expect(runtime.admin.state.eventDeny.size).toBe(0);

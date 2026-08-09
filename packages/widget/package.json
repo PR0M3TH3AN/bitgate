@@ -1,10 +1,13 @@
 {
-  "name": "@nostr-governance/widget",
+  "name": "@bitgate/widget",
   "version": "0.1.0",
   "type": "module",
   "main": "src/index.js",
   "types": "dist/types/index.d.ts",
-  "files": ["src", "dist"],
+  "files": [
+    "src",
+    "dist"
+  ],
   "exports": {
     ".": {
       "types": "./dist/types/index.d.ts",
@@ -13,10 +16,11 @@
     "./dist/types/*": "./dist/types/*"
   },
   "scripts": {
-    "test": "vitest run"
+    "test": "vitest run",
+    "build": "node build.mjs"
   },
   "dependencies": {
-    "@nostr-governance/core": "*",
-    "@nostr-governance/runtime": "*"
+    "@bitgate/core": "*",
+    "@bitgate/runtime": "*"
   }
 }

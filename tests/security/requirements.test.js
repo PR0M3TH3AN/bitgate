@@ -19,20 +19,20 @@ import {
   isValidTarget,
   normalizeAddress,
   reduceAdminState,
-} from "@nostr-governance/core";
+} from "@bitgate/core";
 import {
   MAX_POLICY_BYTES,
   canonicalIdentifier,
   decodePolicy,
   decodeReport,
   verifyEvents,
-} from "@nostr-governance/nostr";
+} from "@bitgate/nostr";
 import {
   ERROR_CODES,
   createCommands,
-  createGovernanceRuntime,
+  createBitGate,
   createMemoryTransport,
-} from "@nostr-governance/runtime";
+} from "@bitgate/runtime";
 
 const ROOT = "a1".repeat(32);
 const MODERATOR = "b2".repeat(32);
@@ -75,7 +75,7 @@ const event = (parts) => ({
 });
 
 function runtimeWithSigner(pubkey) {
-  const runtime = createGovernanceRuntime({
+  const runtime = createBitGate({
     applicationId: "sec",
     namespace: "sec",
     transport: createMemoryTransport(),
@@ -206,7 +206,7 @@ describe("9. ignore unauthorized contributor events", () => {
   });
 
   it("stops honoring an actor's contributions the moment their role is revoked", () => {
-    /** @type {import('@nostr-governance/core').Contribution[]} */
+    /** @type {import('@bitgate/core').Contribution[]} */
     const contributions = [
       { actor: MODERATOR, kind: "user-deny", targets: [{ type: "user", pubkey: CREATOR }] },
     ];
@@ -419,7 +419,7 @@ describe("18-19. transient relay failure and diagnostics", () => {
 
 describe("20. fail closed when authority cannot be confirmed", () => {
   it("refuses an administrative command with no signer", async () => {
-    const runtime = createGovernanceRuntime({
+    const runtime = createBitGate({
       applicationId: "sec",
       namespace: "sec",
       transport: createMemoryTransport(),
@@ -430,7 +430,7 @@ describe("20. fail closed when authority cannot be confirmed", () => {
   });
 
   it("refuses every administrative command when the roster is empty", async () => {
-    const runtime = createGovernanceRuntime({
+    const runtime = createBitGate({
       applicationId: "sec",
       namespace: "sec",
       transport: createMemoryTransport(),

@@ -14,8 +14,8 @@
 import { GovernanceElement, defineElement, escapeHtml, shortenKey } from "./base.js";
 
 /**
- * @typedef {import('@nostr-governance/runtime').GovernanceCommands} GovernanceCommands
- * @typedef {import('@nostr-governance/core').GovernanceCapability} GovernanceCapability
+ * @typedef {import('@bitgate/runtime').GovernanceCommands} GovernanceCommands
+ * @typedef {import('@bitgate/core').GovernanceCapability} GovernanceCapability
  */
 
 /** Human wording for capabilities, used when explaining a refusal. */
@@ -32,7 +32,7 @@ export const CAPABILITY_LABELS = {
 };
 
 /**
- * `<governance-capabilities>` — what the signed-in moderator may do.
+ * `<bitgate-capabilities>` — what the signed-in moderator may do.
  *
  * Worth rendering explicitly: in the previous generation of this system,
  * moderator status was a UI permission with no cryptographic meaning. Showing
@@ -81,7 +81,7 @@ export class GovernanceCapabilities extends GovernanceElement {
 }
 
 /**
- * `<governance-action>` — a single capability-gated action button.
+ * `<bitgate-action>` — a single capability-gated action button.
  *
  * When the actor lacks the capability the button is disabled *and* labelled
  * with what is missing, which is the difference between "broken" and "not
@@ -167,7 +167,7 @@ export class GovernanceAction extends GovernanceElement {
 }
 
 /**
- * `<governance-admin-panel>` — effective administrative state plus controls.
+ * `<bitgate-admin-panel>` — effective administrative state plus controls.
  *
  * Shows what is currently in force and who contributed it, so a moderator can
  * see that a denial came from a community list rather than from their own team.
@@ -298,12 +298,12 @@ export class GovernanceAdminPanel extends GovernanceElement {
  */
 export function defineAdminElements() {
   const registered = [];
-  if (defineElement("governance-capabilities", GovernanceCapabilities)) {
-    registered.push("governance-capabilities");
+  if (defineElement("bitgate-capabilities", GovernanceCapabilities)) {
+    registered.push("bitgate-capabilities");
   }
-  if (defineElement("governance-action", GovernanceAction)) registered.push("governance-action");
-  if (defineElement("governance-admin-panel", GovernanceAdminPanel)) {
-    registered.push("governance-admin-panel");
+  if (defineElement("bitgate-action", GovernanceAction)) registered.push("bitgate-action");
+  if (defineElement("bitgate-admin-panel", GovernanceAdminPanel)) {
+    registered.push("bitgate-admin-panel");
   }
   return registered;
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createPolicyDefinition } from "@nostr-governance/core";
+import { createPolicyDefinition } from "@bitgate/core";
 
 import { Emitter } from "../src/emitter.js";
 import {
@@ -18,7 +18,7 @@ const CREATOR = "d4".repeat(32);
 const OTHER = "e5".repeat(32);
 const DAY = 86_400;
 
-/** @param {string} pubkey @returns {import("@nostr-governance/core").UserTarget} */
+/** @param {string} pubkey @returns {import("@bitgate/core").UserTarget} */
 const user = (pubkey) => ({ type: "user", pubkey });
 
 const roster = {

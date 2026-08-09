@@ -1,5 +1,5 @@
 {
-  "name": "@nostr-governance/example-commerce",
+  "name": "@bitgate/example-commerce",
   "version": "0.1.0",
   "type": "module",
   "private": true,
@@ -9,7 +9,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@nostr-governance/core": "*",
-    "@nostr-governance/runtime": "*"
+    "@bitgate/core": "*",
+    "@bitgate/runtime": "*"
   }
 }

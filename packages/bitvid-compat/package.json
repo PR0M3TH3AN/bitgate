@@ -1,5 +1,5 @@
 {
-  "name": "@nostr-governance/bitvid-compat",
+  "name": "@bitgate/bitvid-compat",
   "version": "0.1.0",
   "type": "module",
   "main": "src/index.js",
@@ -22,7 +22,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@nostr-governance/core": "*",
-    "@nostr-governance/nostr": "*"
+    "@bitgate/core": "*",
+    "@bitgate/nostr": "*"
   }
 }

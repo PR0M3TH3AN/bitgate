@@ -1,4 +1,4 @@
-// @nostr-governance/nostr
+// @bitgate/nostr
 //
 // Codecs translating Nostr events into the core's vocabulary. Event formats
 // live here so the core never learns which kind stores roles, which `d`

@@ -15,7 +15,7 @@ The core defines the *vocabulary* — target types, capabilities, effect ladders
 reason identifiers, aggregation and precedence rules — and no thresholds.
 Applications supply a `PolicyDefinition` of named profiles with category
 thresholds. The characterized reference values live in
-`@nostr-governance/bitvid-compat` as one application's profile.
+`@bitgate/bitvid-compat` as one application's profile.
 
 `NEUTRAL_POLICY` is the fallback: it enforces administrative denial and applies
 no trust thresholds, so the generic engine never hides content merely because

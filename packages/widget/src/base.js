@@ -10,9 +10,9 @@
 // one governance runtime across its whole page.
 
 /**
- * @typedef {import('@nostr-governance/runtime').GovernanceRuntime} GovernanceRuntime
- * @typedef {import('@nostr-governance/core').GovernanceDecision} GovernanceDecision
- * @typedef {import('@nostr-governance/core').GovernanceTarget} GovernanceTarget
+ * @typedef {import('@bitgate/runtime').GovernanceRuntime} GovernanceRuntime
+ * @typedef {import('@bitgate/core').GovernanceDecision} GovernanceDecision
+ * @typedef {import('@bitgate/core').GovernanceTarget} GovernanceTarget
  */
 
 /**
@@ -91,6 +91,73 @@ export function shortenKey(pubkey) {
 }
 
 /**
+ * Ask the nearest provider for its runtime and commands.
+ *
+ * Declared here rather than imported from ./provider.js to keep the module
+ * graph acyclic: provider.js already depends on this file.
+ *
+ * @param {Element} element
+ * @returns {{ runtime: any, commands: any }|null}
+ */
+export function requestContext(element) {
+  /** @type {{ context: any }} */
+  const detail = { context: null };
+  element.dispatchEvent(
+    new CustomEvent("bitgate:context-request", { detail, bubbles: true, composed: true }),
+  );
+  return detail.context;
+}
+
+/**
+ * Parse a governance target from element attributes.
+ *
+ * Lets markup name a target without JavaScript:
+ *   target-event / target-author / target-kind
+ *   target-user
+ *   target-address (a `kind:pubkey:d` coordinate)
+ *
+ * @param {Element} element
+ * @returns {import('@bitgate/core').GovernanceTarget|null}
+ */
+export function targetFromAttributes(element) {
+  const user = element.getAttribute("target-user");
+  if (user) {
+    return { type: "user", pubkey: user.trim() };
+  }
+
+  const eventId = element.getAttribute("target-event");
+  if (eventId) {
+    /** @type {any} */
+    const target = { type: "event", id: eventId.trim() };
+    const author = element.getAttribute("target-author");
+    if (author) {
+      target.author = author.trim();
+    }
+    const kind = element.getAttribute("target-kind");
+    if (kind && Number.isFinite(Number(kind))) {
+      target.kind = Number(kind);
+    }
+    return target;
+  }
+
+  const address = element.getAttribute("target-address");
+  if (address) {
+    const first = address.indexOf(":");
+    const second = address.indexOf(":", first + 1);
+    if (first > 0 && second > first) {
+      return {
+        type: "address",
+        kind: address.slice(0, first),
+        pubkey: address.slice(first + 1, second),
+        identifier: address.slice(second + 1),
+      };
+    }
+  }
+
+  return null;
+}
+
+/**
  * Base element: owns a shadow root, a runtime reference, and change
  * subscription lifecycle.
  *
@@ -104,6 +171,7 @@ export class GovernanceElement extends globalThis.HTMLElement {
     this._runtime = null;
     /** @type {(() => void)|null} */
     this._unsubscribe = null;
+    this._awaitingProvider = false;
   }
 
   /**
@@ -129,10 +197,53 @@ export class GovernanceElement extends globalThis.HTMLElement {
   }
 
   connectedCallback() {
+    // Adopt the nearest provider's runtime when one was not assigned directly.
+    // This is what lets a page configure BitGate entirely in markup.
+    if (!this._runtime) {
+      this.adoptContext();
+    }
     if (this._runtime && !this._unsubscribe) {
       this._subscribe();
     }
     this.render();
+  }
+
+  /**
+   * Find a `<bitgate-provider>` ancestor and take its runtime and commands.
+   *
+   * A provider that is still starting answers with nothing; the element waits
+   * for `bitgate:ready` rather than polling.
+   *
+   * @returns {boolean} Whether a runtime was adopted
+   */
+  adoptContext() {
+    const context = requestContext(this);
+    if (context?.runtime) {
+      this.runtime = context.runtime;
+      if (context.commands && "commands" in this) {
+        /** @type {any} */ (this).commands = context.commands;
+      }
+      return true;
+    }
+
+    if (!this._awaitingProvider) {
+      this._awaitingProvider = true;
+      globalThis.document?.addEventListener(
+        "bitgate:ready",
+        (event) => {
+          const detail = /** @type {CustomEvent} */ (event).detail;
+          if (!detail?.runtime || this._runtime) {
+            return;
+          }
+          this.runtime = detail.runtime;
+          if (detail.commands && "commands" in this) {
+            /** @type {any} */ (this).commands = detail.commands;
+          }
+        },
+        { once: true },
+      );
+    }
+    return false;
   }
 
   disconnectedCallback() {
@@ -155,7 +266,7 @@ export class GovernanceElement extends globalThis.HTMLElement {
    */
   emit(name, detail) {
     this.dispatchEvent(
-      new CustomEvent(`governance:${name}`, { detail, bubbles: true, composed: true }),
+      new CustomEvent(`bitgate:${name}`, { detail, bubbles: true, composed: true }),
     );
   }
 

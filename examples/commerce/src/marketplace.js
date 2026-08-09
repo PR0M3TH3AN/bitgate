@@ -4,7 +4,7 @@
 // the answer. It computes no thresholds and reimplements no precedence — which
 // is the property the extraction is meant to guarantee.
 
-import { collectTargets, evaluateObject } from "@nostr-governance/core";
+import { collectTargets, evaluateObject } from "@bitgate/core";
 
 import { productAdapter } from "./adapters.js";
 
@@ -20,7 +20,7 @@ import { productAdapter } from "./adapters.js";
  * listing.
  *
  * @param {Product[]} products
- * @param {import('@nostr-governance/runtime').GovernanceRuntime} runtime
+ * @param {import('@bitgate/runtime').GovernanceRuntime} runtime
  * @param {string} profile
  * @returns {Array<Product & { moderation: any }>}
  */
@@ -43,7 +43,7 @@ export function governProductFeed(products, runtime, profile) {
  * like censorship to sellers.
  *
  * @param {Product[]} products
- * @param {import('@nostr-governance/runtime').GovernanceRuntime} runtime
+ * @param {import('@bitgate/runtime').GovernanceRuntime} runtime
  * @returns {Array<Product & { moderation: any }>}
  */
 export function buildMarketplaceGrid(products, runtime) {
@@ -67,7 +67,7 @@ export function buildMarketplaceGrid(products, runtime) {
  * checkout is the point where being wrong actually costs someone money.
  *
  * @param {Product} product
- * @param {import('@nostr-governance/runtime').GovernanceRuntime} runtime
+ * @param {import('@bitgate/runtime').GovernanceRuntime} runtime
  * @returns {CheckoutVerdict}
  */
 export function checkoutVerdict(product, runtime) {
@@ -90,7 +90,7 @@ export function checkoutVerdict(product, runtime) {
  * that can answer "how many people reported me, and for what".
  *
  * @param {Product} product
- * @param {import('@nostr-governance/runtime').GovernanceRuntime} runtime
+ * @param {import('@bitgate/runtime').GovernanceRuntime} runtime
  * @returns {{ visible: boolean, sellable: boolean, reasons: string[], evidence: any }}
  */
 export function explainToSeller(product, runtime) {

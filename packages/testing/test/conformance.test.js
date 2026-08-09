@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createPolicyDefinition } from "@nostr-governance/core";
+import { createPolicyDefinition } from "@bitgate/core";
 
 import { buildSnapshot, diffExpectation, evaluateFixture, runConformanceCase } from "../src/conformance.js";
 

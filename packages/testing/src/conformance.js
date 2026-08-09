@@ -1,4 +1,4 @@
-// Conformance harness for @nostr-governance
+// Conformance harness for BitGate
 //
 // Turns a JSON fixture into a snapshot, evaluates it, and compares the decision
 // against the fixture's expectation. Expectations are partial by design: a
@@ -11,7 +11,7 @@ import {
   createViewerState,
   evaluateTarget,
   reduceAdminState,
-} from "@nostr-governance/core";
+} from "@bitgate/core";
 
 /**
  * @typedef {Object} FixtureExpectation
@@ -78,8 +78,8 @@ export function buildSnapshot(fixture) {
 /**
  * Evaluate a fixture against a policy definition.
  * @param {Object} fixture
- * @param {import('@nostr-governance/core').PolicyDefinition} policy
- * @returns {import('@nostr-governance/core').GovernanceDecision}
+ * @param {import('@bitgate/core').PolicyDefinition} policy
+ * @returns {import('@bitgate/core').GovernanceDecision}
  */
 export function evaluateFixture(fixture, policy) {
   const { snapshot, viewer } = buildSnapshot(fixture);
@@ -93,7 +93,7 @@ export function evaluateFixture(fixture, policy) {
 
 /**
  * Compare a decision against a fixture expectation.
- * @param {import('@nostr-governance/core').GovernanceDecision} decision
+ * @param {import('@bitgate/core').GovernanceDecision} decision
  * @param {FixtureExpectation} expectation
  * @returns {string[]} Human-readable mismatches; empty when the fixture passes
  */
@@ -187,8 +187,8 @@ export function diffExpectation(decision, expectation) {
 /**
  * Run one fixture end to end.
  * @param {Object} fixture
- * @param {import('@nostr-governance/core').PolicyDefinition} policy
- * @returns {{ passed: boolean, mismatches: string[], decision: import('@nostr-governance/core').GovernanceDecision }}
+ * @param {import('@bitgate/core').PolicyDefinition} policy
+ * @returns {{ passed: boolean, mismatches: string[], decision: import('@bitgate/core').GovernanceDecision }}
  */
 export function runConformanceCase(fixture, policy) {
   const decision = evaluateFixture(fixture, policy);

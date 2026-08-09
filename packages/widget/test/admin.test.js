@@ -2,15 +2,15 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createPolicyDefinition } from "@nostr-governance/core";
+import { createPolicyDefinition } from "@bitgate/core";
 import {
   createCommands,
-  createGovernanceRuntime,
+  createBitGate,
   createMemoryTransport,
-} from "@nostr-governance/runtime";
+} from "@bitgate/runtime";
 
 import { CAPABILITY_LABELS } from "../src/admin.js";
-import { defineGovernanceElements } from "../src/index.js";
+import { defineBitGateElements } from "../src/index.js";
 import { shortenKey } from "../src/base.js";
 
 const ROOT = "a1".repeat(32);
@@ -26,10 +26,10 @@ const POLICY = createPolicyDefinition({
   profiles: { feed: { name: "feed", reports: {}, mutes: {} } },
 });
 
-defineGovernanceElements();
+defineBitGateElements();
 
 function makeRuntime(viewer) {
-  const runtime = createGovernanceRuntime({
+  const runtime = createBitGate({
     applicationId: "widget-test",
     namespace: "widget",
     transport: createMemoryTransport(),
@@ -71,21 +71,21 @@ beforeEach(() => {
   document.body.innerHTML = "";
 });
 
-describe("<governance-capabilities>", () => {
+describe("<bitgate-capabilities>", () => {
   it("says when nobody is signed in", () => {
-    const panel = mount("governance-capabilities", makeRuntime());
+    const panel = mount("bitgate-capabilities", makeRuntime());
     expect(panel.shadowRoot.textContent).toContain("Not signed in");
   });
 
   it("lists what a moderator holds", () => {
-    const panel = mount("governance-capabilities", makeRuntime(MODERATOR));
+    const panel = mount("bitgate-capabilities", makeRuntime(MODERATOR));
     const text = panel.shadowRoot.textContent;
     expect(text).toContain(CAPABILITY_LABELS["contribute-user-deny"]);
     expect(text).toContain(shortenKey(MODERATOR));
   });
 
   it("shows capabilities an actor lacks rather than omitting them", () => {
-    const panel = mount("governance-capabilities", makeRuntime(CURATOR));
+    const panel = mount("bitgate-capabilities", makeRuntime(CURATOR));
     // A curator holds only contribute-user-deny, but every capability is
     // listed so the boundary is legible.
     for (const label of Object.values(CAPABILITY_LABELS)) {
@@ -94,7 +94,7 @@ describe("<governance-capabilities>", () => {
   });
 
   it("marks held capabilities distinctly from unheld ones", () => {
-    const panel = mount("governance-capabilities", makeRuntime(CURATOR));
+    const panel = mount("bitgate-capabilities", makeRuntime(CURATOR));
     const items = [...panel.shadowRoot.querySelectorAll("li")];
     const held = items.filter((item) => item.textContent.includes("✓"));
     expect(held).toHaveLength(1);
@@ -102,12 +102,12 @@ describe("<governance-capabilities>", () => {
   });
 
   it("tells an account with no authority that it has none", () => {
-    const panel = mount("governance-capabilities", makeRuntime(STRANGER));
+    const panel = mount("bitgate-capabilities", makeRuntime(STRANGER));
     expect(panel.shadowRoot.textContent).toContain("no governance capabilities");
   });
 
   it("grants the root everything", () => {
-    const panel = mount("governance-capabilities", makeRuntime(ROOT));
+    const panel = mount("bitgate-capabilities", makeRuntime(ROOT));
     const held = [...panel.shadowRoot.querySelectorAll("li")].filter((item) =>
       item.textContent.includes("✓"),
     );
@@ -115,9 +115,9 @@ describe("<governance-capabilities>", () => {
   });
 });
 
-describe("<governance-action>", () => {
+describe("<bitgate-action>", () => {
   it("enables the control when the actor holds the capability", () => {
-    const action = mount("governance-action", makeRuntime(MODERATOR), {
+    const action = mount("bitgate-action", makeRuntime(MODERATOR), {
       capability: "contribute-user-deny",
       label: "Restrict",
     });
@@ -125,7 +125,7 @@ describe("<governance-action>", () => {
   });
 
   it("disables it and explains why when they do not", () => {
-    const action = mount("governance-action", makeRuntime(CURATOR), {
+    const action = mount("bitgate-action", makeRuntime(CURATOR), {
       capability: "contribute-event-deny",
       label: "Restrict post",
     });
@@ -136,7 +136,7 @@ describe("<governance-action>", () => {
   });
 
   it("keeps the control visible rather than hiding it", () => {
-    const action = mount("governance-action", makeRuntime(CURATOR), {
+    const action = mount("bitgate-action", makeRuntime(CURATOR), {
       capability: "manage-roles",
       label: "Edit roles",
     });
@@ -145,14 +145,14 @@ describe("<governance-action>", () => {
   });
 
   it("runs the action and announces completion", async () => {
-    const action = mount("governance-action", makeRuntime(MODERATOR), {
+    const action = mount("bitgate-action", makeRuntime(MODERATOR), {
       capability: "contribute-user-deny",
       label: "Restrict",
     });
     action.action = vi.fn().mockResolvedValue({ ok: true });
 
     const completed = vi.fn();
-    action.addEventListener("governance:action-completed", completed);
+    action.addEventListener("bitgate:action-completed", completed);
     action.shadowRoot.querySelector("#run").click();
     await action.pending;
     expect(completed).toHaveBeenCalled();
@@ -161,14 +161,14 @@ describe("<governance-action>", () => {
   });
 
   it("reports a refusal with its stable code", async () => {
-    const action = mount("governance-action", makeRuntime(MODERATOR), {
+    const action = mount("bitgate-action", makeRuntime(MODERATOR), {
       capability: "contribute-user-deny",
       label: "Restrict",
     });
     action.action = vi.fn().mockResolvedValue({ ok: false, code: "protected-target" });
 
     const refused = vi.fn();
-    action.addEventListener("governance:action-refused", refused);
+    action.addEventListener("bitgate:action-refused", refused);
     action.shadowRoot.querySelector("#run").click();
     await action.pending;
     expect(refused).toHaveBeenCalled();
@@ -177,13 +177,13 @@ describe("<governance-action>", () => {
   });
 
   it("reports a thrown failure without breaking the element", async () => {
-    const action = mount("governance-action", makeRuntime(MODERATOR), {
+    const action = mount("bitgate-action", makeRuntime(MODERATOR), {
       capability: "contribute-user-deny",
     });
     action.action = vi.fn().mockRejectedValue(new Error("relay down"));
 
     const failed = vi.fn();
-    action.addEventListener("governance:action-failed", failed);
+    action.addEventListener("bitgate:action-failed", failed);
     action.shadowRoot.querySelector("#run").click();
     await action.pending;
     expect(failed).toHaveBeenCalled();
@@ -193,7 +193,7 @@ describe("<governance-action>", () => {
 
   it("re-evaluates permission when the roster changes", () => {
     const runtime = makeRuntime(MODERATOR);
-    const action = mount("governance-action", runtime, {
+    const action = mount("bitgate-action", runtime, {
       capability: "contribute-user-deny",
     });
     expect(action.shadowRoot.querySelector("#run").disabled).toBe(false);
@@ -203,7 +203,7 @@ describe("<governance-action>", () => {
   });
 });
 
-describe("<governance-admin-panel>", () => {
+describe("<bitgate-admin-panel>", () => {
   /**
    * @param {any} runtime
    * @param {Object} [options]
@@ -220,13 +220,13 @@ describe("<governance-admin-panel>", () => {
   }
 
   it("reports when no runtime is attached", () => {
-    const panel = /** @type {any} */ (document.createElement("governance-admin-panel"));
+    const panel = /** @type {any} */ (document.createElement("bitgate-admin-panel"));
     document.body.append(panel);
     expect(panel.shadowRoot.textContent).toContain("No runtime attached");
   });
 
   it("shows the roster summary", () => {
-    const panel = mount("governance-admin-panel", makeRuntime(MODERATOR));
+    const panel = mount("bitgate-admin-panel", makeRuntime(MODERATOR));
     expect(panel.shadowRoot.textContent).toContain(shortenKey(ROOT));
     expect(panel.shadowRoot.textContent).toContain("actor(s)");
   });
@@ -234,27 +234,27 @@ describe("<governance-admin-panel>", () => {
   it("lists restricted accounts", () => {
     const runtime = makeRuntime(MODERATOR);
     denyCreator(runtime);
-    const panel = mount("governance-admin-panel", runtime);
+    const panel = mount("bitgate-admin-panel", runtime);
     expect(panel.shadowRoot.textContent).toContain(shortenKey(CREATOR));
   });
 
   it("distinguishes a community list from a moderator action", () => {
     const runtime = makeRuntime(MODERATOR);
     denyCreator(runtime, { source: "curated-list" });
-    const panel = mount("governance-admin-panel", runtime);
+    const panel = mount("bitgate-admin-panel", runtime);
     expect(panel.shadowRoot.textContent).toContain("community list");
   });
 
   it("attributes a direct action to a moderator", () => {
     const runtime = makeRuntime(MODERATOR);
     denyCreator(runtime);
-    const panel = mount("governance-admin-panel", runtime);
+    const panel = mount("bitgate-admin-panel", runtime);
     expect(panel.shadowRoot.textContent).toContain("moderator");
     expect(panel.shadowRoot.textContent).not.toContain("community list");
   });
 
   it("disables restriction for an actor without the capability", () => {
-    const panel = mount("governance-admin-panel", makeRuntime(STRANGER));
+    const panel = mount("bitgate-admin-panel", makeRuntime(STRANGER));
     expect(panel.shadowRoot.querySelector("#deny").disabled).toBe(true);
     expect(panel.shadowRoot.textContent).toContain("Requires permission");
   });
@@ -264,12 +264,12 @@ describe("<governance-admin-panel>", () => {
     const commands = createCommands(runtime);
     vi.spyOn(commands, "denyUser").mockResolvedValue({ ok: true });
 
-    const panel = mount("governance-admin-panel", runtime);
+    const panel = mount("bitgate-admin-panel", runtime);
     panel.commands = commands;
     panel.shadowRoot.querySelector("#pubkey").value = CREATOR;
 
     const restricted = vi.fn();
-    panel.addEventListener("governance:account-restricted", restricted);
+    panel.addEventListener("bitgate:account-restricted", restricted);
     panel.shadowRoot.querySelector("#deny").click();
     await panel.pending;
     expect(restricted).toHaveBeenCalled();
@@ -282,12 +282,12 @@ describe("<governance-admin-panel>", () => {
     const commands = createCommands(runtime);
     vi.spyOn(commands, "denyUser").mockResolvedValue({ ok: false, code: "protected-target" });
 
-    const panel = mount("governance-admin-panel", runtime);
+    const panel = mount("bitgate-admin-panel", runtime);
     panel.commands = commands;
     panel.shadowRoot.querySelector("#pubkey").value = ROOT;
 
     const refused = vi.fn();
-    panel.addEventListener("governance:action-refused", refused);
+    panel.addEventListener("bitgate:action-refused", refused);
     panel.shadowRoot.querySelector("#deny").click();
     await panel.pending;
     expect(refused).toHaveBeenCalled();
@@ -298,13 +298,13 @@ describe("<governance-admin-panel>", () => {
   it("warns when serving cached state", () => {
     const runtime = makeRuntime(MODERATOR);
     runtime.stale = true;
-    const panel = mount("governance-admin-panel", runtime);
+    const panel = mount("bitgate-admin-panel", runtime);
     expect(panel.shadowRoot.textContent).toContain("relays unreachable");
   });
 
   it("updates when administrative state changes", () => {
     const runtime = makeRuntime(MODERATOR);
-    const panel = mount("governance-admin-panel", runtime);
+    const panel = mount("bitgate-admin-panel", runtime);
     expect(panel.shadowRoot.textContent).toContain("Restricted accounts (0)");
 
     denyCreator(runtime);
@@ -315,7 +315,7 @@ describe("<governance-admin-panel>", () => {
 describe("element registration", () => {
   it("is idempotent", () => {
     // Elements were registered at module load; a second call must not throw.
-    expect(() => defineGovernanceElements()).not.toThrow();
-    expect(defineGovernanceElements()).toEqual([]);
+    expect(() => defineBitGateElements()).not.toThrow();
+    expect(defineBitGateElements()).toEqual([]);
   });
 });

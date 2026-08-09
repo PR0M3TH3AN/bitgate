@@ -14,7 +14,7 @@ import {
   normalizePolicyDefinition,
   normalizePubkey,
   serializeAdminState,
-} from "@nostr-governance/core";
+} from "@bitgate/core";
 import {
   CANONICAL_KIND,
   LEGACY_KIND,
@@ -28,9 +28,9 @@ import {
   decodeRoles,
   selectReplaceable,
   verifyEvents,
-} from "@nostr-governance/nostr";
+} from "@bitgate/nostr";
 
-import { snapshotFingerprint } from "@nostr-governance/core";
+import { snapshotFingerprint } from "@bitgate/core";
 
 import { Emitter } from "./emitter.js";
 import { createMemoryStorage, createNullSigner, storageKey } from "./interfaces.js";
@@ -44,15 +44,15 @@ import {
 } from "./stores.js";
 
 /**
- * @typedef {import('@nostr-governance/nostr').NostrEvent} NostrEvent
+ * @typedef {import('@bitgate/nostr').NostrEvent} NostrEvent
  * @typedef {import('./interfaces.js').GovernanceTransport} GovernanceTransport
  * @typedef {import('./interfaces.js').GovernanceSigner} GovernanceSigner
  * @typedef {import('./interfaces.js').GovernanceStorage} GovernanceStorage
- * @typedef {import('@nostr-governance/core').PolicyDefinition} PolicyDefinition
- * @typedef {import('@nostr-governance/core').GovernanceTarget} GovernanceTarget
- * @typedef {import('@nostr-governance/core').GovernanceDecision} GovernanceDecision
- * @typedef {import('@nostr-governance/core').GovernanceSnapshot} GovernanceSnapshot
- * @typedef {import('@nostr-governance/core').ViewerState} ViewerState
+ * @typedef {import('@bitgate/core').PolicyDefinition} PolicyDefinition
+ * @typedef {import('@bitgate/core').GovernanceTarget} GovernanceTarget
+ * @typedef {import('@bitgate/core').GovernanceDecision} GovernanceDecision
+ * @typedef {import('@bitgate/core').GovernanceSnapshot} GovernanceSnapshot
+ * @typedef {import('@bitgate/core').ViewerState} ViewerState
  */
 
 /** How many targets go into one relay filter chunk. */
@@ -109,7 +109,7 @@ export class GovernanceRuntime extends Emitter {
    * @param {() => number} [options.now] - Injected clock, unix seconds
    * @param {number} [options.chunkSize]
    * @param {number} [options.muteWindowSeconds]
-   * @param {import('@nostr-governance/nostr').SignatureVerifier} [options.verifySignature]
+   * @param {import('@bitgate/nostr').SignatureVerifier} [options.verifySignature]
    * @param {string} [options.root] - Root administrator pubkey, from deployment config
    */
   constructor({
@@ -859,7 +859,7 @@ export class GovernanceRuntime extends Emitter {
   /**
    * Whether an actor holds a capability under the current roster.
    * @param {string} pubkey
-   * @param {import('@nostr-governance/core').GovernanceCapability} capability
+   * @param {import('@bitgate/core').GovernanceCapability} capability
    * @returns {boolean}
    */
   can(pubkey, capability) {
@@ -869,7 +869,7 @@ export class GovernanceRuntime extends Emitter {
   /**
    * Every capability an actor holds under the current roster.
    * @param {string} pubkey
-   * @returns {import('@nostr-governance/core').GovernanceCapability[]}
+   * @returns {import('@bitgate/core').GovernanceCapability[]}
    */
   capabilitiesOf(pubkey) {
     return getActorCapabilities(pubkey, this.admin.authority);
@@ -877,7 +877,7 @@ export class GovernanceRuntime extends Emitter {
 
   /**
    * What the current viewer is allowed to do.
-   * @returns {import('@nostr-governance/core').GovernanceCapability[]}
+   * @returns {import('@bitgate/core').GovernanceCapability[]}
    */
   viewerCapabilities() {
     return this.viewerPubkey ? this.capabilitiesOf(this.viewerPubkey) : [];
@@ -942,6 +942,6 @@ export class GovernanceRuntime extends Emitter {
  * @param {ConstructorParameters<typeof GovernanceRuntime>[0]} options
  * @returns {GovernanceRuntime}
  */
-export function createGovernanceRuntime(options) {
+export function createBitGate(options) {
   return new GovernanceRuntime(options);
 }

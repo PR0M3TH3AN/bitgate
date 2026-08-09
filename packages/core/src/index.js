@@ -1,4 +1,4 @@
-// @nostr-governance/core
+// @bitgate/core
 //
 // Pure, headless governance primitives. No I/O, no browser globals, no
 // application thresholds. Applications supply a policy definition and a
@@ -84,6 +84,14 @@ export {
   evaluateObjects,
   collectTargets,
 } from "./adapter.js";
+
+export {
+  SOCIAL_POLICY,
+  COMMERCE_POLICY,
+  ADMIN_ONLY_POLICY,
+  POLICY_PRESETS,
+  getPolicyPreset,
+} from "./presets.js";
 
 export {
   canonicalStringify,

@@ -17,7 +17,7 @@ import { getTagValue, getTags } from "./replaceable.js";
 
 /**
  * @typedef {import('./replaceable.js').NostrEvent} NostrEvent
- * @typedef {import('@nostr-governance/core').Contribution} Contribution
+ * @typedef {import('@bitgate/core').Contribution} Contribution
  */
 
 /** Legacy people-list kind used by the reference application. */
@@ -85,7 +85,7 @@ export function decodeLegacyList(event) {
     return null;
   }
 
-  /** @type {import('@nostr-governance/core').GovernanceTarget[]} */
+  /** @type {import('@bitgate/core').GovernanceTarget[]} */
   const targets = [];
 
   if (kind === "event-deny") {

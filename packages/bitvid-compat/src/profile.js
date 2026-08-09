@@ -1,7 +1,7 @@
 // Reference application profile for the extraction's characterization corpus.
 //
 // These values are one application's configuration, not governance defaults.
-// They live outside @nostr-governance/core on purpose: the core engine must
+// They live outside @bitgate/core on purpose: the core engine must
 // carry no application thresholds, and this file is what proves the generic
 // engine can reproduce a real deployment's behavior.
 //
@@ -9,7 +9,7 @@
 // docs/reference-map.md). Changing a number here should break a conformance
 // fixture — that is the point.
 
-import { createPolicyDefinition } from "@nostr-governance/core";
+import { createPolicyDefinition } from "@bitgate/core";
 
 /** Trusted reports needed before a thumbnail is blurred. */
 export const BLUR_THRESHOLD = 3;
@@ -34,7 +34,7 @@ export const TRUSTED_MUTE_WINDOW_SECONDS = TRUSTED_MUTE_WINDOW_DAYS * 24 * 60 * 
  * autoplay threshold is the withheld autoplay. Spam escalates to a hide at its
  * own higher threshold, while other categories never hide on reports alone.
  *
- * @type {Record<string, import('@nostr-governance/core').CategoryThresholds>}
+ * @type {Record<string, import('@bitgate/core').CategoryThresholds>}
  */
 const REPORT_THRESHOLDS = {
   default: {
@@ -54,7 +54,7 @@ const REPORT_THRESHOLDS = {
  * Below the hide threshold a trusted mute is a ranking signal only: it must not
  * blur, must not block playback, and must not read as an administrative denial.
  *
- * @type {Record<string, import('@nostr-governance/core').CategoryThresholds>}
+ * @type {Record<string, import('@bitgate/core').CategoryThresholds>}
  */
 const MUTE_THRESHOLDS = {
   default: {
@@ -70,7 +70,7 @@ const MUTE_THRESHOLDS = {
  * override: discovery feeds decline to hard-hide so that a single stale list
  * cannot empty a feed, while playback enforces the full decision.
  *
- * @type {import('@nostr-governance/core').PolicyDefinition}
+ * @type {import('@bitgate/core').PolicyDefinition}
  */
 export const REFERENCE_POLICY = createPolicyDefinition({
   id: "reference-video-app",

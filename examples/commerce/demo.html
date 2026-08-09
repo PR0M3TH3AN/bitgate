@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>nostr-governance widget demo</title>
+    <title>BitGate widget demo</title>
     <style>
       :root { color-scheme: light dark; }
       body {
@@ -29,20 +29,20 @@
     </style>
   </head>
   <body>
-    <h1>nostr-governance widget</h1>
+    <h1>BitGate widget demo</h1>
     <p class="lede">
       Every element below reads from one shared runtime. Toggle governance state
       and watch each surface reach its own conclusion from the same evidence.
     </p>
 
     <section>
-      <h2>Viewer surface — <code>&lt;governance-veil&gt;</code></h2>
-      <governance-veil id="veil" profile="public-marketplace">
+      <h2>Viewer surface — <code>&lt;bitgate-veil&gt;</code></h2>
+      <bitgate-veil id="veil" profile="public-marketplace">
         <div class="card">
           <img alt="" />
           <p><strong>Widget</strong> — 1000 sats</p>
         </div>
-      </governance-veil>
+      </bitgate-veil>
 
       <div class="controls">
         <button id="report">Add a trusted scam report</button>
@@ -61,8 +61,8 @@
     </section>
 
     <section>
-      <h2>Status readout — <code>&lt;governance-status&gt;</code></h2>
-      <governance-status id="status" profile="seller-dashboard"></governance-status>
+      <h2>Status readout — <code>&lt;bitgate-status&gt;</code></h2>
+      <bitgate-status id="status" profile="seller-dashboard"></bitgate-status>
     </section>
 
     <section>
@@ -72,20 +72,20 @@
         listings but not sellers. Note that the refused control stays visible
         and says what it needs.
       </p>
-      <governance-capabilities id="caps"></governance-capabilities>
-      <governance-admin-panel id="panel"></governance-admin-panel>
+      <bitgate-capabilities id="caps"></bitgate-capabilities>
+      <bitgate-admin-panel id="panel"></bitgate-admin-panel>
     </section>
 
     <script type="module">
       import {
         createCommands,
-        createGovernanceRuntime,
+        createBitGate,
         createMemoryTransport,
       } from "../../packages/runtime/src/index.js";
-      import { defineGovernanceElements } from "../../packages/widget/src/index.js";
+      import { defineBitGateElements } from "../../packages/widget/src/index.js";
       import { COMMERCE_POLICY, COMMERCE_ROLE_CAPABILITIES } from "./src/policy.js";
 
-      defineGovernanceElements();
+      defineBitGateElements();
 
       const key = (seed) => seed.repeat(64).slice(0, 64);
       const ROOT = key("a1");
@@ -95,7 +95,7 @@
       const NOW = Math.floor(Date.now() / 1000);
       const trusted = (i) => key(i.toString(16).padStart(2, "0"));
 
-      const runtime = createGovernanceRuntime({
+      const runtime = createBitGate({
         applicationId: "commerce-demo",
         namespace: "commerce",
         root: ROOT,

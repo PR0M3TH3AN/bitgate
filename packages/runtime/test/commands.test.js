@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createPolicyDefinition } from "@nostr-governance/core";
-import { REPORT_KIND, encodeRoles } from "@nostr-governance/nostr";
+import { createPolicyDefinition } from "@bitgate/core";
+import { REPORT_KIND, encodeRoles } from "@bitgate/nostr";
 
 import { ERROR_CODES, createCommands } from "../src/commands.js";
-import { createGovernanceRuntime } from "../src/runtime.js";
+import { createBitGate } from "../src/runtime.js";
 import { createMemoryTransport } from "../src/interfaces.js";
 
 const ROOT = "a1".repeat(32);
@@ -45,7 +45,7 @@ function signerFor(pubkey) {
  */
 function setup({ actor = MODERATOR, signer, transport } = {}) {
   const memory = transport ?? createMemoryTransport();
-  const runtime = createGovernanceRuntime({
+  const runtime = createBitGate({
     applicationId: "test",
     namespace: "app",
     transport: memory,
@@ -177,7 +177,7 @@ describe("argument validation", () => {
 
 describe("signer failures", () => {
   it("reports a missing signer", async () => {
-    const runtime = createGovernanceRuntime({
+    const runtime = createBitGate({
       applicationId: "test",
       namespace: "app",
       transport: createMemoryTransport(),
@@ -244,7 +244,7 @@ describe("contribution round-trip", () => {
     const { runtime, commands, transport } = setup();
     await commands.denyUser(CREATOR);
 
-    const fresh = createGovernanceRuntime({
+    const fresh = createBitGate({
       applicationId: "test",
       namespace: "app",
       transport: createMemoryTransport(),

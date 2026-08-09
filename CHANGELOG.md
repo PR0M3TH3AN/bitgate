@@ -7,6 +7,34 @@ public API changes with it.
 
 ## [Unreleased]
 
+### Changed — renamed to BitGate
+
+`@nostr-governance/*` is now `@bitgate/*`, `governance-*` elements are
+`bitgate-*`, and `createGovernanceRuntime` / `defineGovernanceElements` are
+`createBitGate` / `defineBitGateElements`. Domain types keep their names: the
+product is BitGate, the subject matter is still governance. See
+[ADR 0005](docs/adr/0005-rename-to-bitgate.md).
+
+The storage key prefix changed from `nostr-governance:` to `bitgate:`.
+
+### Added — drop-in distribution
+
+Adopting BitGate previously meant supplying a transport, authoring a policy,
+and wiring every element in JavaScript. Three pieces close that gap, plus a
+build step. See [ADR 0006](docs/adr/0006-drop-in-distribution.md).
+
+- **`createRelayTransport(urls)`** — a small WebSocket transport with
+  reconnection, backoff, subscription replay, and cross-relay deduplication.
+- **Policy presets** — `social`, `commerce`, `admin-only`, addressable by name.
+  The engine still carries no thresholds of its own.
+- **`<bitgate-provider>`** — configuration in markup; descendants find the
+  runtime through a bubbling context-request event rather than DOM walking,
+  which would break across shadow boundaries. Targets can be read from
+  attributes (`target-user`, `target-event`, `target-address`).
+- **`npm run build:widget`** — a self-contained `dist/bitgate.js` via esbuild.
+  Bare specifiers do not resolve in browsers, so the unbundled source worked
+  everywhere except a plain static page. Not committed: build from source.
+
 ### Added
 
 - **Core decision model.** Four independent dimensions (`ranking`, `visibility`,
@@ -43,10 +71,10 @@ public API changes with it.
   bounded subscription counts, and targeted invalidation.
 - **Security requirements suite** (`tests/security/`) covering the enumerated
   requirements testable at this layer.
-- **`@nostr-governance/widget`**: framework-agnostic custom elements. Viewer
-  surfaces (`governance-veil`, `governance-report`, `governance-status`) and
-  moderator surfaces (`governance-capabilities`, `governance-action`,
-  `governance-admin-panel`), plus a runnable demo page. Elements render
+- **`@bitgate/widget`**: framework-agnostic custom elements. Viewer
+  surfaces (`bitgate-veil`, `bitgate-report`, `bitgate-status`) and
+  moderator surfaces (`bitgate-capabilities`, `bitgate-action`,
+  `bitgate-admin-panel`), plus a runnable demo page. Elements render
   decisions and issue commands; they compute no policy.
 - **Runtime wiring**: storage persistence and hydration, signature verification
   in the load path, trusted mute-list subscriptions, community source
@@ -55,6 +83,17 @@ public API changes with it.
 
 ### Fixed
 
+- `GovernanceAdminStore` announced nothing when a roster change altered
+  capabilities without changing any denial, leaving capability-gated UI and the
+  decision cache stale.
+- The relay transport sent every subscription twice on connect: queued REQ
+  frames were flushed *and* subscriptions were replayed from the map.
+- The commerce preset computed a visibility verdict at checkout, a surface that
+  renders nothing, and could hide a listing from its own seller — leaving no
+  route to appeal. Checkout now declares only transaction gates, and the seller
+  dashboard caps visibility at a warning.
+- `<bitgate-status>` threw if a runtime returned an unusable decision.
+- `ReportStore.ingest` required a `target` field it never read.
 - Per-package `types` fields pointed at paths the build never produced, so
   consumers received no type declarations at all. Declarations now emit per
   package and resolve.
@@ -100,7 +139,7 @@ public API changes with it.
 - The evaluator no longer carries application thresholds. The previous invented
   defaults (5/3/10/5) are gone; applications supply category thresholds through
   a policy definition. The characterized reference values live in
-  `@nostr-governance/bitvid-compat` as one application's profile.
+  `@bitgate/bitvid-compat` as one application's profile.
 - `createAuthorityState` takes an options object and always grants the root
   every capability and protection.
 - Evaluation takes a `GovernanceSnapshot` and a `ViewerState` rather than a

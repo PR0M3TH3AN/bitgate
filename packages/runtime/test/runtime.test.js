@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createPolicyDefinition } from "@nostr-governance/core";
+import { createPolicyDefinition } from "@bitgate/core";
 import {
   CANONICAL_KIND,
   MUTE_LIST_KIND,
@@ -8,9 +8,9 @@ import {
   canonicalIdentifier,
   encodeContribution,
   encodeRoles,
-} from "@nostr-governance/nostr";
+} from "@bitgate/nostr";
 
-import { GovernanceRuntime, chunk, createGovernanceRuntime } from "../src/runtime.js";
+import { GovernanceRuntime, chunk, createBitGate } from "../src/runtime.js";
 import { createMemoryTransport, storageKey } from "../src/interfaces.js";
 
 const ROOT = "a1".repeat(32);
@@ -37,8 +37,8 @@ const POLICY = createPolicyDefinition({
 });
 
 /**
- * @param {Partial<import('@nostr-governance/nostr').NostrEvent>} parts
- * @returns {import('@nostr-governance/nostr').NostrEvent}
+ * @param {Partial<import('@bitgate/nostr').NostrEvent>} parts
+ * @returns {import('@bitgate/nostr').NostrEvent}
  */
 const event = (parts) => ({
   id: "00".repeat(32),
@@ -57,7 +57,7 @@ const rolesEvent = () =>
     ...encodeRoles({ actors: { [MODERATOR]: ["moderator"] }, protectedActors: [] }, "app"),
   });
 
-/** @param {import('@nostr-governance/core').GovernanceTarget} [target] */
+/** @param {import('@bitgate/core').GovernanceTarget} [target] */
 const denyEvent = (target = { type: "user", pubkey: CREATOR }) =>
   event({
     id: "bb".repeat(32),
@@ -66,7 +66,7 @@ const denyEvent = (target = { type: "user", pubkey: CREATOR }) =>
 
 function makeRuntime(events = []) {
   const transport = createMemoryTransport(events);
-  const runtime = createGovernanceRuntime({
+  const runtime = createBitGate({
     applicationId: "test-app",
     namespace: "app",
     transport,
@@ -100,7 +100,7 @@ describe("storageKey", () => {
         schemaVersion: "v1",
         scope: "admin",
       }),
-    ).toBe("nostr-governance:bitroad:bitroad:abcd:v1:admin");
+    ).toBe("bitgate:bitroad:bitroad:abcd:v1:admin");
   });
 
   it("appends the viewer for viewer-scoped state", () => {
@@ -260,7 +260,7 @@ describe("loadAdministrativeState", () => {
   it("can restrict the query to known authors", async () => {
     const transport = createMemoryTransport([rolesEvent(), denyEvent()]);
     const listSpy = vi.spyOn(transport, "list");
-    const runtime = createGovernanceRuntime({
+    const runtime = createBitGate({
       applicationId: "a",
       namespace: "app",
       transport,
@@ -277,7 +277,7 @@ describe("active targets and subscriptions", () => {
   it("chunks report subscriptions rather than opening one per target", () => {
     const transport = createMemoryTransport();
     const subscribeSpy = vi.spyOn(transport, "subscribe");
-    const runtime = createGovernanceRuntime({
+    const runtime = createBitGate({
       applicationId: "a",
       namespace: "app",
       transport,
@@ -299,7 +299,7 @@ describe("active targets and subscriptions", () => {
   it("separates event and user filters", () => {
     const transport = createMemoryTransport();
     const subscribeSpy = vi.spyOn(transport, "subscribe");
-    const runtime = createGovernanceRuntime({
+    const runtime = createBitGate({
       applicationId: "a",
       namespace: "app",
       transport,
@@ -411,7 +411,7 @@ describe("evaluation", () => {
     runtime.ingestEvent(rolesEvent());
     runtime.ingestEvent(denyEvent());
 
-    /** @type {import('@nostr-governance/core').GovernanceTarget} */
+    /** @type {import('@bitgate/core').GovernanceTarget} */
     const target = { type: "user", pubkey: CREATOR };
     const many = runtime.evaluateMany([target], { profile: "feed" });
     expect(many.get(`user:${CREATOR}`)).toEqual(runtime.evaluate(target, { profile: "feed" }));

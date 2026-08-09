@@ -6,7 +6,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { createCommands, createGovernanceRuntime, createMemoryTransport } from "@nostr-governance/runtime";
+import { createCommands, createBitGate, createMemoryTransport } from "@bitgate/runtime";
 
 import { COMMERCE_POLICY, COMMERCE_ROLE_CAPABILITIES } from "../src/policy.js";
 import { productAdapter, reviewAdapter, sellerAdapter } from "../src/adapters.js";
@@ -57,7 +57,7 @@ const RIVAL_PRODUCT = {
 };
 
 function setup({ allowlisted = [SELLER, OTHER_SELLER] } = {}) {
-  const runtime = createGovernanceRuntime({
+  const runtime = createBitGate({
     applicationId: "commerce-example",
     namespace: "commerce",
     transport: createMemoryTransport(),
@@ -298,7 +298,7 @@ describe("7. moderator capability checks", () => {
   });
 
   function commandsAs(pubkey) {
-    const runtime = createGovernanceRuntime({
+    const runtime = createBitGate({
       applicationId: "commerce-example",
       namespace: "commerce",
       transport: createMemoryTransport(),
@@ -462,7 +462,7 @@ describe("10. no core changes required", () => {
     // Every import in this example resolves through a package entry point; if
     // one reached into a package's internals, the reference guard and this
     // assertion are what would catch it.
-    const core = await import("@nostr-governance/core");
+    const core = await import("@bitgate/core");
     for (const name of [
       "createApplicationAdapter",
       "evaluateObject",
