@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>nostr-governance widget demo</title>
+    <style>
+      :root { color-scheme: light dark; }
+      body {
+        font: 16px/1.5 system-ui, sans-serif;
+        max-width: 60rem;
+        margin: 0 auto;
+        padding: 2rem 1rem 6rem;
+      }
+      h1 { margin-bottom: 0.25rem; }
+      .lede { color: color-mix(in srgb, currentColor 65%, transparent); margin-top: 0; }
+      section {
+        border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+        border-radius: 10px;
+        padding: 1rem 1.25rem;
+        margin: 1.5rem 0;
+      }
+      h2 { font-size: 1.05rem; margin-top: 0; }
+      .card { max-width: 22rem; border-radius: 8px; overflow: hidden; }
+      .card img { display: block; width: 100%; background: #8884; aspect-ratio: 16/9; }
+      .controls { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem; }
+      button { font: inherit; padding: 0.4em 0.8em; border-radius: 8px; cursor: pointer; }
+      code { font-size: 0.9em; }
+    </style>
+  </head>
+  <body>
+    <h1>nostr-governance widget</h1>
+    <p class="lede">
+      Every element below reads from one shared runtime. Toggle governance state
+      and watch each surface reach its own conclusion from the same evidence.
+    </p>
+
+    <section>
+      <h2>Viewer surface — <code>&lt;governance-veil&gt;</code></h2>
+      <governance-veil id="veil" profile="public-marketplace">
+        <div class="card">
+          <img alt="" />
+          <p><strong>Widget</strong> — 1000 sats</p>
+        </div>
+      </governance-veil>
+
+      <div class="controls">
+        <button id="report">Add a trusted scam report</button>
+        <button id="deny">Restrict the seller</button>
+        <button id="reset">Reset</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>Same product, four surfaces</h2>
+      <p class="lede">
+        One snapshot, four profiles. This is the state a single
+        <code>hidden</code> boolean cannot express.
+      </p>
+      <div id="surfaces"></div>
+    </section>
+
+    <section>
+      <h2>Status readout — <code>&lt;governance-status&gt;</code></h2>
+      <governance-status id="status" profile="seller-dashboard"></governance-status>
+    </section>
+
+    <section>
+      <h2>Moderator console</h2>
+      <p class="lede">
+        Signed in as a <strong>listing moderator</strong>, who may restrict
+        listings but not sellers. Note that the refused control stays visible
+        and says what it needs.
+      </p>
+      <governance-capabilities id="caps"></governance-capabilities>
+      <governance-admin-panel id="panel"></governance-admin-panel>
+    </section>
+
+    <script type="module">
+      import {
+        createCommands,
+        createGovernanceRuntime,
+        createMemoryTransport,
+      } from "../../packages/runtime/src/index.js";
+      import { defineGovernanceElements } from "../../packages/widget/src/index.js";
+      import { COMMERCE_POLICY, COMMERCE_ROLE_CAPABILITIES } from "./src/policy.js";
+
+      defineGovernanceElements();
+
+      const key = (seed) => seed.repeat(64).slice(0, 64);
+      const ROOT = key("a1");
+      const LISTING_MOD = key("b2");
+      const SELLER_MOD = key("c3");
+      const SELLER = key("d4");
+      const NOW = Math.floor(Date.now() / 1000);
+      const trusted = (i) => key(i.toString(16).padStart(2, "0"));
+
+      const runtime = createGovernanceRuntime({
+        applicationId: "commerce-demo",
+        namespace: "commerce",
+        root: ROOT,
+        transport: createMemoryTransport(),
+        policy: COMMERCE_POLICY,
+        now: () => NOW,
+      });
+
+      function resetRoster() {
+        runtime.admin.setRoles({
+          root: ROOT,
+          roles: COMMERCE_ROLE_CAPABILITIES,
+          actors: {
+            [ROOT]: ["super_admin"],
+            [LISTING_MOD]: ["listing_moderator"],
+            [SELLER_MOD]: ["seller_moderator"],
+          },
+        });
+        runtime.admin.upsertContribution({
+          actor: ROOT,
+          kind: "user-allow",
+          targets: [{ type: "user", pubkey: SELLER }],
+          createdAt: NOW,
+        });
+      }
+
+      resetRoster();
+      // Signed in as a listing moderator: they may restrict listings, not sellers.
+      runtime.setViewer(LISTING_MOD);
+      runtime.trust.setContacts(Array.from({ length: 8 }, (_, i) => trusted(i + 1)));
+
+      const commands = createCommands(runtime);
+      const target = { type: "address", kind: "30078", pubkey: SELLER, identifier: "sku-001" };
+      const targetKey = `address:30078:${SELLER}:sku-001`;
+
+      for (const [id, node] of [
+        ["veil", document.getElementById("veil")],
+        ["status", document.getElementById("status")],
+      ]) {
+        node.runtime = runtime;
+        node.target = target;
+      }
+
+      const caps = document.getElementById("caps");
+      const panel = document.getElementById("panel");
+      caps.runtime = runtime;
+      panel.runtime = runtime;
+      panel.commands = commands;
+
+      const PROFILES = ["public-marketplace", "product-detail", "checkout", "seller-dashboard"];
+      const surfaces = document.getElementById("surfaces");
+
+      function renderSurfaces() {
+        surfaces.innerHTML = PROFILES.map((profile) => {
+          const decision = runtime.evaluate(target, { profile });
+          return `<p><code>${profile}</code> — visibility:
+            <strong>${decision.visibility.effect}</strong>, transaction:
+            <strong>${decision.transaction?.effect ?? "n/a"}</strong>, rank:
+            <strong>${decision.ranking.effect}</strong></p>`;
+        }).join("");
+      }
+
+      runtime.on("change", renderSurfaces);
+      renderSurfaces();
+
+      let reportCount = 0;
+      document.getElementById("report").addEventListener("click", () => {
+        reportCount += 1;
+        runtime.reports.ingest(
+          { reporter: trusted(reportCount), category: "scam", createdAt: NOW },
+          targetKey,
+        );
+      });
+
+      document.getElementById("deny").addEventListener("click", () => {
+        runtime.admin.upsertContribution({
+          actor: SELLER_MOD,
+          kind: "user-deny",
+          targets: [{ type: "user", pubkey: SELLER }],
+          createdAt: NOW + reportCount,
+        });
+      });
+
+      document.getElementById("reset").addEventListener("click", () => {
+        reportCount = 0;
+        runtime.reports.clearTarget(targetKey);
+        runtime.admin.setContributions([]);
+        resetRoster();
+      });
+    </script>
+  </body>
+</html>

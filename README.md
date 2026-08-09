@@ -45,6 +45,7 @@ equivalent to following the operator's seed list.
 | `@nostr-governance/nostr` | Codecs: canonical v1, NIP-56, NIP-51, legacy lists, bech32. |
 | `@nostr-governance/runtime` | Stores, transport orchestration, commands. |
 | `@nostr-governance/testing` | Conformance harness. |
+| `@nostr-governance/widget` | Drop-in custom elements: viewer controls and a moderator console. |
 | `@nostr-governance/bitvid-compat` | Reference application profile for the characterization corpus. |
 
 ## Quick start
@@ -115,6 +116,30 @@ marketplace built entirely on the public API, demonstrating seller allowlists,
 address denial that survives republication, malware-driven checkout blocking,
 capability-scoped moderator roles, community curator ingestion, and
 seller-facing explanations. See [`docs/integration-guide.md`](docs/integration-guide.md).
+
+## Plug-and-play UI
+
+`@nostr-governance/widget` ships custom elements that render decisions and issue
+commands — and compute no policy of their own:
+
+```html
+<governance-veil profile="feed"><img src="thumbnail.jpg" alt="" /></governance-veil>
+```
+
+```js
+import { defineGovernanceElements } from "@nostr-governance/widget";
+defineGovernanceElements();
+
+const veil = document.querySelector("governance-veil");
+veil.runtime = runtime;
+veil.target = { type: "event", id, author };
+```
+
+Viewer elements (`governance-veil`, `governance-report`, `governance-status`)
+and moderator elements (`governance-capabilities`, `governance-action`,
+`governance-admin-panel`) are separate, so a site embeds only what it needs.
+See [`packages/widget/README.md`](packages/widget/README.md) and the runnable
+[`examples/commerce/demo.html`](examples/commerce/demo.html).
 
 ## Authority model
 

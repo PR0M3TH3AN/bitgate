@@ -382,3 +382,37 @@ describe("OverrideStore", () => {
     expect(handler).toHaveBeenCalledTimes(3);
   });
 });
+
+describe("GovernanceAdminStore authority changes", () => {
+  it("emits when a role is revoked even if no denial changes", () => {
+    const store = new GovernanceAdminStore();
+    store.setRoles(roster);
+    const handler = vi.fn();
+    store.on("change", handler);
+
+    // No contributions exist, so effective denial state is empty before and
+    // after. The capability change must still be announced.
+    store.setRoles({ root: ROOT, actors: { [ROOT]: ["super_admin"] } });
+    expect(handler).toHaveBeenCalledTimes(1);
+  });
+
+  it("emits when protected actors change", () => {
+    const store = new GovernanceAdminStore();
+    store.setRoles(roster);
+    const handler = vi.fn();
+    store.on("change", handler);
+
+    store.setRoles({ ...roster, protectedActors: [CREATOR] });
+    expect(handler).toHaveBeenCalledTimes(1);
+  });
+
+  it("stays quiet when the roster is set to the same thing", () => {
+    const store = new GovernanceAdminStore();
+    store.setRoles(roster);
+    const handler = vi.fn();
+    store.on("change", handler);
+
+    store.setRoles(roster);
+    expect(handler).not.toHaveBeenCalled();
+  });
+});

@@ -38,6 +38,8 @@ export class GovernanceAdminStore extends Emitter {
     this.state = createEmptyAdminState();
     /** @type {string} */
     this.fingerprint = fingerprint(serializeAdminState(this.state));
+    /** @type {string} */
+    this.authorityFingerprint = this.#computeAuthorityFingerprint();
   }
 
   /**
@@ -51,6 +53,15 @@ export class GovernanceAdminStore extends Emitter {
   setRoles(roster) {
     this.authority = createAuthorityState(roster ?? {});
     this.#recompute();
+  }
+
+  #computeAuthorityFingerprint() {
+    return fingerprint({
+      root: this.authority.root ?? "",
+      actors: this.authority.actors,
+      roles: this.authority.roles,
+      protectedActors: this.authority.protectedActors,
+    });
   }
 
   /**
@@ -104,11 +115,22 @@ export class GovernanceAdminStore extends Emitter {
   #recompute() {
     const next = reduceAdminState(this.contributions, this.authority);
     const nextFingerprint = fingerprint(serializeAdminState(next));
+    const nextAuthority = this.#computeAuthorityFingerprint();
+
     this.state = next;
 
-    if (nextFingerprint !== this.fingerprint) {
-      this.fingerprint = nextFingerprint;
-      this.emit("change", { fingerprint: nextFingerprint });
+    // A roster change can alter capabilities and protected actors without
+    // changing a single denial entry. Emitting only on reduced state would
+    // leave capability-gated UI and the decision cache stale after a
+    // revocation that happened to deny nobody.
+    const changed =
+      nextFingerprint !== this.fingerprint || nextAuthority !== this.authorityFingerprint;
+
+    this.fingerprint = nextFingerprint;
+    this.authorityFingerprint = nextAuthority;
+
+    if (changed) {
+      this.emit("change", { fingerprint: nextFingerprint, authorityFingerprint: nextAuthority });
     }
   }
 }
@@ -223,7 +245,10 @@ export class ReportStore extends Emitter {
    * structural: re-ingesting the same report cannot inflate a count, which
    * matters because relays routinely deliver duplicates.
    *
-   * @param {{ reporter: string, target: import('@nostr-governance/core').GovernanceTarget, category: string, createdAt?: number }} report
+   * The target is identified by `targetKey`; a decoded report's own `target`
+   * field is accepted but not required, since it would be redundant.
+   *
+   * @param {{ reporter: string, category: string, createdAt?: number, target?: import('@nostr-governance/core').GovernanceTarget }} report
    * @param {string} targetKey
    */
   ingest(report, targetKey) {

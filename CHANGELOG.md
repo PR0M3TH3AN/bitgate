@@ -43,6 +43,14 @@ public API changes with it.
   bounded subscription counts, and targeted invalidation.
 - **Security requirements suite** (`tests/security/`) covering the enumerated
   requirements testable at this layer.
+- **`@nostr-governance/widget`**: framework-agnostic custom elements. Viewer
+  surfaces (`governance-veil`, `governance-report`, `governance-status`) and
+  moderator surfaces (`governance-capabilities`, `governance-action`,
+  `governance-admin-panel`), plus a runnable demo page. Elements render
+  decisions and issue commands; they compute no policy.
+- **Runtime wiring**: storage persistence and hydration, signature verification
+  in the load path, trusted mute-list subscriptions, community source
+  resolution, root-policy application, import/export, and capability queries.
 - GPL-3.0-or-later `LICENSE`, `README`, and an integration guide.
 
 ### Fixed
@@ -59,6 +67,12 @@ public API changes with it.
   governed by several targets lost the evidence that drove its verdict.
 - `OverrideStore.clear()` shadowed the inherited listener `clear()`, leaking
   subscribers on teardown. Now `clearOverrides()`.
+- `GovernanceAdminStore` emitted only when reduced denial state changed, so
+  revoking a role that happened to deny nobody announced nothing — leaving
+  capability-gated UI and the decision cache stale. It now also emits on
+  authority changes.
+- `ReportStore.ingest` required a `target` field it never read, since the
+  target is identified by the key argument.
 - Evaluation was quadratic in state size: both the snapshot and its fingerprint
   were rebuilt for every target, so each call walked every report and mute
   list. A 5,000-target pass took ~47s. The runtime now memoizes the snapshot

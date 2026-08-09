@@ -1,0 +1,22 @@
+{
+  "name": "@nostr-governance/widget",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "src/index.js",
+  "types": "dist/types/index.d.ts",
+  "files": ["src", "dist"],
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./src/index.js"
+    },
+    "./dist/types/*": "./dist/types/*"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@nostr-governance/core": "*",
+    "@nostr-governance/runtime": "*"
+  }
+}
