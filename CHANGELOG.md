@@ -80,6 +80,11 @@ public API changes with it.
   fingerprint once for the batch. The same pass now takes ~85ms cold and ~6ms
   warm.
 
+- `npm audit` reported 5 vulnerabilities (1 critical, 2 high, 2 moderate), all
+  from `vitest@1.6.1`'s dependency tree (`vite` → `esbuild`, `postcss` →
+  `nanoid`). Dev-only and never shipped, since packages publish `src` and
+  `dist` alone. Upgrading to `vitest@3` clears all five with no test changes.
+
 ### Changed
 
 - The evaluator no longer carries application thresholds. The previous invented
