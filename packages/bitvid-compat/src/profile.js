@@ -69,6 +69,8 @@ const MUTE_THRESHOLDS = {
  * Surfaces differ only in how they treat a hide and whether a viewer may
  * override: discovery feeds decline to hard-hide so that a single stale list
  * cannot empty a feed, while playback enforces the full decision.
+ *
+ * @type {import('@nostr-governance/core').PolicyDefinition}
  */
 export const REFERENCE_POLICY = createPolicyDefinition({
   id: "reference-video-app",
