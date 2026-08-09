@@ -299,7 +299,8 @@ describe("<governance-report>", () => {
 
     report.shadowRoot.querySelector("#category").value = "spam";
     report.shadowRoot.querySelector("form").dispatchEvent(new Event("submit"));
-    await vi.waitFor(() => expect(reported).toHaveBeenCalled());
+    await report.pending;
+    expect(reported).toHaveBeenCalled();
 
     expect(commands.report).toHaveBeenCalledWith({ type: "event", id: EVENT_ID }, "spam", "");
     expect(report.shadowRoot.textContent).toContain("Report published");
@@ -317,7 +318,8 @@ describe("<governance-report>", () => {
     const failed = vi.fn();
     report.addEventListener("governance:report-failed", failed);
     report.shadowRoot.querySelector("form").dispatchEvent(new Event("submit"));
-    await vi.waitFor(() => expect(failed).toHaveBeenCalled());
+    await report.pending;
+    expect(failed).toHaveBeenCalled();
 
     expect(report.shadowRoot.textContent).toContain("invalid-target");
   });

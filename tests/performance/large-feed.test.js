@@ -88,16 +88,17 @@ function buildLargeRuntime() {
 
   runtime.trust.setContacts(Array.from({ length: MUTERS_PER_AUTHOR }, (_, i) => muter(i)));
 
-  // 100 trusted muters against each of the first 50 authors.
-  for (let authorIndex = 0; authorIndex < 50; authorIndex += 1) {
-    for (let muterIndex = 0; muterIndex < MUTERS_PER_AUTHOR; muterIndex += 1) {
-      runtime.mutes.replaceList({
-        owner: muter(muterIndex),
-        updatedAt: NOW - 1000,
-        entries: Array.from({ length: 50 }, (_, i) => ({ pubkey: author(i) })),
-        hasEncryptedEntries: false,
-      });
-    }
+  // 100 trusted muters, each muting the same 50 authors — which is what gives
+  // every one of those authors 100 muters. One pass per muter is enough; an
+  // outer loop over authors would repeat identical work 50 times.
+  const mutedAuthors = Array.from({ length: 50 }, (_, i) => ({ pubkey: author(i) }));
+  for (let muterIndex = 0; muterIndex < MUTERS_PER_AUTHOR; muterIndex += 1) {
+    runtime.mutes.replaceList({
+      owner: muter(muterIndex),
+      updatedAt: NOW - 1000,
+      entries: mutedAuthors,
+      hasEncryptedEntries: false,
+    });
   }
 
   // Reports across several categories.
@@ -119,6 +120,30 @@ function buildLargeRuntime() {
 
   return { runtime, transport, targets, MODERATORS };
 }
+
+describe("fixture shape", () => {
+  it("matches the size the migration plan specifies", () => {
+    const { runtime, targets } = buildLargeRuntime();
+
+    expect(targets).toHaveLength(TARGET_COUNT);
+    const authors = targets.map((t) => (t.type === "event" ? t.author : undefined));
+    expect(new Set(authors).size).toBe(AUTHOR_COUNT);
+
+    // Every muted author must carry the full muter count; an earlier version of
+    // this fixture built it with a redundant loop that made setup 50x more
+    // expensive without changing this number.
+    const muteRecords = runtime.mutes.toRecordMap();
+    expect(muteRecords.get(`user:${author(0)}`)).toHaveLength(MUTERS_PER_AUTHOR);
+    expect(muteRecords.get(`user:${author(49)}`)).toHaveLength(MUTERS_PER_AUTHOR);
+
+    // Multiple report categories and several administrative contributors.
+    const categories = new Set(
+      [...runtime.reports.toRecordMap().values()].flat().map((r) => r.category),
+    );
+    expect(categories.size).toBeGreaterThanOrEqual(3);
+    expect(runtime.admin.state.userDeny.size).toBeGreaterThanOrEqual(30);
+  });
+});
 
 describe("large feed evaluation", () => {
   it("evaluates 5,000 targets without touching the network", () => {
@@ -180,12 +205,53 @@ describe("large feed evaluation", () => {
     }
   });
 
-  it("completes a 5,000-target pass in reasonable time", () => {
+  it("materializes state once per batch, not once per target", () => {
+    // This is the regression that made a 5,000-target pass take ~47 seconds:
+    // both the snapshot and its fingerprint were rebuilt for every target, so
+    // each evaluation walked every report and every mute list.
+    //
+    // Asserted structurally rather than by wall clock. A timing budget
+    // measures the machine as much as the code — it varied roughly 20x here
+    // between an idle and a loaded run — which makes it flaky instead of
+    // informative. Counting materializations tests the actual claim and is
+    // deterministic.
     const { runtime, targets } = buildLargeRuntime();
-    const started = performance.now();
+    const reportMaps = vi.spyOn(runtime.reports, "toRecordMap");
+    const muteMaps = vi.spyOn(runtime.mutes, "toRecordMap");
+
     runtime.evaluateMany(targets, { profile: "feed" });
-    // Loose on purpose: this catches an accidental O(n^2), not a slow runner.
-    expect(performance.now() - started).toBeLessThan(10_000);
+
+    expect(reportMaps).toHaveBeenCalledTimes(1);
+    expect(muteMaps).toHaveBeenCalledTimes(1);
+  });
+
+  it("reuses one snapshot fingerprint across a batch", () => {
+    const { runtime, targets } = buildLargeRuntime();
+    const decisions = runtime.evaluateMany(targets.slice(0, 500), { profile: "feed" });
+
+    const fingerprints = new Set([...decisions.values()].map((d) => d.snapshotFingerprint));
+    expect(fingerprints.size).toBe(1);
+  });
+
+  it("re-materializes after state changes, and only then", () => {
+    const { runtime, targets } = buildLargeRuntime();
+    const slice = targets.slice(0, 100);
+
+    const reportMaps = vi.spyOn(runtime.reports, "toRecordMap");
+    runtime.evaluateMany(slice, { profile: "feed" });
+    expect(reportMaps).toHaveBeenCalledTimes(1);
+
+    // A second pass is served from cache and materializes nothing.
+    runtime.evaluateMany(slice, { profile: "feed" });
+    expect(reportMaps).toHaveBeenCalledTimes(1);
+
+    // A state change forces exactly one fresh materialization.
+    runtime.reports.ingest(
+      { reporter: muter(0), category: "spam", createdAt: NOW },
+      `event:${eventId(0)}`,
+    );
+    runtime.evaluateMany(slice, { profile: "feed" });
+    expect(reportMaps).toHaveBeenCalledTimes(2);
   });
 });
 

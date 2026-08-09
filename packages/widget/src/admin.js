@@ -98,6 +98,12 @@ export class GovernanceAction extends GovernanceElement {
     this.commands = null;
     /** @type {(() => Promise<any>)|null} */
     this.action = null;
+    /**
+     * The in-flight action, or null when idle. Hosts can await it to disable
+     * surrounding UI; tests can await it instead of polling.
+     * @type {Promise<void>|null}
+     */
+    this.pending = null;
     this._status = "";
   }
 
@@ -132,7 +138,9 @@ export class GovernanceAction extends GovernanceElement {
       </div>
     `);
 
-    this.$("#run")?.addEventListener("click", () => void this._run());
+    this.$("#run")?.addEventListener("click", () => {
+      this.pending = this._run();
+    });
   }
 
   async _run() {
@@ -154,6 +162,7 @@ export class GovernanceAction extends GovernanceElement {
     }
 
     this.render();
+    this.pending = null;
   }
 }
 
@@ -168,6 +177,8 @@ export class GovernanceAdminPanel extends GovernanceElement {
     super();
     /** @type {GovernanceCommands|null} */
     this.commands = null;
+    /** @type {Promise<void>|null} */
+    this.pending = null;
     this._status = "";
   }
 
@@ -258,7 +269,9 @@ export class GovernanceAdminPanel extends GovernanceElement {
       </div>
     `);
 
-    this.$("#deny")?.addEventListener("click", () => void this._deny());
+    this.$("#deny")?.addEventListener("click", () => {
+      this.pending = this._deny();
+    });
   }
 
   async _deny() {
@@ -275,6 +288,7 @@ export class GovernanceAdminPanel extends GovernanceElement {
     this._status = result.ok ? "Restricted" : `Refused: ${result.code}`;
     this.emit(result.ok ? "account-restricted" : "action-refused", { pubkey, result });
     this.render();
+    this.pending = null;
   }
 }
 

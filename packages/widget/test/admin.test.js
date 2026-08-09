@@ -154,7 +154,8 @@ describe("<governance-action>", () => {
     const completed = vi.fn();
     action.addEventListener("governance:action-completed", completed);
     action.shadowRoot.querySelector("#run").click();
-    await vi.waitFor(() => expect(completed).toHaveBeenCalled());
+    await action.pending;
+    expect(completed).toHaveBeenCalled();
 
     expect(action.shadowRoot.textContent).toContain("Done");
   });
@@ -169,7 +170,8 @@ describe("<governance-action>", () => {
     const refused = vi.fn();
     action.addEventListener("governance:action-refused", refused);
     action.shadowRoot.querySelector("#run").click();
-    await vi.waitFor(() => expect(refused).toHaveBeenCalled());
+    await action.pending;
+    expect(refused).toHaveBeenCalled();
 
     expect(action.shadowRoot.textContent).toContain("protected-target");
   });
@@ -183,7 +185,8 @@ describe("<governance-action>", () => {
     const failed = vi.fn();
     action.addEventListener("governance:action-failed", failed);
     action.shadowRoot.querySelector("#run").click();
-    await vi.waitFor(() => expect(failed).toHaveBeenCalled());
+    await action.pending;
+    expect(failed).toHaveBeenCalled();
 
     expect(action.shadowRoot.textContent).toContain("relay down");
   });
@@ -268,7 +271,8 @@ describe("<governance-admin-panel>", () => {
     const restricted = vi.fn();
     panel.addEventListener("governance:account-restricted", restricted);
     panel.shadowRoot.querySelector("#deny").click();
-    await vi.waitFor(() => expect(restricted).toHaveBeenCalled());
+    await panel.pending;
+    expect(restricted).toHaveBeenCalled();
 
     expect(commands.denyUser).toHaveBeenCalledWith(CREATOR);
   });
@@ -285,7 +289,8 @@ describe("<governance-admin-panel>", () => {
     const refused = vi.fn();
     panel.addEventListener("governance:action-refused", refused);
     panel.shadowRoot.querySelector("#deny").click();
-    await vi.waitFor(() => expect(refused).toHaveBeenCalled());
+    await panel.pending;
+    expect(refused).toHaveBeenCalled();
 
     expect(panel.shadowRoot.textContent).toContain("protected-target");
   });

@@ -195,6 +195,11 @@ export class GovernanceReport extends GovernanceElement {
     this.categories = ["spam", "nudity", "profanity", "illegal", "malware", "impersonation", "other"];
     /** @type {import('@nostr-governance/runtime').GovernanceCommands|null} */
     this.commands = null;
+    /**
+     * The in-flight submission, or null when idle.
+     * @type {Promise<void>|null}
+     */
+    this.pending = null;
     this._status = "";
   }
 
@@ -242,7 +247,7 @@ export class GovernanceReport extends GovernanceElement {
 
     this.$("form")?.addEventListener("submit", (fromEvent) => {
       fromEvent.preventDefault();
-      void this._submit();
+      this.pending = this._submit();
     });
   }
 
@@ -263,6 +268,7 @@ export class GovernanceReport extends GovernanceElement {
     this._status = result.ok ? "Report published" : `Failed: ${result.code}`;
     this.emit(result.ok ? "reported" : "report-failed", { target: this._target, category, result });
     this.render();
+    this.pending = null;
   }
 }
 

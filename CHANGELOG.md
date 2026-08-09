@@ -73,6 +73,16 @@ public API changes with it.
   authority changes.
 - `ReportStore.ingest` required a `target` field it never read, since the
   target is identified by the key argument.
+- The performance fixture was intermittently failing. Its setup repeated the
+  same 100 mute-list writes 50 times with identical data, making construction
+  50x more expensive than the fixture it describes and pushing individual tests
+  past their timeout under load. The fixture's shape is now asserted so it
+  cannot silently degrade again.
+- The performance suite's wall-clock assertion was replaced with structural
+  ones. A timing budget measured the machine as much as the code — it varied
+  roughly 20x between idle and loaded runs here — so it now asserts that state
+  is materialized once per batch, which is the actual regression that made a
+  5,000-target pass take ~47 seconds.
 - Evaluation was quadratic in state size: both the snapshot and its fingerprint
   were rebuilt for every target, so each call walked every report and mute
   list. A 5,000-target pass took ~47s. The runtime now memoizes the snapshot
