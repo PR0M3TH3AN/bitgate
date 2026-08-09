@@ -1,0 +1,56 @@
+{
+  "name": "protected-target",
+  "description": "The root administrator cannot be denied by contributor lists.",
+  "behavior": "Protected actors are stripped from every denial set.",
+  "profile": "feed",
+  "now": 1750000000,
+  "authority": {
+    "root": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+    "actors": {
+      "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1": [
+        "super_admin"
+      ],
+      "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2": [
+        "moderator"
+      ],
+      "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3": [
+        "curator"
+      ]
+    },
+    "protectedActors": [
+      "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+    ]
+  },
+  "contributions": [
+    {
+      "actor": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+      "kind": "user-deny",
+      "targets": [
+        {
+          "type": "user",
+          "pubkey": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        }
+      ]
+    }
+  ],
+  "target": {
+    "type": "user",
+    "pubkey": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+  },
+  "expect": {
+    "ranking": {
+      "effect": "normal",
+      "weight": 0
+    },
+    "visibility": {
+      "effect": "allow",
+      "overridable": true
+    },
+    "interaction": {
+      "effect": "allow"
+    },
+    "evidence": {
+      "protectedTarget": true
+    }
+  }
+}

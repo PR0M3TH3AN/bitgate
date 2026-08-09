@@ -1,0 +1,48 @@
+{
+  "name": "revoked-actor-contribution-dropped",
+  "description": "An actor with no roles cannot deny anyone.",
+  "behavior": "Revocation takes effect immediately because capabilities resolve at merge time.",
+  "profile": "feed",
+  "now": 1750000000,
+  "authority": {
+    "root": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+    "actors": {
+      "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1": [
+        "super_admin"
+      ]
+    },
+    "protectedActors": [
+      "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+    ]
+  },
+  "contributions": [
+    {
+      "actor": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+      "kind": "user-deny",
+      "targets": [
+        {
+          "type": "user",
+          "pubkey": "d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4"
+        }
+      ]
+    }
+  ],
+  "target": {
+    "type": "user",
+    "pubkey": "d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4"
+  },
+  "expect": {
+    "ranking": {
+      "effect": "normal",
+      "weight": 0
+    },
+    "visibility": {
+      "effect": "allow",
+      "overridable": true
+    },
+    "interaction": {
+      "effect": "allow"
+    },
+    "reasons": []
+  }
+}

@@ -1,8 +1,21 @@
 {
   "name": "@nostr-governance/testing",
+  "version": "0.1.0",
   "type": "module",
   "private": true,
+  "main": "src/index.js",
+  "exports": {
+    ".": {
+      "import": "./src/index.js"
+    },
+    "./conformance": {
+      "import": "./src/conformance.js"
+    }
+  },
   "scripts": {
     "test": "vitest run"
+  },
+  "dependencies": {
+    "@nostr-governance/core": "*"
   }
 }

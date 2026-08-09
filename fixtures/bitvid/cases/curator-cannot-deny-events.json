@@ -1,0 +1,56 @@
+{
+  "name": "curator-cannot-deny-events",
+  "description": "A curator's event denial is ignored.",
+  "behavior": "Contributions beyond an actor's capabilities are dropped at merge time.",
+  "profile": "feed",
+  "now": 1750000000,
+  "authority": {
+    "root": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+    "actors": {
+      "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1": [
+        "super_admin"
+      ],
+      "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2": [
+        "moderator"
+      ],
+      "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3": [
+        "curator"
+      ]
+    },
+    "protectedActors": [
+      "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+    ]
+  },
+  "contributions": [
+    {
+      "actor": "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+      "kind": "event-deny",
+      "targets": [
+        {
+          "type": "event",
+          "id": "1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b",
+          "author": "d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4"
+        }
+      ]
+    }
+  ],
+  "target": {
+    "type": "event",
+    "id": "1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b",
+    "author": "d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4"
+  },
+  "expect": {
+    "ranking": {
+      "effect": "normal",
+      "weight": 0
+    },
+    "visibility": {
+      "effect": "allow",
+      "overridable": true
+    },
+    "interaction": {
+      "effect": "allow"
+    },
+    "reasons": []
+  }
+}

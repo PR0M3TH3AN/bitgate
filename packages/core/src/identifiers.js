@@ -14,6 +14,8 @@
  * @typedef {Object} EventTarget
  * @property {"event"} type
  * @property {string} id - 64-character hex event ID
+ * @property {string} [author] - Author pubkey, so author-level denial can reach the event
+ * @property {number} [kind] - Event kind, carried for application routing
  */
 
 /**
@@ -134,16 +136,30 @@ export function createUserTarget(pubkey) {
 /**
  * Create an event target
  * @param {string} id - Event ID in hex or note/nevent format
+ * @param {Object} [options]
+ * @param {string} [options.author] - Author pubkey; ignored when it is not valid hex
+ * @param {number} [options.kind] - Event kind
  * @returns {EventTarget|null} Event target or null if invalid
  */
-export function createEventTarget(id) {
+export function createEventTarget(id, options = {}) {
   const normalizedId = normalizeEventId(id);
   if (!normalizedId) return null;
-  
-  return {
+
+  /** @type {EventTarget} */
+  const target = {
     type: "event",
     id: normalizedId
   };
+
+  const author = normalizePubkey(options.author ?? "");
+  if (author) {
+    target.author = author;
+  }
+  if (Number.isFinite(options.kind)) {
+    target.kind = /** @type {number} */ (options.kind);
+  }
+
+  return target;
 }
 
 /**

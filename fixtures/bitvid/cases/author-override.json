@@ -1,0 +1,65 @@
+{
+  "name": "author-override",
+  "description": "An override on the author does not leak to the author's events.",
+  "behavior": "Overrides are keyed by exact target.",
+  "profile": "feed",
+  "now": 1750000000,
+  "authority": {
+    "root": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+    "actors": {
+      "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1": [
+        "super_admin"
+      ],
+      "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2": [
+        "moderator"
+      ],
+      "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3": [
+        "curator"
+      ]
+    },
+    "protectedActors": [
+      "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+    ]
+  },
+  "contributions": [
+    {
+      "actor": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+      "kind": "user-deny",
+      "targets": [
+        {
+          "type": "user",
+          "pubkey": "d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4"
+        }
+      ]
+    }
+  ],
+  "viewer": {
+    "overrides": [
+      {
+        "key": "user:d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4",
+        "visibility": "allow"
+      }
+    ]
+  },
+  "target": {
+    "type": "event",
+    "id": "1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b",
+    "author": "d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4"
+  },
+  "expect": {
+    "ranking": {
+      "effect": "normal",
+      "weight": 0
+    },
+    "visibility": {
+      "effect": "hide",
+      "overridable": true
+    },
+    "interaction": {
+      "effect": "deny"
+    },
+    "reasons": [
+      "admin-user-deny"
+    ]
+  }
+}

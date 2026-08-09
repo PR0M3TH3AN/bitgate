@@ -1,392 +1,187 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
+
 import {
-  BUILTIN_ROLES,
-  getRoleCapabilities,
-  hasRole,
+  DEFAULT_ROLE_CAPABILITIES,
+  GOVERNANCE_CAPABILITIES,
+  createAuthorityState,
+  createRoleDefinition,
+  getActorCapabilities,
   getActorRoles,
   hasCapability,
-  getActorCapabilities,
-  createRoleDefinition,
-  createActor,
-  createAuthorityState
+  hasRole,
+  isGovernanceCapability,
+  isProtectedActor,
 } from "../src/authority.js";
 
-describe("authority", () => {
-  describe("BUILTIN_ROLES", () => {
-    it("should define built-in roles with capabilities", () => {
-      expect(BUILTIN_ROLES).toHaveProperty("root");
-      expect(BUILTIN_ROLES).toHaveProperty("administrator");
-      expect(BUILTIN_ROLES).toHaveProperty("moderator");
-      expect(BUILTIN_ROLES).toHaveProperty("trusted-user");
-      expect(BUILTIN_ROLES).toHaveProperty("user");
-      
-      // Check that each role has a name and capabilities
-      for (const [name, role] of Object.entries(BUILTIN_ROLES)) {
-        expect(role.name).toBe(name);
-        expect(Array.isArray(role.capabilities)).toBe(true);
-        expect(role.capabilities.length).toBeGreaterThan(0);
-      }
-    });
+const ROOT = "a1".repeat(32);
+const MODERATOR = "b2".repeat(32);
+const CURATOR = "c3".repeat(32);
+const STRANGER = "d4".repeat(32);
+
+const baseState = () =>
+  createAuthorityState({
+    root: ROOT,
+    actors: {
+      [ROOT]: ["super_admin"],
+      [MODERATOR]: ["moderator"],
+      [CURATOR]: ["curator"],
+    },
   });
 
-  describe("getRoleCapabilities", () => {
-    it("should return capabilities for built-in roles", () => {
-      const capabilities = getRoleCapabilities("root");
-      expect(capabilities).toEqual(BUILTIN_ROLES.root.capabilities);
-    });
-
-    it("should return capabilities for custom roles", () => {
-      const authorityState = createAuthorityState({
-        "custom-role": {
-          name: "custom-role",
-          capabilities: ["custom-capability"]
-        }
-      });
-      
-      const capabilities = getRoleCapabilities("custom-role", authorityState);
-      expect(capabilities).toEqual(["custom-capability"]);
-    });
-
-    it("should prefer custom roles over built-in roles", () => {
-      const authorityState = createAuthorityState({
-        "root": {
-          name: "root",
-          capabilities: ["custom-root-capability"]
-        }
-      });
-      
-      const capabilities = getRoleCapabilities("root", authorityState);
-      expect(capabilities).toEqual(["custom-root-capability"]);
-    });
-
-    it("should return empty array for unknown roles", () => {
-      const capabilities = getRoleCapabilities("unknown-role");
-      expect(capabilities).toEqual([]);
-    });
+describe("capabilities", () => {
+  it("recognizes every documented capability", () => {
+    for (const capability of GOVERNANCE_CAPABILITIES) {
+      expect(isGovernanceCapability(capability)).toBe(true);
+    }
   });
 
-  describe("hasRole", () => {
-    it("should return true for actors with the specified role", () => {
-      const authorityState = createAuthorityState({}, {
-        "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789": {
-          pubkey: "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
-          roles: ["moderator"]
-        }
-      });
-      
-      const result = hasRole(
-        "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
-        "moderator",
-        authorityState
-      );
-      expect(result).toBe(true);
-    });
-
-    it("should return false for actors without the specified role", () => {
-      const authorityState = createAuthorityState({}, {
-        "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789": {
-          pubkey: "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
-          roles: ["user"]
-        }
-      });
-      
-      const result = hasRole(
-        "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
-        "moderator",
-        authorityState
-      );
-      expect(result).toBe(false);
-    });
-
-    it("should return false for unknown actors", () => {
-      const authorityState = createAuthorityState();
-      const result = hasRole(
-        "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
-        "moderator",
-        authorityState
-      );
-      expect(result).toBe(false);
-    });
-
-    it("should normalize pubkeys to lowercase", () => {
-      const authorityState = createAuthorityState({}, {
-        "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789": {
-          pubkey: "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
-          roles: ["moderator"]
-        }
-      });
-      
-      const result = hasRole(
-        "ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789",
-        "moderator",
-        authorityState
-      );
-      expect(result).toBe(true);
-    });
+  it("rejects unknown capabilities", () => {
+    expect(isGovernanceCapability("delete-everything")).toBe(false);
+    expect(isGovernanceCapability("")).toBe(false);
+    expect(isGovernanceCapability(null)).toBe(false);
   });
 
-  describe("getActorRoles", () => {
-    it("should return roles for known actors", () => {
-      const authorityState = createAuthorityState({}, {
-        "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789": {
-          pubkey: "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
-          roles: ["user", "trusted-user"]
-        }
-      });
-      
-      const roles = getActorRoles(
-        "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
-        authorityState
-      );
-      expect(roles).toEqual(["user", "trusted-user"]);
-    });
-
-    it("should return empty array for unknown actors", () => {
-      const authorityState = createAuthorityState();
-      const roles = getActorRoles(
-        "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
-        authorityState
-      );
-      expect(roles).toEqual([]);
-    });
+  it("gives super_admin every capability", () => {
+    expect([...DEFAULT_ROLE_CAPABILITIES.super_admin].sort()).toEqual(
+      [...GOVERNANCE_CAPABILITIES].sort(),
+    );
   });
 
-  describe("hasCapability", () => {
-    it("should return true for actors with the specified capability", () => {
-      const authorityState = createAuthorityState({}, {
-        "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789": {
-          pubkey: "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
-          roles: ["moderator"]
-        }
-      });
-      
-      const result = hasCapability(
-        "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
-        "submit-reports",
-        authorityState
-      );
-      expect(result).toBe(true);
-    });
-
-    it("should return false for actors without the specified capability", () => {
-      const authorityState = createAuthorityState({}, {
-        "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789": {
-          pubkey: "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
-          roles: ["user"]
-        }
-      });
-      
-      const result = hasCapability(
-        "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
-        "manage-admin-lists",
-        authorityState
-      );
-      expect(result).toBe(false);
-    });
-
-    it("should return false for unknown actors", () => {
-      const authorityState = createAuthorityState();
-      const result = hasCapability(
-        "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
-        "submit-reports",
-        authorityState
-      );
-      expect(result).toBe(false);
-    });
+  it("keeps curators strictly weaker than moderators", () => {
+    const curator = new Set(DEFAULT_ROLE_CAPABILITIES.curator);
+    const moderator = new Set(DEFAULT_ROLE_CAPABILITIES.moderator);
+    for (const capability of curator) {
+      expect(moderator.has(capability)).toBe(true);
+    }
+    expect(moderator.size).toBeGreaterThan(curator.size);
   });
 
-  describe("getActorCapabilities", () => {
-    it("should return all capabilities for an actor's roles", () => {
-      const authorityState = createAuthorityState({}, {
-        "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789": {
-          pubkey: "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
-          roles: ["moderator", "trusted-user"]
-        }
-      });
-      
-      const capabilities = getActorCapabilities(
-        "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
-        authorityState
-      );
-      
-      // Should have capabilities from both roles, with duplicates removed
-      expect(capabilities).toContain("submit-reports");
-      expect(capabilities).toContain("view-reports");
-      expect(capabilities).toContain("submit-trust-endorsements");
-    });
-
-    it("should return empty array for unknown actors", () => {
-      const authorityState = createAuthorityState();
-      const capabilities = getActorCapabilities(
-        "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
-        authorityState
-      );
-      expect(capabilities).toEqual([]);
-    });
+  it("does not let a curator deny events or addresses", () => {
+    expect(DEFAULT_ROLE_CAPABILITIES.curator).not.toContain("contribute-event-deny");
+    expect(DEFAULT_ROLE_CAPABILITIES.curator).not.toContain("contribute-address-deny");
   });
 
-  describe("createRoleDefinition", () => {
-    it("should create a valid role definition", () => {
-      const role = createRoleDefinition("test-role", ["capability1", "capability2"]);
-      expect(role).toEqual({
-        name: "test-role",
-        capabilities: ["capability1", "capability2"]
-      });
-    });
+  it("does not let a moderator manage roles or policy", () => {
+    expect(DEFAULT_ROLE_CAPABILITIES.moderator).not.toContain("manage-roles");
+    expect(DEFAULT_ROLE_CAPABILITIES.moderator).not.toContain("manage-policy");
+  });
+});
 
-    it("should trim whitespace from role name and capabilities", () => {
-      const role = createRoleDefinition(" test-role ", [" capability1 ", " capability2 "]);
-      expect(role).toEqual({
-        name: "test-role",
-        capabilities: ["capability1", "capability2"]
-      });
+describe("createAuthorityState", () => {
+  it("normalizes actor pubkeys and drops invalid ones", () => {
+    const state = createAuthorityState({
+      actors: { [MODERATOR.toUpperCase()]: ["moderator"], "not-a-key": ["moderator"] },
     });
-
-    it("should throw error for invalid role name", () => {
-      expect(() => createRoleDefinition("", ["capability"])).toThrow();
-      expect(() => createRoleDefinition(/** @type {any} */ (123), ["capability"])).toThrow();
-    });
-
-    it("should throw error for invalid capabilities", () => {
-      expect(() => createRoleDefinition("test-role", /** @type {any} */ ("not-an-array"))).toThrow();
-      expect(() => createRoleDefinition("test-role", [/** @type {any} */ (123)])).toThrow();
-      expect(() => createRoleDefinition("test-role", [""])).toThrow();
-    });
+    expect(state.actors[MODERATOR]).toEqual(["moderator"]);
+    expect(Object.keys(state.actors)).toHaveLength(1);
   });
 
-  describe("createActor", () => {
-    it("should create a valid actor", () => {
-      const actor = createActor(
-        "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
-        ["role1", "role2"]
-      );
-      expect(actor).toEqual({
-        pubkey: "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
-        roles: ["role1", "role2"]
-      });
-    });
-
-    it("should normalize pubkey to lowercase", () => {
-      const actor = createActor(
-        "ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789",
-        ["role1"]
-      );
-      expect(actor.pubkey).toBe("abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789");
-    });
-
-    it("should trim whitespace from roles", () => {
-      const actor = createActor(
-        "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
-        [" role1 ", " role2 "]
-      );
-      expect(actor.roles).toEqual(["role1", "role2"]);
-    });
-
-    it("should throw error for invalid pubkey", () => {
-      expect(() => createActor("invalid-pubkey", ["role"])).toThrow();
-      expect(() => createActor(/** @type {any} */ (123), ["role"])).toThrow();
-      expect(() => createActor("", ["role"])).toThrow();
-    });
-
-    it("should throw error for invalid roles", () => {
-      expect(() => createActor(
-        "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
-        /** @type {any} */ ("not-an-array")
-      )).toThrow();
-      expect(() => createActor(
-        "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
-        [/** @type {any} */ (123)]
-      )).toThrow();
-      expect(() => createActor(
-        "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
-        [""]
-      )).toThrow();
-    });
+  it("drops actors with no roles", () => {
+    const state = createAuthorityState({ actors: { [MODERATOR]: [] } });
+    expect(state.actors[MODERATOR]).toBeUndefined();
   });
 
-  describe("createAuthorityState", () => {
-    it("should create a valid authority state", () => {
-      const roles = {
-        "test-role": {
-          name: "test-role",
-          capabilities: ["test-capability"]
-        }
-      };
-      
-      const actors = {
-        "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789": {
-          pubkey: "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
-          roles: ["test-role"]
-        }
-      };
-      
-      const state = createAuthorityState(roles, actors);
-      expect(state).toEqual({ roles, actors });
-    });
+  it("deduplicates repeated roles", () => {
+    const state = createAuthorityState({ actors: { [MODERATOR]: ["moderator", "moderator"] } });
+    expect(state.actors[MODERATOR]).toEqual(["moderator"]);
+  });
 
-    it("should create empty authority state with no arguments", () => {
-      const state = createAuthorityState();
-      expect(state).toEqual({ roles: {}, actors: {} });
-    });
+  it("always protects the root administrator", () => {
+    const state = createAuthorityState({ root: ROOT });
+    expect(state.protectedActors).toContain(ROOT);
+  });
 
-    it("should validate role names", () => {
-      const roles = {
-        "": {
-          name: "",
-          capabilities: ["test-capability"]
-        }
-      };
-      
-      expect(() => createAuthorityState(roles)).toThrow();
-    });
+  it("keeps explicitly protected actors alongside root", () => {
+    const state = createAuthorityState({ root: ROOT, protectedActors: [MODERATOR] });
+    expect(state.protectedActors).toContain(ROOT);
+    expect(state.protectedActors).toContain(MODERATOR);
+  });
 
-    it("should validate role definitions", () => {
-      const roles = {
-        "test-role": /** @type {any} */ (null)
-      };
-      
-      expect(() => createAuthorityState(roles)).toThrow();
+  it("filters unknown capabilities out of custom roles", () => {
+    const state = createAuthorityState({
+      roles: { odd: /** @type {any} */ (["manage-policy", "not-a-capability"]) },
     });
+    expect(state.roles.odd).toEqual(["manage-policy"]);
+  });
+});
 
-    it("should validate role name consistency", () => {
-      const roles = {
-        "test-role": {
-          name: "different-name",
-          capabilities: ["test-capability"]
-        }
-      };
-      
-      expect(() => createAuthorityState(roles)).toThrow();
-    });
+describe("capability resolution", () => {
+  it("resolves capabilities through roles", () => {
+    const state = baseState();
+    expect(hasCapability(MODERATOR, "contribute-event-deny", state)).toBe(true);
+    expect(hasCapability(CURATOR, "contribute-user-deny", state)).toBe(true);
+  });
 
-    it("should validate actor pubkeys", () => {
-      const actors = {
-        "invalid-pubkey": {
-          pubkey: "invalid-pubkey",
-          roles: ["test-role"]
-        }
-      };
-      
-      expect(() => createAuthorityState({}, actors)).toThrow();
-    });
+  it("denies capabilities a role does not carry", () => {
+    const state = baseState();
+    expect(hasCapability(CURATOR, "contribute-event-deny", state)).toBe(false);
+    expect(hasCapability(MODERATOR, "manage-roles", state)).toBe(false);
+  });
 
-    it("should validate actors", () => {
-      const actors = {
-        "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789": /** @type {any} */ (null)
-      };
-      
-      expect(() => createAuthorityState({}, actors)).toThrow();
-    });
+  it("gives the root every capability even without a role entry", () => {
+    const state = createAuthorityState({ root: ROOT });
+    expect(hasCapability(ROOT, "manage-roles", state)).toBe(true);
+    expect(getActorCapabilities(ROOT, state).sort()).toEqual([...GOVERNANCE_CAPABILITIES].sort());
+  });
 
-    it("should validate actor pubkey consistency", () => {
-      const actors = {
-        "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789": {
-          pubkey: "different-pubkey",
-          roles: ["test-role"]
-        }
-      };
-      
-      expect(() => createAuthorityState({}, actors)).toThrow();
-    });
+  it("returns nothing for unknown actors", () => {
+    const state = baseState();
+    expect(getActorCapabilities(STRANGER, state)).toEqual([]);
+    expect(getActorRoles(STRANGER, state)).toEqual([]);
+    expect(hasCapability(STRANGER, "contribute-user-deny", state)).toBe(false);
+  });
+
+  it("stops granting capabilities the moment a role is revoked", () => {
+    const before = baseState();
+    expect(hasCapability(MODERATOR, "contribute-user-deny", before)).toBe(true);
+
+    const after = createAuthorityState({ root: ROOT, actors: { [ROOT]: ["super_admin"] } });
+    expect(hasCapability(MODERATOR, "contribute-user-deny", after)).toBe(false);
+  });
+
+  it("normalizes pubkey case when resolving", () => {
+    const state = baseState();
+    expect(hasRole(MODERATOR.toUpperCase(), "moderator", state)).toBe(true);
+  });
+
+  it("rejects unknown capability names outright", () => {
+    const state = baseState();
+    expect(hasCapability(ROOT, /** @type {any} */ ("nope"), state)).toBe(false);
+  });
+});
+
+describe("protected actors", () => {
+  it("reports protection for the root", () => {
+    expect(isProtectedActor(ROOT, baseState())).toBe(true);
+  });
+
+  it("does not protect ordinary actors", () => {
+    expect(isProtectedActor(MODERATOR, baseState())).toBe(false);
+  });
+
+  it("handles invalid input", () => {
+    expect(isProtectedActor("", baseState())).toBe(false);
+  });
+});
+
+describe("createRoleDefinition", () => {
+  it("creates a role from valid capabilities", () => {
+    const role = createRoleDefinition("listing_moderator", ["contribute-address-deny"]);
+    expect(role).toEqual({ name: "listing_moderator", capabilities: ["contribute-address-deny"] });
+  });
+
+  it("deduplicates capabilities", () => {
+    const role = createRoleDefinition("r", ["review-evidence", "review-evidence"]);
+    expect(role.capabilities).toEqual(["review-evidence"]);
+  });
+
+  it("rejects an unknown capability rather than silently dropping it", () => {
+    expect(() => createRoleDefinition("r", [/** @type {any} */ ("invent-capability")])).toThrow(
+      /Unknown governance capability/,
+    );
+  });
+
+  it("rejects an empty name", () => {
+    expect(() => createRoleDefinition("  ", [])).toThrow(/non-empty/);
   });
 });

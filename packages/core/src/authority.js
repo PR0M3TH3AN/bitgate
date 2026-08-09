@@ -1,278 +1,258 @@
-// Authority handling for Nostr Governance
+// Authority and delegation for Nostr Governance
 //
-// This module handles role resolution, capability checking, and authority
-// validation for the governance system.
+// Root-authorized contributor model: the root administrator publishes the role
+// roster, each authorized actor publishes contributions under their own key,
+// and the runtime accepts a contribution only when the signing actor holds the
+// matching capability. Revoking a role stops accepting that actor's
+// contributions immediately, because capabilities are resolved at merge time
+// rather than baked into stored state.
+
+import { normalizePubkey } from "./identifiers.js";
 
 /**
- * @typedef {Object} RoleDefinition
- * @property {string} name - Role name
- * @property {string[]} capabilities - Array of capability names this role has
+ * @typedef {"manage-roles"
+ *   | "manage-policy"
+ *   | "manage-community-sources"
+ *   | "contribute-user-allow"
+ *   | "contribute-user-deny"
+ *   | "contribute-event-deny"
+ *   | "contribute-address-deny"
+ *   | "contribute-trust-seed"
+ *   | "review-evidence"} GovernanceCapability
  */
 
+/** @type {readonly GovernanceCapability[]} */
+export const GOVERNANCE_CAPABILITIES = Object.freeze([
+  "manage-roles",
+  "manage-policy",
+  "manage-community-sources",
+  "contribute-user-allow",
+  "contribute-user-deny",
+  "contribute-event-deny",
+  "contribute-address-deny",
+  "contribute-trust-seed",
+  "review-evidence",
+]);
+
+const CAPABILITY_SET = new Set(GOVERNANCE_CAPABILITIES);
+
 /**
- * @typedef {Object} Actor
- * @property {string} pubkey - 64-character hex pubkey of the actor
- * @property {string[]} roles - Array of role names assigned to this actor
+ * @param {GovernanceCapability[]} capabilities
+ * @returns {readonly GovernanceCapability[]}
  */
+const bundle = (capabilities) => Object.freeze(capabilities);
+
+/**
+ * Default role bundles. Roles are convenience only; capabilities are
+ * authoritative, and applications may define additional roles.
+ * @type {Record<string, readonly GovernanceCapability[]>}
+ */
+export const DEFAULT_ROLE_CAPABILITIES = Object.freeze({
+  super_admin: bundle([
+    "manage-roles",
+    "manage-policy",
+    "manage-community-sources",
+    "contribute-user-allow",
+    "contribute-user-deny",
+    "contribute-event-deny",
+    "contribute-address-deny",
+    "contribute-trust-seed",
+    "review-evidence",
+  ]),
+  moderator: bundle([
+    "contribute-user-deny",
+    "contribute-event-deny",
+    "contribute-address-deny",
+    "contribute-trust-seed",
+    "review-evidence",
+  ]),
+  curator: bundle(["contribute-user-deny"]),
+  reviewer: bundle(["review-evidence"]),
+});
 
 /**
  * @typedef {Object} AuthorityState
- * @property {Record<string, RoleDefinition>} roles - Map of role names to definitions
- * @property {Record<string, Actor>} actors - Map of pubkeys to actors
+ * @property {Record<string, readonly GovernanceCapability[]>} roles - Role name to capabilities
+ * @property {Record<string, string[]>} actors - Actor pubkey to role names
+ * @property {string[]} protectedActors - Pubkeys that contributor lists cannot deny
+ * @property {string} [root] - Root administrator pubkey
  */
 
 /**
- * Built-in role definitions
- * @type {Record<string, RoleDefinition>}
+ * Check whether a value is a known capability.
+ * @param {unknown} value
+ * @returns {value is GovernanceCapability}
  */
-export const BUILTIN_ROLES = {
-  "root": {
-    name: "root",
-    capabilities: [
-      "manage-roles",
-      "manage-capabilities",
-      "manage-actors",
-      "manage-policies",
-      "manage-admin-lists",
-      "manage-trust-graph",
-      "manage-overrides",
-      "view-reports",
-      "view-trust-graph",
-      "view-admin-lists",
-      "view-policies"
-    ]
-  },
-  "administrator": {
-    name: "administrator",
-    capabilities: [
-      "manage-admin-lists",
-      "manage-trust-graph",
-      "view-reports",
-      "view-trust-graph",
-      "view-admin-lists"
-    ]
-  },
-  "moderator": {
-    name: "moderator",
-    capabilities: [
-      "submit-reports",
-      "submit-trust-endorsements",
-      "view-reports"
-    ]
-  },
-  "trusted-user": {
-    name: "trusted-user",
-    capabilities: [
-      "submit-reports",
-      "view-reports"
-    ]
-  },
-  "user": {
-    name: "user",
-    capabilities: [
-      "submit-reports"
-    ]
-  }
-};
-
-/**
- * Get capabilities for a role
- * @param {string} roleName
- * @param {AuthorityState} [authorityState]
- * @returns {string[]}
- */
-export function getRoleCapabilities(roleName, authorityState) {
-  // Check custom roles first
-  if (authorityState && authorityState.roles[roleName]) {
-    return authorityState.roles[roleName].capabilities;
-  }
-  
-  // Check built-in roles
-  if (BUILTIN_ROLES[roleName]) {
-    return BUILTIN_ROLES[roleName].capabilities;
-  }
-  
-  // Unknown role has no capabilities
-  return [];
+export function isGovernanceCapability(value) {
+  return typeof value === "string" && CAPABILITY_SET.has(/** @type {GovernanceCapability} */ (value));
 }
 
 /**
- * Check if an actor has a specific role
- * @param {string} pubkey - 64-character hex pubkey
- * @param {string} roleName
- * @param {AuthorityState} [authorityState]
- * @returns {boolean}
+ * Create an authority state.
+ *
+ * The root administrator is always protected and always holds every
+ * capability, so a misconfigured role roster cannot lock governance out of its
+ * own instance.
+ *
+ * @param {Object} [options]
+ * @param {Record<string, readonly GovernanceCapability[]>} [options.roles]
+ * @param {Record<string, string[]>} [options.actors]
+ * @param {string[]} [options.protectedActors]
+ * @param {string} [options.root]
+ * @returns {AuthorityState}
  */
-export function hasRole(pubkey, roleName, authorityState) {
-  // Normalize pubkey
-  const normalizedPubkey = pubkey.toLowerCase();
-  
-  // Check custom actors first
-  if (authorityState && authorityState.actors[normalizedPubkey]) {
-    return authorityState.actors[normalizedPubkey].roles.includes(roleName);
+export function createAuthorityState(options = {}) {
+  /** @type {Record<string, readonly GovernanceCapability[]>} */
+  const roles = {};
+  for (const [name, capabilities] of Object.entries(options.roles ?? DEFAULT_ROLE_CAPABILITIES)) {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      continue;
+    }
+    roles[trimmed] = Object.freeze(
+      (Array.isArray(capabilities) ? capabilities : []).filter(isGovernanceCapability),
+    );
   }
-  
-  // No actor found means no roles
-  return false;
-}
 
-/**
- * Get all roles for an actor
- * @param {string} pubkey - 64-character hex pubkey
- * @param {AuthorityState} [authorityState]
- * @returns {string[]}
- */
-export function getActorRoles(pubkey, authorityState) {
-  // Normalize pubkey
-  const normalizedPubkey = pubkey.toLowerCase();
-  
-  // Check custom actors first
-  if (authorityState && authorityState.actors[normalizedPubkey]) {
-    return authorityState.actors[normalizedPubkey].roles;
-  }
-  
-  // No actor found means no roles
-  return [];
-}
-
-/**
- * Check if an actor has a specific capability
- * @param {string} pubkey - 64-character hex pubkey
- * @param {string} capability
- * @param {AuthorityState} [authorityState]
- * @returns {boolean}
- */
-export function hasCapability(pubkey, capability, authorityState) {
-  // Get all roles for the actor
-  const roles = getActorRoles(pubkey, authorityState);
-  
-  // Check if any role has the capability
-  for (const role of roles) {
-    const capabilities = getRoleCapabilities(role, authorityState);
-    if (capabilities.includes(capability)) {
-      return true;
+  /** @type {Record<string, string[]>} */
+  const actors = {};
+  for (const [pubkey, roleNames] of Object.entries(options.actors ?? {})) {
+    const normalized = normalizePubkey(pubkey);
+    if (!normalized) {
+      continue;
+    }
+    const names = (Array.isArray(roleNames) ? roleNames : [])
+      .filter((name) => typeof name === "string" && name.trim())
+      .map((name) => name.trim());
+    if (names.length) {
+      actors[normalized] = Array.from(new Set(names));
     }
   }
-  
-  return false;
+
+  const root = options.root ? normalizePubkey(options.root) : "";
+
+  const protectedActors = new Set(
+    (options.protectedActors ?? [])
+      .map((pubkey) => normalizePubkey(pubkey))
+      .filter(Boolean),
+  );
+  if (root) {
+    protectedActors.add(root);
+  }
+
+  /** @type {AuthorityState} */
+  const state = {
+    roles,
+    actors,
+    protectedActors: Array.from(protectedActors).sort(),
+  };
+
+  if (root) {
+    state.root = root;
+  }
+
+  return state;
 }
 
 /**
- * Get all capabilities for an actor
- * @param {string} pubkey - 64-character hex pubkey
- * @param {AuthorityState} [authorityState]
+ * Get the role names assigned to an actor.
+ * @param {string} pubkey
+ * @param {AuthorityState} authority
  * @returns {string[]}
  */
-export function getActorCapabilities(pubkey, authorityState) {
-  // Get all roles for the actor
-  const roles = getActorRoles(pubkey, authorityState);
-  
-  // Collect all capabilities from all roles
+export function getActorRoles(pubkey, authority) {
+  const normalized = normalizePubkey(pubkey);
+  if (!normalized) {
+    return [];
+  }
+  return [...(authority.actors[normalized] ?? [])];
+}
+
+/**
+ * Get every capability an actor holds, resolved through their roles.
+ * @param {string} pubkey
+ * @param {AuthorityState} authority
+ * @returns {GovernanceCapability[]}
+ */
+export function getActorCapabilities(pubkey, authority) {
+  const normalized = normalizePubkey(pubkey);
+  if (!normalized) {
+    return [];
+  }
+
+  if (authority.root && normalized === authority.root) {
+    return [...GOVERNANCE_CAPABILITIES];
+  }
+
+  /** @type {Set<GovernanceCapability>} */
   const capabilities = new Set();
-  for (const role of roles) {
-    const roleCapabilities = getRoleCapabilities(role, authorityState);
-    for (const capability of roleCapabilities) {
+  for (const roleName of authority.actors[normalized] ?? []) {
+    for (const capability of authority.roles[roleName] ?? []) {
       capabilities.add(capability);
     }
   }
-  
+
   return Array.from(capabilities);
 }
 
 /**
- * Create a new role definition
- * @param {string} name - Role name
- * @param {string[]} capabilities - Array of capability names
- * @returns {RoleDefinition}
+ * Check whether an actor holds a capability.
+ * @param {string} pubkey
+ * @param {GovernanceCapability} capability
+ * @param {AuthorityState} authority
+ * @returns {boolean}
+ */
+export function hasCapability(pubkey, capability, authority) {
+  if (!isGovernanceCapability(capability)) {
+    return false;
+  }
+  return getActorCapabilities(pubkey, authority).includes(capability);
+}
+
+/**
+ * Check whether an actor holds a role.
+ * @param {string} pubkey
+ * @param {string} roleName
+ * @param {AuthorityState} authority
+ * @returns {boolean}
+ */
+export function hasRole(pubkey, roleName, authority) {
+  return getActorRoles(pubkey, authority).includes(roleName);
+}
+
+/**
+ * Check whether a pubkey is protected from contributor denial.
+ * @param {string} pubkey
+ * @param {AuthorityState} authority
+ * @returns {boolean}
+ */
+export function isProtectedActor(pubkey, authority) {
+  const normalized = normalizePubkey(pubkey);
+  if (!normalized) {
+    return false;
+  }
+  return authority.protectedActors.includes(normalized);
+}
+
+/**
+ * Define a role's capability bundle, rejecting unknown capabilities.
+ * @param {string} name
+ * @param {GovernanceCapability[]} capabilities
+ * @returns {{ name: string, capabilities: GovernanceCapability[] }}
  */
 export function createRoleDefinition(name, capabilities) {
-  // Validate input
   if (typeof name !== "string" || !name.trim()) {
     throw new Error("Role name must be a non-empty string");
   }
-  
   if (!Array.isArray(capabilities)) {
-    throw new Error("Capabilities must be an array");
+    throw new Error("Role capabilities must be an array");
   }
-  
-  // Validate each capability
+
   for (const capability of capabilities) {
-    if (typeof capability !== "string" || !capability.trim()) {
-      throw new Error("All capabilities must be non-empty strings");
+    if (!isGovernanceCapability(capability)) {
+      throw new Error(`Unknown governance capability: ${String(capability)}`);
     }
   }
-  
-  return {
-    name: name.trim(),
-    capabilities: capabilities.map(c => c.trim())
-  };
-}
 
-/**
- * Create a new actor
- * @param {string} pubkey - 64-character hex pubkey
- * @param {string[]} roles - Array of role names
- * @returns {Actor}
- */
-export function createActor(pubkey, roles) {
-  // Validate pubkey
-  if (typeof pubkey !== "string" || !/^[0-9a-f]{64}$/i.test(pubkey)) {
-    throw new Error("Pubkey must be a 64-character hex string");
-  }
-  
-  // Validate roles
-  if (!Array.isArray(roles)) {
-    throw new Error("Roles must be an array");
-  }
-  
-  // Validate each role
-  for (const role of roles) {
-    if (typeof role !== "string" || !role.trim()) {
-      throw new Error("All roles must be non-empty strings");
-    }
-  }
-  
-  return {
-    pubkey: pubkey.toLowerCase(),
-    roles: roles.map(r => r.trim())
-  };
-}
-
-/**
- * Create a new authority state
- * @param {Record<string, RoleDefinition>} [roles]
- * @param {Record<string, Actor>} [actors]
- * @returns {AuthorityState}
- */
-export function createAuthorityState(roles = {}, actors = {}) {
-  // Validate roles
-  for (const [name, role] of Object.entries(roles)) {
-    if (typeof name !== "string" || !name.trim()) {
-      throw new Error("Role names must be non-empty strings");
-    }
-    if (!role || typeof role !== "object") {
-      throw new Error("Role definitions must be objects");
-    }
-    if (role.name !== name) {
-      throw new Error(`Role name mismatch: ${name} !== ${role.name}`);
-    }
-  }
-  
-  // Validate actors
-  for (const [pubkey, actor] of Object.entries(actors)) {
-    if (typeof pubkey !== "string" || !/^[0-9a-f]{64}$/i.test(pubkey)) {
-      throw new Error("Actor pubkeys must be 64-character hex strings");
-    }
-    if (!actor || typeof actor !== "object") {
-      throw new Error("Actors must be objects");
-    }
-    if (actor.pubkey !== pubkey.toLowerCase()) {
-      throw new Error(`Actor pubkey mismatch: ${pubkey} !== ${actor.pubkey}`);
-    }
-  }
-  
-  return {
-    roles,
-    actors
-  };
+  return { name: name.trim(), capabilities: [...new Set(capabilities)] };
 }

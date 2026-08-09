@@ -56,7 +56,7 @@ export function isValidTarget(target) {
 
 /**
  * Create a target from various input formats
- * @param {string|{type: string, pubkey?: string, id?: string, kind?: string|number, identifier?: string}|null|undefined} input
+ * @param {string|{type: string, pubkey?: string, id?: string, author?: string, kind?: string|number, identifier?: string}|null|undefined} input
  * @returns {GovernanceTarget|null}
  */
 export function createTarget(input) {
@@ -116,7 +116,10 @@ export function createTarget(input) {
       case "user":
         return createUserTarget(/** @type {string} */ (input.pubkey));
       case "event":
-        return createEventTarget(/** @type {string} */ (input.id));
+        return createEventTarget(/** @type {string} */ (input.id), {
+          author: /** @type {string|undefined} */ (input.author),
+          kind: typeof input.kind === "number" ? input.kind : undefined,
+        });
       case "address":
         return normalizeAddress(
           /** @type {string|number} */ (input.kind), 
@@ -145,12 +148,15 @@ export function getParentTarget(target, authorPubkey) {
     case "user":
       // User targets have no parent
       return null;
-    case "event":
-      // Event targets have the author as parent, but we need the author pubkey
-      if (!authorPubkey) {
+    case "event": {
+      // Event targets have the author as parent. The author may be carried on
+      // the target itself; the explicit argument stays supported and wins.
+      const author = authorPubkey ?? target.author;
+      if (!author) {
         throw new Error("authorPubkey is required for event targets");
       }
-      return createUserTarget(authorPubkey);
+      return createUserTarget(author);
+    }
     case "address":
       // Address targets have the author as parent
       return createUserTarget(target.pubkey);

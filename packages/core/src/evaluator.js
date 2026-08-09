@@ -1,441 +1,601 @@
-// Evaluator for Nostr Governance
+// Canonical evaluator for Nostr Governance
 //
-// This module brings together all the core components to evaluate governance
-// decisions for targets based on state and policies.
+// This is the single place policy is decided. Applications collect targets and
+// apply the returned decision; they must not recompute thresholds themselves.
+//
+// Evaluation is pure: it performs no I/O, reads an injected clock, and never
+// mutates its inputs. The same snapshot and context always produce the same
+// decision, which is what makes the conformance corpus meaningful.
 
 import { getTargetKey } from "./identifiers.js";
-import { areTargetsEqual, isDescendantOf } from "./targets.js";
-import { hasCapability } from "./authority.js";
+import { isValidTarget } from "./targets.js";
+import { isProtectedActor } from "./authority.js";
+import { isDenied } from "./adminState.js";
+import { createEmptyEvidence, freezeEvidence, redactEvidence } from "./evidence.js";
+import { createReason, dedupeReasons } from "./reasons.js";
 import {
-  createGovernanceDecision,
-  getPolicyEffect,
-  composeGovernanceDecisions
+  NEUTRAL_POLICY,
+  applyEffects,
+  applyThresholds,
+  createNeutralDecision,
+  effectSeverity,
+  resolveProfile,
+  resolveThresholds,
 } from "./policy.js";
+import { snapshotFingerprint } from "./fingerprint.js";
 
 /**
  * @typedef {import('./identifiers.js').GovernanceTarget} GovernanceTarget
  * @typedef {import('./authority.js').AuthorityState} AuthorityState
+ * @typedef {import('./adminState.js').AdminState} AdminState
  * @typedef {import('./policy.js').PolicyContext} PolicyContext
+ * @typedef {import('./policy.js').PolicyProfile} PolicyProfile
  * @typedef {import('./policy.js').GovernanceDecision} GovernanceDecision
- * @typedef {import('./policy.js').PolicyDefinition} PolicyDefinition
+ * @typedef {import('./evidence.js').GovernanceEvidence} GovernanceEvidence
+ * @typedef {import('./reasons.js').GovernanceReason} GovernanceReason
  */
 
 /**
- * @typedef {Object} Report
- * @property {string} reporter - Pubkey of the reporter
- * @property {GovernanceTarget} target - Target being reported
+ * @typedef {Object} ReportRecord
+ * @property {string} reporter - Reporter pubkey
  * @property {string} category - Report category
- * @property {number} timestamp - Unix timestamp of the report
+ * @property {number} [createdAt] - Unix seconds
  */
 
 /**
- * @typedef {Object} TrustedMute
- * @property {GovernanceTarget} target - Target being muted
- * @property {number} count - Number of trusted mutes
- * @property {Record<string, number>} categories - Count of mutes per category
+ * @typedef {Object} MuteRecord
+ * @property {string} muter - Muting pubkey
+ * @property {string} [category] - Optional mute category
+ * @property {number} [updatedAt] - Unix seconds; compared against the mute window
  */
 
 /**
- * @typedef {Object} Override
- * @property {GovernanceTarget} target - Target being overridden
- * @property {"allow"|"restrict"|"hide"|"deny"} visibility - Visibility override
- * @property {string} [reason] - Reason for the override
+ * @typedef {Object} ViewerState
+ * @property {Set<string>} [blocks] - Pubkeys the viewer blocks outright
+ * @property {Set<string>} [mutes] - Pubkeys the viewer mutes
+ * @property {Map<string, { visibility: string, reason?: string }>} [overrides] - Viewer overrides by target key
  */
 
 /**
- * @typedef {Object} GovernanceState
- * @property {AuthorityState} authority - Authority state
- * @property {Record<string, Report[]>} reports - Reports by target key
- * @property {Record<string, TrustedMute>} trustedMutes - Trusted mutes by target key
- * @property {Record<string, Override>} overrides - Overrides by target key
- * @property {Record<string, PolicyDefinition>} policies - Policy definitions by ID
+ * @typedef {Object} TrustState
+ * @property {Set<string>} [contacts] - Pubkeys the viewer trusts directly
+ * @property {Set<string>} [seeds] - Fallback trust seeds for anonymous viewers
  */
 
 /**
- * Default thresholds for governance decisions
+ * @typedef {Object} GovernanceSnapshot
+ * @property {AuthorityState} authority
+ * @property {AdminState} admin
+ * @property {TrustState} [trust]
+ * @property {Map<string, ReportRecord[]>} [reports] - Reports by target key
+ * @property {Map<string, MuteRecord[]>} [trustedMutes] - Mutes by target key
  */
-export const DEFAULT_THRESHOLDS = {
-  // Number of trusted reports needed to hide a target
-  trustedReportHideThreshold: 5,
-  // Number of trusted reports needed to restrict a target
-  trustedReportRestrictThreshold: 3,
-  // Number of trusted mutes needed to hide a target
-  trustedMuteHideThreshold: 10,
-  // Number of trusted mutes needed to restrict a target
-  trustedMuteRestrictThreshold: 5
-};
 
 /**
- * Evaluate a single target against the governance state
+ * Resolve the effective trust set for a viewer.
+ *
+ * Trust seeds are a fallback for anonymous or not-yet-hydrated viewers, not an
+ * addition to a real follow graph: once the viewer has contacts, seeds stop
+ * contributing so that following nobody is not equivalent to following the
+ * seed set.
+ *
+ * @param {TrustState} [trust]
+ * @returns {Set<string>}
+ */
+export function resolveTrustSet(trust) {
+  const contacts = trust?.contacts;
+  if (contacts && contacts.size > 0) {
+    return contacts;
+  }
+  return trust?.seeds ?? new Set();
+}
+
+/**
+ * Decide whether a contributor's signal counts.
+ *
+ * Blocked and administratively denied accounts are excluded before any
+ * counting, so a denied account cannot manufacture reports.
+ *
+ * @param {string} pubkey
+ * @param {Set<string>} trustSet
+ * @param {GovernanceSnapshot} snapshot
+ * @param {ViewerState} viewer
+ * @returns {boolean}
+ */
+function isCountableSignal(pubkey, trustSet, snapshot, viewer) {
+  if (typeof pubkey !== "string" || !pubkey) {
+    return false;
+  }
+  if (!trustSet.has(pubkey)) {
+    return false;
+  }
+  if (viewer.blocks?.has(pubkey)) {
+    return false;
+  }
+  if (snapshot.admin.userDeny.has(`user:${pubkey}`)) {
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Aggregate trusted reports for a target.
+ *
+ * Reports are deduplicated per (reporter, category): one account reporting the
+ * same target for the same reason twice is one signal, but the same account may
+ * legitimately report distinct categories.
+ *
+ * @param {string} key
+ * @param {GovernanceSnapshot} snapshot
+ * @param {ViewerState} viewer
+ * @param {Set<string>} trustSet
+ * @returns {{ total: number, byCategory: Record<string, number>, reporters: string[] }}
+ */
+export function aggregateReports(key, snapshot, viewer, trustSet) {
+  const records = snapshot.reports?.get(key) ?? [];
+  /** @type {Map<string, Set<string>>} */
+  const byCategory = new Map();
+  /** @type {Set<string>} */
+  const reporters = new Set();
+
+  for (const record of records) {
+    if (!record || !isCountableSignal(record.reporter, trustSet, snapshot, viewer)) {
+      continue;
+    }
+    const category = typeof record.category === "string" ? record.category.trim().toLowerCase() : "";
+    if (!category) {
+      continue;
+    }
+    if (!byCategory.has(category)) {
+      byCategory.set(category, new Set());
+    }
+    /** @type {Set<string>} */ (byCategory.get(category)).add(record.reporter);
+    reporters.add(record.reporter);
+  }
+
+  /** @type {Record<string, number>} */
+  const counts = {};
+  let total = 0;
+  for (const [category, set] of byCategory.entries()) {
+    counts[category] = set.size;
+    total += set.size;
+  }
+
+  return { total, byCategory: counts, reporters: Array.from(reporters) };
+}
+
+/**
+ * Aggregate trusted mutes for a target.
+ *
+ * Muters are counted uniquely and mutes outside the profile's validity window
+ * are ignored, so a stale list cannot hold a target down indefinitely.
+ *
+ * @param {string} key
+ * @param {GovernanceSnapshot} snapshot
+ * @param {ViewerState} viewer
+ * @param {Set<string>} trustSet
+ * @param {number} now - Unix seconds
+ * @param {number} [windowSeconds] - 0 or undefined disables expiry
+ * @returns {{ total: number, byCategory: Record<string, number>, muters: string[] }}
+ */
+export function aggregateMutes(key, snapshot, viewer, trustSet, now, windowSeconds) {
+  const records = snapshot.trustedMutes?.get(key) ?? [];
+  const cutoff = Number.isFinite(windowSeconds) && /** @type {number} */ (windowSeconds) > 0
+    ? now - /** @type {number} */ (windowSeconds)
+    : Number.NEGATIVE_INFINITY;
+
+  /** @type {Set<string>} */
+  const muters = new Set();
+  /** @type {Map<string, Set<string>>} */
+  const byCategory = new Map();
+
+  for (const record of records) {
+    if (!record || !isCountableSignal(record.muter, trustSet, snapshot, viewer)) {
+      continue;
+    }
+    const updatedAt = Number.isFinite(record.updatedAt) ? /** @type {number} */ (record.updatedAt) : 0;
+    if (updatedAt < cutoff) {
+      continue;
+    }
+    muters.add(record.muter);
+
+    const category = typeof record.category === "string" ? record.category.trim().toLowerCase() : "";
+    if (category) {
+      if (!byCategory.has(category)) {
+        byCategory.set(category, new Set());
+      }
+      /** @type {Set<string>} */ (byCategory.get(category)).add(record.muter);
+    }
+  }
+
+  /** @type {Record<string, number>} */
+  const counts = {};
+  for (const [category, set] of byCategory.entries()) {
+    counts[category] = set.size;
+  }
+
+  return { total: muters.size, byCategory: counts, muters: Array.from(muters) };
+}
+
+/**
+ * Collect the pubkeys whose administrative denial should reach this target.
+ *
+ * An event or address inherits its author's denial: denying a seller must take
+ * down that seller's listings. An exact-event denial does not travel the other
+ * way — it applies only to the event named.
+ *
  * @param {GovernanceTarget} target
- * @param {GovernanceState} state
- * @param {PolicyContext} context
- * @param {string} [viewerPubkey] - Pubkey of the viewer (for personal overrides)
+ * @returns {string[]}
+ */
+function authorChain(target) {
+  if (target.type === "user") {
+    return [target.pubkey];
+  }
+  if (target.type === "address") {
+    return [target.pubkey];
+  }
+  const author = /** @type {{ author?: string }} */ (target).author;
+  return typeof author === "string" && author ? [author] : [];
+}
+
+/**
+ * Evaluate one target.
+ *
+ * @param {GovernanceTarget} target
+ * @param {GovernanceSnapshot} snapshot
+ * @param {PolicyContext} [context]
+ * @param {ViewerState} [viewerState]
  * @returns {GovernanceDecision}
  */
-export function evaluateTarget(target, state, context, viewerPubkey) {
-  const decisions = [];
-  
-  // 1. Check for personal overrides first
-  if (viewerPubkey) {
-    const overrideDecision = checkPersonalOverrides(target, state, viewerPubkey);
-    if (overrideDecision) {
-      decisions.push(overrideDecision);
-    }
+export function evaluateTarget(target, snapshot, context = { surface: "default" }, viewerState = {}) {
+  // 1. Validate and normalize the target.
+  if (!isValidTarget(target)) {
+    throw new Error(`Invalid governance target: ${JSON.stringify(target)}`);
   }
-  
-  // 2. Check for explicit overrides
-  const explicitOverrideDecision = checkExplicitOverrides(target, state, context);
-  if (explicitOverrideDecision) {
-    decisions.push(explicitOverrideDecision);
+
+  const key = getTargetKey(target);
+  const policy = context.policy ?? NEUTRAL_POLICY;
+  const profile = resolveProfile(policy, context);
+  const now = Number.isFinite(context.now) ? /** @type {number} */ (context.now) : 0;
+  const viewer = viewerState ?? {};
+
+  const includeTransaction =
+    profile.administrativeDeny?.transaction !== undefined ||
+    hasTransactionGate(profile);
+
+  /** @type {GovernanceDecision} */
+  const decision = createNeutralDecision({ key, target, includeTransaction });
+  decision.policyProfile = profile.name;
+  decision.policyVersion = policy.version;
+  decision.evaluatedAt = now;
+  decision.snapshotFingerprint = snapshotFingerprint({
+    authority: snapshot.authority,
+    admin: snapshot.admin,
+    reports: snapshot.reports,
+    trustedMutes: snapshot.trustedMutes,
+    policy: { id: policy.id, version: policy.version, profile: profile.name },
+  });
+
+  const evidence = createEmptyEvidence();
+
+  // A disabled surface reports why it decided nothing rather than silently
+  // returning a neutral decision that looks like a real evaluation.
+  if (profile.disabled) {
+    decision.reasons = [createReason("policy-disabled")];
+    decision.evidence = evidence;
+    return decision;
   }
-  
-  // 3. Check reports
-  const reportDecision = checkReports(target, state, context);
-  if (reportDecision) {
-    decisions.push(reportDecision);
-  }
-  
-  // 4. Check trusted mutes
-  const muteDecision = checkTrustedMutes(target, state, context);
-  if (muteDecision) {
-    decisions.push(muteDecision);
-  }
-  
-  // 5. Check if target is a descendant of a denied ancestor
-  const ancestorDecision = checkAncestorDeny(target, state, context);
-  if (ancestorDecision) {
-    decisions.push(ancestorDecision);
-  }
-  
-  // Compose all decisions into a final decision
-  if (decisions.length === 0) {
-    // Default allow decision
-    return createGovernanceDecision(
-      { effect: /** @type {import('./policy.js').PolicyEffect["effect"]} */ ("allow") },
-      { effect: /** @type {import('./policy.js').PolicyEffect["effect"]} */ ("allow") }
+
+  const authors = authorChain(target);
+
+  // 2. Protected-target status. Checked before any denial path so that a
+  //    protected actor cannot be denied even by a malformed admin snapshot.
+  const isProtected = authors.some((pubkey) => isProtectedActor(pubkey, snapshot.authority));
+  evidence.protectedTarget = isProtected;
+
+  // 3. Viewer personal block. Viewer-local and always enforced: a viewer's own
+  //    block is never softened by an application profile.
+  const blockedAuthor = authors.find((pubkey) => viewer.blocks?.has(pubkey));
+  if (blockedAuthor) {
+    evidence.personalBlock = true;
+    applyEffects(
+      decision,
+      profile.viewerBlock ?? { visibility: "hide", interaction: "deny" },
+      [createReason("viewer-block")],
     );
   }
-  
-  return composeGovernanceDecisions(decisions);
-}
 
-/**
- * Check for personal overrides for a viewer
- * @param {GovernanceTarget} target
- * @param {GovernanceState} state
- * @param {string} viewerPubkey
- * @returns {GovernanceDecision|null}
- */
-function checkPersonalOverrides(target, state, viewerPubkey) {
-  // This would check for personal allowlists, blocklists, etc.
-  // For now, we'll return null to indicate no personal override
-  return null;
-}
+  if (authors.some((pubkey) => viewer.mutes?.has(pubkey))) {
+    evidence.personalMute = true;
+    decision.reasons = dedupeReasons([...decision.reasons, createReason("viewer-mute")]);
+  }
 
-/**
- * Check for explicit overrides
- * @param {GovernanceTarget} target
- * @param {GovernanceState} state
- * @param {PolicyContext} context
- * @returns {GovernanceDecision|null}
- */
-function checkExplicitOverrides(target, state, context) {
-  const targetKey = getTargetKey(target);
-  const override = state.overrides[targetKey];
-  
-  if (!override) {
-    return null;
-  }
-  
-  // Check if the override should be applied based on context
-  if (context.enforcement && context.enforcement.allowOverrides === false) {
-    return null;
-  }
-  
-  const reasons = [];
-  if (override.reason) {
-    reasons.push(override.reason);
-  }
-  
-  return createGovernanceDecision(
-    { 
-      effect: /** @type {import('./policy.js').PolicyEffect["effect"]} */ (override.visibility), 
-      reason: override.reason 
-    },
-    { 
-      effect: /** @type {import('./policy.js').PolicyEffect["effect"]} */ (override.visibility), 
-      reason: override.reason 
-    },
-    undefined,
-    reasons,
-    [override]
-  );
-}
+  // 4-6. Administrative denial: the target itself, then its author.
+  if (!isProtected) {
+    const targetDenied = isDenied(target, snapshot.admin);
+    const authorDenied =
+      target.type !== "user" && authors.some((pubkey) => snapshot.admin.userDeny.has(`user:${pubkey}`));
 
-/**
- * Check reports against a target
- * @param {GovernanceTarget} target
- * @param {GovernanceState} state
- * @param {PolicyContext} context
- * @returns {GovernanceDecision|null}
- */
-function checkReports(target, state, context) {
-  const targetKey = getTargetKey(target);
-  const targetReports = state.reports[targetKey] || [];
-  
-  if (targetReports.length === 0) {
-    return null;
-  }
-  
-  // Count trusted reports by category
-  /** @type {Record<string, number>} */
-  const trustedReportCounts = {};
-  /** @type {any[]} */
-  const evidence = [];
-  
-  for (const report of targetReports) {
-    // Check if the reporter is trusted
-    if (hasCapability(report.reporter, "submit-reports", state.authority)) {
-      if (!trustedReportCounts[report.category]) {
-        trustedReportCounts[report.category] = 0;
+    if (target.type === "user" && targetDenied) {
+      evidence.userDenied = true;
+    }
+    if (target.type === "event" && targetDenied) {
+      evidence.eventDenied = true;
+    }
+    if (target.type === "address" && targetDenied) {
+      evidence.addressDenied = true;
+    }
+    if (authorDenied) {
+      evidence.userDenied = true;
+    }
+
+    if (targetDenied || authorDenied) {
+      const reasonId =
+        target.type === "event" && targetDenied
+          ? "admin-event-deny"
+          : target.type === "address" && targetDenied
+            ? "admin-address-deny"
+            : "admin-user-deny";
+
+      const communitySources = snapshot.admin.communitySources.get(key) ?? [];
+      /** @type {GovernanceReason[]} */
+      const reasons = [createReason(reasonId)];
+      if (communitySources.length) {
+        reasons.push(createReason("community-user-deny", { source: communitySources[0] }));
       }
-      trustedReportCounts[report.category]++;
-      evidence.push(report);
+
+      applyEffects(
+        decision,
+        profile.administrativeDeny ?? { visibility: "hide", interaction: "deny" },
+        reasons,
+      );
+    }
+  } else if (isDenied(target, snapshot.admin)) {
+    // A protected actor appearing in a denial set is a policy no-op, but the
+    // consumer should be able to see that it was ignored.
+    decision.reasons = dedupeReasons([...decision.reasons, createReason("protected-target")]);
+  }
+
+  // 7. Allowlist policy. Access control is separate from trust: being allowed
+  //    to publish grants no trust, and missing the allowlist is not a moral
+  //    judgement, so it is only enforced where the profile asks for it.
+  if (profile.requireAllowlist && !isProtected) {
+    const allowed = authors.some((pubkey) => snapshot.admin.userAllow.has(`user:${pubkey}`));
+    evidence.userAllowed = allowed;
+    if (!allowed) {
+      applyEffects(
+        decision,
+        profile.allowlistMiss ?? { visibility: "hide", interaction: "deny" },
+        [createReason("allowlist-miss")],
+      );
+    }
+  } else {
+    evidence.userAllowed = authors.some((pubkey) => snapshot.admin.userAllow.has(`user:${pubkey}`));
+  }
+
+  // 9-11. Trust signals. Aggregated after administrative state so that denied
+  //       accounts are already excluded from counting.
+  const trustSet = resolveTrustSet(snapshot.trust);
+
+  const mutes = aggregateMutes(key, snapshot, viewer, trustSet, now, profile.muteWindowSeconds);
+  evidence.trustedMuteTotal = mutes.total;
+  evidence.trustedMutesByCategory = mutes.byCategory;
+  evidence.trustedMuterPubkeys = mutes.muters;
+
+  if (mutes.total > 0) {
+    const thresholds = resolveThresholds(profile.mutes, undefined);
+    const { effects, firedGates } = applyThresholds(mutes.total, thresholds);
+    /** @type {GovernanceReason[]} */
+    const reasons = [createReason("trusted-mute", { count: mutes.total })];
+    if (firedGates.length) {
+      reasons.push(
+        createReason("trusted-mute-threshold", {
+          count: mutes.total,
+          threshold: lowestFiredThreshold(thresholds, firedGates),
+        }),
+      );
+    }
+    applyEffects(decision, effects, reasons);
+
+    for (const [category, count] of Object.entries(mutes.byCategory)) {
+      const categoryThresholds = profile.mutes?.[category];
+      if (!categoryThresholds) {
+        continue;
+      }
+      const categoryResult = applyThresholds(count, categoryThresholds);
+      if (categoryResult.firedGates.length) {
+        applyEffects(decision, categoryResult.effects, [
+          createReason("trusted-mute-threshold", {
+            category,
+            count,
+            threshold: lowestFiredThreshold(categoryThresholds, categoryResult.firedGates),
+          }),
+        ]);
+      }
     }
   }
-  
-  // Determine effect based on trusted report counts
-  let visibilityEffect = /** @type {import('./policy.js').PolicyEffect["effect"]} */ ("allow");
-  let interactionEffect = /** @type {import('./policy.js').PolicyEffect["effect"]} */ ("allow");
-  /** @type {string[]} */
-  const reasons = [];
-  
-  for (const [category, count] of Object.entries(trustedReportCounts)) {
-    if (count >= DEFAULT_THRESHOLDS.trustedReportHideThreshold) {
-      visibilityEffect = /** @type {import('./policy.js').PolicyEffect["effect"]} */ ("hide");
-      interactionEffect = /** @type {import('./policy.js').PolicyEffect["effect"]} */ ("deny");
-      reasons.push(`Hidden due to ${count} trusted reports in category ${category}`);
-    } else if (count >= DEFAULT_THRESHOLDS.trustedReportRestrictThreshold) {
-      visibilityEffect = /** @type {import('./policy.js').PolicyEffect["effect"]} */ ("restrict");
-      reasons.push(`Restricted due to ${count} trusted reports in category ${category}`);
+
+  const reports = aggregateReports(key, snapshot, viewer, trustSet);
+  evidence.trustedReportTotal = reports.total;
+  evidence.trustedReportsByCategory = reports.byCategory;
+  evidence.trustedReporterPubkeys = reports.reporters;
+
+  if (reports.total > 0) {
+    decision.reasons = dedupeReasons([
+      ...decision.reasons,
+      createReason("trusted-report", { count: reports.total }),
+    ]);
+
+    for (const [category, count] of Object.entries(reports.byCategory)) {
+      const thresholds = resolveThresholds(profile.reports, category);
+      const { effects, firedGates } = applyThresholds(count, thresholds);
+      if (!firedGates.length) {
+        continue;
+      }
+      applyEffects(decision, effects, [
+        createReason("trusted-report-threshold", {
+          category,
+          count,
+          threshold: lowestFiredThreshold(thresholds, firedGates),
+        }),
+      ]);
     }
   }
-  
-  if (visibilityEffect === "allow" && interactionEffect === "allow") {
-    return null;
+
+  evidence.thresholds = summarizeThresholds(profile);
+
+  // 8. Viewer override, applied after evidence so the viewer is overriding a
+  //    decision that actually exists. Overrides may only soften, never
+  //    escalate, and never reach a non-overridable decision.
+  const override = viewer.overrides?.get(key);
+  const overridesAllowed =
+    context.enforcement?.allowOverrides !== false && profile.allowViewerOverride !== false;
+
+  if (override && overridesAllowed && decision.visibility.overridable) {
+    const requested = override.visibility;
+    if (effectSeverity("visibility", requested) >= 0) {
+      const isSoftening =
+        effectSeverity("visibility", requested) < effectSeverity("visibility", decision.visibility.effect);
+      if (isSoftening) {
+        decision.visibility.effect = /** @type {import('./policy.js').VisibilityEffect} */ (requested);
+        decision.interaction.effect = "require-explicit-action";
+        decision.reasons = dedupeReasons([...decision.reasons, createReason("viewer-override")]);
+      }
+    }
   }
-  
-  return createGovernanceDecision(
-    { effect: visibilityEffect, reason: reasons.join("; ") },
-    { effect: interactionEffect, reason: reasons.join("; ") },
-    undefined,
-    reasons,
-    evidence
-  );
+
+  // 13. Surface policy profile. A feed may decline to hide while still
+  //     downranking, so the hide ceiling is applied last, over the composed
+  //     decision, and records that it fired.
+  if (profile.bypassHide && effectSeverity("visibility", decision.visibility.effect) >= effectSeverity("visibility", "hide")) {
+    const ceiling = profile.bypassHideCeiling ?? "restrict";
+    decision.visibility.effect = /** @type {import('./policy.js').VisibilityEffect} */ (ceiling);
+    decision.reasons = dedupeReasons([...decision.reasons, createReason("surface-policy-bypass")]);
+  }
+
+  decision.evidence = profile.exposeEvidence ? freezeEvidence(evidence) : redactEvidence(evidence);
+  decision.reasons = dedupeReasons(decision.reasons);
+
+  return decision;
 }
 
 /**
- * Check trusted mutes against a target
- * @param {GovernanceTarget} target
- * @param {GovernanceState} state
- * @param {PolicyContext} context
- * @returns {GovernanceDecision|null}
+ * Whether any category threshold in a profile can affect the transaction
+ * dimension, which decides if the decision carries a transaction block at all.
+ * @param {PolicyProfile} profile
+ * @returns {boolean}
  */
-function checkTrustedMutes(target, state, context) {
-  const targetKey = getTargetKey(target);
-  const trustedMute = state.trustedMutes[targetKey];
-  
-  if (!trustedMute) {
-    return null;
+function hasTransactionGate(profile) {
+  for (const table of [profile.reports, profile.mutes]) {
+    for (const thresholds of Object.values(table ?? {})) {
+      if (
+        Number.isFinite(thresholds.transactionDeny) ||
+        Number.isFinite(thresholds.transactionReview)
+      ) {
+        return true;
+      }
+    }
   }
-  
-  // Determine effect based on trusted mute count
-  let visibilityEffect = /** @type {import('./policy.js').PolicyEffect["effect"]} */ ("allow");
-  let interactionEffect = /** @type {import('./policy.js').PolicyEffect["effect"]} */ ("allow");
-  /** @type {string[]} */
-  const reasons = [];
-  const evidence = [trustedMute];
-  
-  if (trustedMute.count >= DEFAULT_THRESHOLDS.trustedMuteHideThreshold) {
-    visibilityEffect = /** @type {import('./policy.js').PolicyEffect["effect"]} */ ("hide");
-    interactionEffect = /** @type {import('./policy.js').PolicyEffect["effect"]} */ ("deny");
-    reasons.push(`Hidden due to ${trustedMute.count} trusted mutes`);
-  } else if (trustedMute.count >= DEFAULT_THRESHOLDS.trustedMuteRestrictThreshold) {
-    visibilityEffect = /** @type {import('./policy.js').PolicyEffect["effect"]} */ ("restrict");
-    reasons.push(`Restricted due to ${trustedMute.count} trusted mutes`);
-  }
-  
-  if (visibilityEffect === "allow" && interactionEffect === "allow") {
-    return null;
-  }
-  
-  return createGovernanceDecision(
-    { effect: visibilityEffect, reason: reasons.join("; ") },
-    { effect: interactionEffect, reason: reasons.join("; ") },
-    undefined,
-    reasons,
-    evidence
-  );
+  return false;
 }
 
 /**
- * Check if target is a descendant of a denied ancestor
- * @param {GovernanceTarget} target
- * @param {GovernanceState} state
- * @param {PolicyContext} context
- * @returns {GovernanceDecision|null}
+ * The smallest threshold value among the gates that fired, which is the one
+ * that explains why the decision changed.
+ * @param {import('./policy.js').CategoryThresholds} thresholds
+ * @param {string[]} firedGates
+ * @returns {number|undefined}
  */
-function checkAncestorDeny(target, state, context) {
-  // This would check if any ancestor of the target is denied
-  // For now, we'll return null to indicate no ancestor deny
-  return null;
+function lowestFiredThreshold(thresholds, firedGates) {
+  let lowest;
+  for (const gate of firedGates) {
+    const value = /** @type {Record<string, number|undefined>} */ (thresholds)[gate];
+    if (Number.isFinite(value) && (lowest === undefined || /** @type {number} */ (value) < lowest)) {
+      lowest = /** @type {number} */ (value);
+    }
+  }
+  return lowest;
 }
 
 /**
- * Evaluate multiple targets against the governance state
+ * Summarize a profile's headline thresholds for evidence reporting.
+ * @param {PolicyProfile} profile
+ * @returns {import('./evidence.js').EvidenceThresholds}
+ */
+function summarizeThresholds(profile) {
+  const defaults = profile.reports?.default ?? {};
+  /** @type {import('./evidence.js').EvidenceThresholds} */
+  const summary = {};
+  for (const gate of /** @type {const} */ (["warn", "restrict", "hide", "deny"])) {
+    if (Number.isFinite(defaults[gate])) {
+      summary[gate] = /** @type {number} */ (defaults[gate]);
+    }
+  }
+  return summary;
+}
+
+/**
+ * Evaluate many targets against one snapshot.
+ *
+ * The snapshot fingerprint is computed once and reused, which is what keeps
+ * large feeds from re-hashing identical state per item.
+ *
  * @param {GovernanceTarget[]} targets
- * @param {GovernanceState} state
- * @param {PolicyContext} context
- * @param {string} [viewerPubkey] - Pubkey of the viewer (for personal overrides)
- * @returns {Record<string, GovernanceDecision>}
+ * @param {GovernanceSnapshot} snapshot
+ * @param {PolicyContext} [context]
+ * @param {ViewerState} [viewerState]
+ * @returns {Map<string, GovernanceDecision>}
  */
-export function evaluateMany(targets, state, context, viewerPubkey) {
-  /** @type {Record<string, GovernanceDecision>} */
-  const results = {};
-  
+export function evaluateMany(targets, snapshot, context, viewerState) {
+  /** @type {Map<string, GovernanceDecision>} */
+  const results = new Map();
+
   for (const target of targets) {
-    const targetKey = getTargetKey(target);
-    results[targetKey] = evaluateTarget(target, state, context, viewerPubkey);
+    if (!isValidTarget(target)) {
+      continue;
+    }
+    const key = getTargetKey(target);
+    if (results.has(key)) {
+      continue;
+    }
+    results.set(key, evaluateTarget(target, snapshot, context, viewerState));
   }
-  
+
   return results;
 }
 
 /**
- * Create a governance state
- * @param {AuthorityState} [authority]
- * @param {Record<string, Report[]>} [reports]
- * @param {Record<string, TrustedMute>} [trustedMutes]
- * @param {Record<string, Override>} [overrides]
- * @param {Record<string, PolicyDefinition>} [policies]
- * @returns {GovernanceState}
+ * Create a governance snapshot with empty defaults.
+ * @param {Partial<GovernanceSnapshot>} [parts]
+ * @returns {GovernanceSnapshot}
  */
-export function createGovernanceState(authority, reports, trustedMutes, overrides, policies) {
+export function createSnapshot(parts = {}) {
   return {
-    authority: authority || { roles: {}, actors: {} },
-    reports: reports || {},
-    trustedMutes: trustedMutes || {},
-    overrides: overrides || {},
-    policies: policies || {}
+    authority: parts.authority ?? { roles: {}, actors: {}, protectedActors: [] },
+    admin: parts.admin ?? {
+      userAllow: new Set(),
+      userDeny: new Set(),
+      eventDeny: new Set(),
+      addressDeny: new Set(),
+      trustSeeds: new Set(),
+      contributors: new Map(),
+      communitySources: new Map(),
+    },
+    trust: parts.trust ?? { contacts: new Set(), seeds: new Set() },
+    reports: parts.reports ?? new Map(),
+    trustedMutes: parts.trustedMutes ?? new Map(),
   };
 }
 
 /**
- * Create a report
- * @param {string} reporter
- * @param {GovernanceTarget} target
- * @param {string} category
- * @param {number} timestamp
- * @returns {Report}
+ * Create a viewer state with empty defaults.
+ * @param {Partial<ViewerState>} [parts]
+ * @returns {ViewerState}
  */
-export function createReport(reporter, target, category, timestamp) {
-  // Validate reporter pubkey
-  if (typeof reporter !== "string" || !/^[0-9a-f]{64}$/i.test(reporter)) {
-    throw new Error("Reporter must be a 64-character hex pubkey");
-  }
-  
-  // Validate target
-  if (!target || typeof target !== "object") {
-    throw new Error("Target must be an object");
-  }
-  
-  // Validate category
-  if (typeof category !== "string" || !category.trim()) {
-    throw new Error("Category must be a non-empty string");
-  }
-  
-  // Validate timestamp
-  if (typeof timestamp !== "number" || timestamp <= 0) {
-    throw new Error("Timestamp must be a positive number");
-  }
-  
+export function createViewerState(parts = {}) {
   return {
-    reporter: reporter.toLowerCase(),
-    target,
-    category: category.trim(),
-    timestamp
+    blocks: parts.blocks ?? new Set(),
+    mutes: parts.mutes ?? new Set(),
+    overrides: parts.overrides ?? new Map(),
   };
-}
-
-/**
- * Create a trusted mute
- * @param {GovernanceTarget} target
- * @param {number} count
- * @param {Record<string, number>} categories
- * @returns {TrustedMute}
- */
-export function createTrustedMute(target, count, categories) {
-  // Validate target
-  if (!target || typeof target !== "object") {
-    throw new Error("Target must be an object");
-  }
-  
-  // Validate count
-  if (typeof count !== "number" || count < 0) {
-    throw new Error("Count must be a non-negative number");
-  }
-  
-  // Validate categories
-  if (!categories || typeof categories !== "object") {
-    throw new Error("Categories must be an object");
-  }
-  
-  // Validate each category count
-  for (const [category, categoryCount] of Object.entries(categories)) {
-    if (typeof category !== "string" || !category.trim()) {
-      throw new Error("Category names must be non-empty strings");
-    }
-    
-    if (typeof categoryCount !== "number" || categoryCount < 0) {
-      throw new Error("Category counts must be non-negative numbers");
-    }
-  }
-  
-  return {
-    target,
-    count,
-    categories
-  };
-}
-
-/**
- * Create an override
- * @param {GovernanceTarget} target
- * @param {"allow"|"restrict"|"hide"|"deny"} visibility
- * @param {string} [reason]
- * @returns {Override}
- */
-export function createOverride(target, visibility, reason) {
-  // Validate target
-  if (!target || typeof target !== "object") {
-    throw new Error("Target must be an object");
-  }
-  
-  // Validate visibility
-  if (!["allow", "restrict", "hide", "deny"].includes(visibility)) {
-    throw new Error("Invalid visibility effect");
-  }
-  
-  /** @type {Override} */
-  const override = {
-    target,
-    visibility
-  };
-  
-  if (reason) {
-    override.reason = reason;
-  }
-  
-  return override;
 }

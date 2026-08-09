@@ -1,0 +1,59 @@
+{
+  "name": "admin-user-deny",
+  "description": "A moderator's user denial hides the creator.",
+  "behavior": "Administrative denial applies the profile's administrativeDeny effects.",
+  "profile": "feed",
+  "now": 1750000000,
+  "authority": {
+    "root": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+    "actors": {
+      "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1": [
+        "super_admin"
+      ],
+      "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2": [
+        "moderator"
+      ],
+      "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3": [
+        "curator"
+      ]
+    },
+    "protectedActors": [
+      "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+    ]
+  },
+  "contributions": [
+    {
+      "actor": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+      "kind": "user-deny",
+      "targets": [
+        {
+          "type": "user",
+          "pubkey": "d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4"
+        }
+      ]
+    }
+  ],
+  "target": {
+    "type": "user",
+    "pubkey": "d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4"
+  },
+  "expect": {
+    "ranking": {
+      "effect": "normal",
+      "weight": 0
+    },
+    "visibility": {
+      "effect": "hide",
+      "overridable": true
+    },
+    "interaction": {
+      "effect": "deny"
+    },
+    "reasons": [
+      "admin-user-deny"
+    ],
+    "evidence": {
+      "userDenied": true
+    }
+  }
+}

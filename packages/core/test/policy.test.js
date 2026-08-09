@@ -1,428 +1,318 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
+
 import {
-  BUILTIN_POLICY_PROFILES,
-  createPolicyEffect,
-  createPolicyProfile,
+  INTERACTION_LADDER,
+  NEUTRAL_POLICY,
+  RANKING_LADDER,
+  TRANSACTION_LADDER,
+  VISIBILITY_LADDER,
+  applyEffects,
+  applyThresholds,
+  composeDecisions,
+  createNeutralDecision,
   createPolicyDefinition,
-  createPolicyContext,
-  createGovernanceDecision,
-  getPolicyEffect,
-  composeGovernanceDecisions
+  effectSeverity,
+  maxEffect,
+  normalizeCategoryThresholds,
+  normalizeDimensionEffects,
+  normalizePolicyDefinition,
+  resolveProfile,
+  resolveThresholds,
 } from "../src/policy.js";
+import { createReason } from "../src/reasons.js";
 
-describe("policy", () => {
-  describe("BUILTIN_POLICY_PROFILES", () => {
-    it("should define built-in policy profiles with effects", () => {
-      expect(BUILTIN_POLICY_PROFILES).toHaveProperty("default");
-      expect(BUILTIN_POLICY_PROFILES).toHaveProperty("moderate");
-      expect(BUILTIN_POLICY_PROFILES).toHaveProperty("strict");
-      expect(BUILTIN_POLICY_PROFILES).toHaveProperty("commerce-default");
-      expect(BUILTIN_POLICY_PROFILES).toHaveProperty("commerce-transaction");
-      
-      // Check that each profile has a name and effects
-      for (const [name, profile] of Object.entries(BUILTIN_POLICY_PROFILES)) {
-        expect(profile.name).toBe(name);
-        expect(profile.effects).toBeDefined();
-        expect(typeof profile.effects).toBe("object");
-      }
+describe("effect ladders", () => {
+  it("orders visibility from permissive to severe", () => {
+    expect(VISIBILITY_LADDER).toEqual(["allow", "warn", "restrict", "hide", "deny"]);
+  });
+
+  it("orders the remaining dimensions", () => {
+    expect(RANKING_LADDER).toEqual(["normal", "downrank"]);
+    expect(INTERACTION_LADDER).toEqual(["allow", "require-explicit-action", "deny"]);
+    expect(TRANSACTION_LADDER).toEqual(["allow", "require-review", "deny"]);
+  });
+
+  it("ranks effects by severity", () => {
+    expect(effectSeverity("visibility", "allow")).toBeLessThan(effectSeverity("visibility", "hide"));
+    expect(effectSeverity("visibility", "hide")).toBeLessThan(effectSeverity("visibility", "deny"));
+  });
+
+  it("returns -1 for effects outside the ladder", () => {
+    expect(effectSeverity("visibility", "banish")).toBe(-1);
+  });
+
+  it("throws for an unknown dimension", () => {
+    expect(() => effectSeverity(/** @type {any} */ ("vibes"), "allow")).toThrow(/Unknown decision dimension/);
+  });
+
+  it("keeps the more severe effect", () => {
+    expect(maxEffect("visibility", "allow", "hide")).toBe("hide");
+    expect(maxEffect("visibility", "deny", "warn")).toBe("deny");
+    expect(maxEffect("interaction", "allow", "require-explicit-action")).toBe("require-explicit-action");
+  });
+
+  it("falls back to the valid effect when one side is unknown", () => {
+    expect(maxEffect("visibility", "nonsense", "warn")).toBe("warn");
+    expect(maxEffect("visibility", "warn", "nonsense")).toBe("warn");
+  });
+});
+
+describe("normalizeDimensionEffects", () => {
+  it("passes valid effects through", () => {
+    expect(normalizeDimensionEffects({ visibility: "hide", interaction: "deny" })).toEqual({
+      visibility: "hide",
+      interaction: "deny",
     });
   });
 
-  describe("createPolicyEffect", () => {
-    it("should create a valid policy effect", () => {
-      const effect = createPolicyEffect("hide", "User is blocked", { details: "more info" });
-      expect(effect).toEqual({
-        effect: "hide",
-        reason: "User is blocked",
-        details: { details: "more info" }
-      });
-    });
+  it("rejects an effect from the wrong ladder", () => {
+    expect(() => normalizeDimensionEffects({ interaction: /** @type {any} */ ("hide") })).toThrow(
+      /invalid interaction effect/,
+    );
+  });
 
-    it("should create a policy effect without optional fields", () => {
-      const effect = createPolicyEffect("allow");
-      expect(effect).toEqual({ effect: "allow" });
-    });
+  it("returns an empty object for missing input", () => {
+    expect(normalizeDimensionEffects(/** @type {any} */ (undefined))).toEqual({});
+  });
+});
 
-    it("should throw error for invalid effect", () => {
-      expect(() => createPolicyEffect(/** @type {any} */ ("invalid"))).toThrow();
-      expect(() => createPolicyEffect(/** @type {any} */ (123))).toThrow();
+describe("normalizeCategoryThresholds", () => {
+  it("lowercases categories and floors values", () => {
+    expect(normalizeCategoryThresholds({ SPAM: { hide: 5.7 } })).toEqual({ spam: { hide: 5 } });
+  });
+
+  it("drops non-numeric gates", () => {
+    expect(normalizeCategoryThresholds({ spam: { hide: /** @type {any} */ ("many") } })).toEqual({
+      spam: {},
     });
   });
 
-  describe("createPolicyProfile", () => {
-    it("should create a valid policy profile", () => {
-      const profile = createPolicyProfile("test-profile", {
-        "visibility": { effect: "hide", reason: "Hidden" },
-        "interaction": { effect: "deny", reason: "Denied" }
-      });
-      
-      expect(profile).toEqual({
-        name: "test-profile",
-        effects: {
-          "visibility": { effect: "hide", reason: "Hidden" },
-          "interaction": { effect: "deny", reason: "Denied" }
-        }
-      });
-    });
+  it("rejects negative thresholds", () => {
+    expect(() => normalizeCategoryThresholds({ spam: { hide: -1 } })).toThrow(/must be >= 0/);
+  });
+});
 
-    it("should throw error for invalid profile name", () => {
-      expect(() => createPolicyProfile("", {})).toThrow();
-      expect(() => createPolicyProfile(/** @type {any} */ (123), {})).toThrow();
-    });
+describe("normalizePolicyDefinition", () => {
+  const valid = {
+    id: "app",
+    version: "1.0.0",
+    profiles: { feed: { name: "feed" } },
+  };
 
-    it("should throw error for invalid effects", () => {
-      expect(() => createPolicyProfile("test-profile", /** @type {any} */ (null))).toThrow();
-      expect(() => createPolicyProfile("test-profile", /** @type {any} */ ("not-an-object"))).toThrow();
-    });
-
-    it("should throw error for invalid effect types", () => {
-      expect(() => createPolicyProfile("test-profile", {
-        "": { effect: "allow" }
-      })).toThrow();
-      
-      expect(() => createPolicyProfile("test-profile", {
-        "visibility": /** @type {any} */ (null)
-      })).toThrow();
-      
-      expect(() => createPolicyProfile("test-profile", {
-        "visibility": { effect: /** @type {any} */ ("invalid") }
-      })).toThrow();
-    });
+  it("normalizes a minimal policy", () => {
+    const policy = normalizePolicyDefinition(valid);
+    expect(policy.id).toBe("app");
+    expect(policy.defaultProfile).toBe("feed");
+    expect(policy.profiles.feed.allowViewerOverride).toBe(true);
   });
 
-  describe("createPolicyDefinition", () => {
-    it("should create a valid policy definition", () => {
-      const definition = createPolicyDefinition(
-        "test-policy",
-        "Test Policy",
-        "A test policy",
-        {
-          "default": {
-            name: "default",
-            effects: {
-              "visibility": { effect: "allow" }
-            }
-          }
-        }
-      );
-      
-      expect(definition).toEqual({
-        id: "test-policy",
-        name: "Test Policy",
-        description: "A test policy",
-        profiles: {
-          "default": {
-            name: "default",
-            effects: {
-              "visibility": { effect: "allow" }
-            }
-          }
-        }
-      });
-    });
-
-    it("should throw error for invalid ID", () => {
-      expect(() => createPolicyDefinition("", "Test Policy", "A test policy", {})).toThrow();
-      expect(() => createPolicyDefinition(/** @type {any} */ (123), "Test Policy", "A test policy", {})).toThrow();
-    });
-
-    it("should throw error for invalid name", () => {
-      expect(() => createPolicyDefinition("test-policy", "", "A test policy", {})).toThrow();
-      expect(() => createPolicyDefinition("test-policy", /** @type {any} */ (123), "A test policy", {})).toThrow();
-    });
-
-    it("should throw error for invalid description", () => {
-      expect(() => createPolicyDefinition("test-policy", "Test Policy", /** @type {any} */ (123), {})).toThrow();
-    });
-
-    it("should throw error for invalid profiles", () => {
-      expect(() => createPolicyDefinition("test-policy", "Test Policy", "A test policy", /** @type {any} */ (null))).toThrow();
-      expect(() => createPolicyDefinition("test-policy", "Test Policy", "A test policy", /** @type {any} */ ("not-an-object"))).toThrow();
-    });
-
-    it("should throw error for invalid profile names", () => {
-      expect(() => createPolicyDefinition(
-        "test-policy",
-        "Test Policy",
-        "A test policy",
-        {
-          "": {
-            name: "",
-            effects: {}
-          }
-        }
-      )).toThrow();
-    });
-
-    it("should throw error for profile name mismatch", () => {
-      expect(() => createPolicyDefinition(
-        "test-policy",
-        "Test Policy",
-        "A test policy",
-        {
-          "default": {
-            name: "different-name",
-            effects: {}
-          }
-        }
-      )).toThrow();
-    });
+  it("requires an id and a version", () => {
+    expect(() => normalizePolicyDefinition({ ...valid, id: "" })).toThrow(/non-empty id/);
+    expect(() => normalizePolicyDefinition({ ...valid, version: "" })).toThrow(/version string/);
   });
 
-  describe("createPolicyContext", () => {
-    it("should create a valid policy context", () => {
-      const context = createPolicyContext("feed", "default");
-      expect(context).toEqual({
-        surface: "feed",
-        policyProfile: "default"
-      });
-    });
-
-    it("should create a policy context with enforcement options", () => {
-      const context = createPolicyContext("feed", "default", {
-        hardHide: true,
-        allowOverrides: false
-      });
-      
-      expect(context).toEqual({
-        surface: "feed",
-        policyProfile: "default",
-        enforcement: {
-          hardHide: true,
-          allowOverrides: false
-        }
-      });
-    });
-
-    it("should throw error for invalid surface", () => {
-      expect(() => createPolicyContext("", "default")).toThrow();
-      expect(() => createPolicyContext(/** @type {any} */ (123), "default")).toThrow();
-    });
-
-    it("should throw error for invalid policy profile", () => {
-      expect(() => createPolicyContext("feed", "")).toThrow();
-      expect(() => createPolicyContext("feed", /** @type {any} */ (123))).toThrow();
-    });
+  it("requires at least one profile", () => {
+    expect(() => normalizePolicyDefinition({ ...valid, profiles: {} })).toThrow(/at least one profile/);
   });
 
-  describe("createGovernanceDecision", () => {
-    it("should create a valid governance decision", () => {
-      const decision = createGovernanceDecision(
-        { effect: "hide", reason: "Hidden" },
-        { effect: "deny", reason: "Denied" },
-        { effect: "deny", reason: "Transaction denied" },
-        ["reason1", "reason2"],
-        [{ evidence: "evidence1" }, { evidence: "evidence2" }],
-        { metadata: "data" }
-      );
-      
-      expect(decision).toEqual({
-        visibility: { effect: "hide", reason: "Hidden" },
-        interaction: { effect: "deny", reason: "Denied" },
-        transaction: { effect: "deny", reason: "Transaction denied" },
-        reasons: ["reason1", "reason2"],
-        evidence: [{ evidence: "evidence1" }, { evidence: "evidence2" }],
-        metadata: { metadata: "data" }
-      });
-    });
-
-    it("should create a governance decision without optional fields", () => {
-      const decision = createGovernanceDecision(
-        { effect: "allow" },
-        { effect: "allow" }
-      );
-      
-      expect(decision).toEqual({
-        visibility: { effect: "allow" },
-        interaction: { effect: "allow" },
-        reasons: [],
-        evidence: []
-      });
-    });
-
-    it("should throw error for invalid visibility effect", () => {
-      expect(() => createGovernanceDecision(
-        /** @type {any} */ ({ effect: "invalid" }),
-        { effect: "allow" }
-      )).toThrow();
-    });
-
-    it("should throw error for invalid interaction effect", () => {
-      expect(() => createGovernanceDecision(
-        { effect: "allow" },
-        /** @type {any} */ ({ effect: "invalid" })
-      )).toThrow();
-    });
-
-    it("should throw error for invalid transaction effect", () => {
-      expect(() => createGovernanceDecision(
-        { effect: "allow" },
-        { effect: "allow" },
-        /** @type {any} */ ({ effect: "invalid" })
-      )).toThrow();
-    });
-
-    it("should throw error for invalid reasons", () => {
-      expect(() => createGovernanceDecision(
-        { effect: "allow" },
-        { effect: "allow" },
-        undefined,
-        /** @type {any} */ ("not-an-array")
-      )).toThrow();
-    });
-
-    it("should throw error for invalid evidence", () => {
-      expect(() => createGovernanceDecision(
-        { effect: "allow" },
-        { effect: "allow" },
-        undefined,
-        [],
-        /** @type {any} */ ("not-an-array")
-      )).toThrow();
-    });
+  it("rejects a default profile that does not exist", () => {
+    expect(() => normalizePolicyDefinition({ ...valid, defaultProfile: "nope" })).toThrow(
+      /is not defined/,
+    );
   });
 
-  describe("getPolicyEffect", () => {
-    it("should return effect for built-in profiles", () => {
-      const effect = getPolicyEffect("strict", "visibility");
-      expect(effect).toEqual({ effect: "hide" });
+  it("names a profile from its map key when the profile omits a name", () => {
+    const policy = normalizePolicyDefinition({
+      ...valid,
+      profiles: { checkout: /** @type {any} */ ({}) },
     });
-
-    it("should return effect for custom policies", () => {
-      const customPolicies = {
-        "custom-policy": {
-          id: "custom-policy",
-          name: "Custom Policy",
-          description: "A custom policy",
-          profiles: {
-            "custom-profile": {
-              name: "custom-profile",
-              effects: {
-                "visibility": { effect: "hide", reason: "Custom hidden" }
-              }
-            }
-          }
-        }
-      };
-      
-      const effect = getPolicyEffect("custom-profile", "visibility", /** @type {any} */ (customPolicies));
-      expect(effect).toEqual({ effect: "hide", reason: "Custom hidden" });
-    });
-
-    it("should prefer custom policies over built-in profiles", () => {
-      const customPolicies = {
-        "custom-policy": {
-          id: "custom-policy",
-          name: "Custom Policy",
-          description: "A custom policy",
-          profiles: {
-            "default": {
-              name: "default",
-              effects: {
-                "visibility": { effect: "hide", reason: "Custom default" }
-              }
-            }
-          }
-        }
-      };
-      
-      const effect = getPolicyEffect("default", "visibility", /** @type {any} */ (customPolicies));
-      expect(effect).toEqual({ effect: "hide", reason: "Custom default" });
-    });
-
-    it("should return default allow effect for unknown profiles/effects", () => {
-      const effect = getPolicyEffect("unknown-profile", "unknown-effect");
-      expect(effect).toEqual({ effect: "allow" });
-    });
+    expect(policy.profiles.checkout.name).toBe("checkout");
   });
 
-  describe("composeGovernanceDecisions", () => {
-    it("should return default allow decision for empty array", () => {
-      const decision = composeGovernanceDecisions([]);
-      expect(decision).toEqual({
-        visibility: { effect: "allow" },
-        interaction: { effect: "allow" },
-        reasons: [],
-        evidence: []
-      });
+  it("defaults the hide ceiling when bypassHide is set", () => {
+    const policy = normalizePolicyDefinition({
+      ...valid,
+      profiles: { feed: { name: "feed", bypassHide: true } },
     });
+    expect(policy.profiles.feed.bypassHideCeiling).toBe("restrict");
+  });
 
-    it("should return the single decision for array with one element", () => {
-      const inputDecision = createGovernanceDecision(
-        { effect: "hide", reason: "Hidden" },
-        { effect: "deny", reason: "Denied" },
-        undefined,
-        ["reason1"],
-        [{ evidence: "evidence1" }]
-      );
-      
-      const decision = composeGovernanceDecisions([inputDecision]);
-      expect(decision).toEqual(inputDecision);
-    });
+  it("rejects a negative mute window", () => {
+    expect(() =>
+      normalizePolicyDefinition({
+        ...valid,
+        profiles: { feed: { name: "feed", muteWindowSeconds: -5 } },
+      }),
+    ).toThrow(/muteWindowSeconds/);
+  });
 
-    it("should compose multiple decisions with most restrictive effects", () => {
-      const decisions = [
-        createGovernanceDecision(
-          { effect: "allow" },
-          { effect: "allow" }
-        ),
-        createGovernanceDecision(
-          { effect: "hide", reason: "Hidden" },
-          { effect: "deny", reason: "Denied" }
-        ),
-        createGovernanceDecision(
-          { effect: "restrict", reason: "Restricted" },
-          { effect: "allow" }
-        )
-      ];
-      
-      const decision = composeGovernanceDecisions(decisions);
-      expect(decision.visibility).toEqual({ effect: "hide", reason: "Hidden" });
-      expect(decision.interaction).toEqual({ effect: "deny", reason: "Denied" });
-    });
+  it("is exposed as createPolicyDefinition", () => {
+    expect(createPolicyDefinition(valid).id).toBe("app");
+  });
+});
 
-    it("should combine reasons and evidence from all decisions", () => {
-      const decisions = [
-        createGovernanceDecision(
-          { effect: "allow" },
-          { effect: "allow" },
-          undefined,
-          ["reason1", "reason2"],
-          [{ evidence: "evidence1" }]
-        ),
-        createGovernanceDecision(
-          { effect: "hide" },
-          { effect: "deny" },
-          undefined,
-          ["reason2", "reason3"],
-          [{ evidence: "evidence2" }]
-        )
-      ];
-      
-      const decision = composeGovernanceDecisions(decisions);
-      expect(decision.reasons).toEqual(["reason1", "reason2", "reason3"]);
-      expect(decision.evidence).toEqual([
-        { evidence: "evidence1" },
-        { evidence: "evidence2" }
-      ]);
-    });
+describe("resolveProfile", () => {
+  const policy = createPolicyDefinition({
+    id: "app",
+    version: "1.0.0",
+    defaultProfile: "feed",
+    profiles: { feed: { name: "feed" }, checkout: { name: "checkout" } },
+  });
 
-    it("should compose transaction effects when present", () => {
-      const decisions = [
-        createGovernanceDecision(
-          { effect: "allow" },
-          { effect: "allow" },
-          { effect: "allow" }
-        ),
-        createGovernanceDecision(
-          { effect: "hide" },
-          { effect: "deny" },
-          { effect: "deny", reason: "Transaction denied" }
-        )
-      ];
-      
-      const decision = composeGovernanceDecisions(decisions);
-      expect(decision.transaction).toEqual({ effect: "deny", reason: "Transaction denied" });
+  it("returns the requested profile", () => {
+    expect(resolveProfile(policy, { surface: "x", policyProfile: "checkout" }).name).toBe("checkout");
+  });
+
+  it("falls back to the default profile", () => {
+    expect(resolveProfile(policy, { surface: "x" }).name).toBe("feed");
+  });
+
+  it("throws for an unknown profile rather than silently falling back", () => {
+    expect(() => resolveProfile(policy, { surface: "x", policyProfile: "ghost" })).toThrow(
+      /Unknown policy profile/,
+    );
+  });
+});
+
+describe("resolveThresholds", () => {
+  const table = { spam: { hide: 5 }, default: { restrict: 3 } };
+
+  it("prefers an exact category match", () => {
+    expect(resolveThresholds(table, "spam")).toEqual({ hide: 5 });
+  });
+
+  it("falls back to the default entry", () => {
+    expect(resolveThresholds(table, "nudity")).toEqual({ restrict: 3 });
+  });
+
+  it("returns an empty object when nothing matches", () => {
+    expect(resolveThresholds({ spam: { hide: 5 } }, "nudity")).toEqual({});
+    expect(resolveThresholds(undefined, "spam")).toEqual({});
+  });
+});
+
+describe("applyThresholds", () => {
+  it("fires gates at or above the threshold", () => {
+    const { effects } = applyThresholds(3, { restrict: 3 });
+    expect(effects.visibility).toBe("restrict");
+  });
+
+  it("does not fire below the threshold", () => {
+    const { effects, firedGates } = applyThresholds(2, { restrict: 3 });
+    expect(effects).toEqual({});
+    expect(firedGates).toEqual([]);
+  });
+
+  it("keeps the most severe gate when several fire", () => {
+    const { effects } = applyThresholds(10, { warn: 1, restrict: 3, hide: 5 });
+    expect(effects.visibility).toBe("hide");
+  });
+
+  it("treats a zero threshold as disabled rather than always-on", () => {
+    const { effects } = applyThresholds(5, { hide: 0 });
+    expect(effects).toEqual({});
+  });
+
+  it("ignores non-positive counts", () => {
+    expect(applyThresholds(0, { warn: 1 }).effects).toEqual({});
+    expect(applyThresholds(Number.NaN, { warn: 1 }).effects).toEqual({});
+  });
+
+  it("maps gates onto their own dimensions", () => {
+    const { effects } = applyThresholds(5, {
+      downrank: 1,
+      restrict: 2,
+      requireExplicitAction: 3,
+      transactionDeny: 4,
     });
+    expect(effects).toEqual({
+      ranking: "downrank",
+      visibility: "restrict",
+      interaction: "require-explicit-action",
+      transaction: "deny",
+    });
+  });
+});
+
+describe("applyEffects", () => {
+  it("escalates but never softens", () => {
+    const decision = createNeutralDecision();
+    applyEffects(decision, { visibility: "hide" });
+    applyEffects(decision, { visibility: "warn" });
+    expect(decision.visibility.effect).toBe("hide");
+  });
+
+  it("accumulates downrank weight", () => {
+    const decision = createNeutralDecision();
+    applyEffects(decision, { ranking: "downrank" });
+    applyEffects(decision, { ranking: "downrank" });
+    expect(decision.ranking.weight).toBe(2);
+    expect(decision.ranking.effect).toBe("downrank");
+  });
+
+  it("creates the transaction dimension on demand", () => {
+    const decision = createNeutralDecision();
+    expect(decision.transaction).toBeUndefined();
+    applyEffects(decision, { transaction: "deny" });
+    expect(decision.transaction).toEqual({ effect: "deny" });
+  });
+
+  it("deduplicates reasons", () => {
+    const decision = createNeutralDecision();
+    applyEffects(decision, {}, [createReason("viewer-block"), createReason("viewer-block")]);
+    expect(decision.reasons).toHaveLength(1);
+  });
+});
+
+describe("composeDecisions", () => {
+  const withVisibility = (effect, weight = 0) => {
+    const decision = createNeutralDecision();
+    decision.visibility.effect = effect;
+    decision.ranking.weight = weight;
+    return decision;
+  };
+
+  it("returns a neutral decision for an empty list", () => {
+    const composed = composeDecisions([]);
+    expect(composed.visibility.effect).toBe("allow");
+  });
+
+  it("keeps the most severe effect", () => {
+    expect(composeDecisions([withVisibility("warn"), withVisibility("hide")]).visibility.effect).toBe(
+      "hide",
+    );
+  });
+
+  it("is order-independent", () => {
+    const a = composeDecisions([withVisibility("warn"), withVisibility("hide")]);
+    const b = composeDecisions([withVisibility("hide"), withVisibility("warn")]);
+    expect(a.visibility.effect).toBe(b.visibility.effect);
+  });
+
+  it("sums ranking weight", () => {
+    expect(composeDecisions([withVisibility("allow", 2), withVisibility("allow", 3)]).ranking.weight).toBe(5);
+  });
+
+  it("makes a decision non-overridable if any input was", () => {
+    const locked = createNeutralDecision();
+    locked.visibility.overridable = false;
+    expect(composeDecisions([createNeutralDecision(), locked]).visibility.overridable).toBe(false);
+  });
+
+  it("does not mutate its inputs", () => {
+    const first = withVisibility("warn");
+    composeDecisions([first, withVisibility("deny")]);
+    expect(first.visibility.effect).toBe("warn");
+  });
+});
+
+describe("NEUTRAL_POLICY", () => {
+  it("enforces administrative denial", () => {
+    expect(NEUTRAL_POLICY.profiles.default.administrativeDeny?.visibility).toBe("hide");
+  });
+
+  it("applies no trust thresholds of its own", () => {
+    expect(NEUTRAL_POLICY.profiles.default.reports).toEqual({});
+    expect(NEUTRAL_POLICY.profiles.default.mutes).toEqual({});
   });
 });
