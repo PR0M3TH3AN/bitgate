@@ -53,6 +53,7 @@ export {
 export {
   createEmptyEvidence,
   freezeEvidence,
+  mergeEvidence,
   redactEvidence,
 } from "./evidence.js";
 
@@ -76,6 +77,13 @@ export {
   applyEffects,
   composeDecisions,
 } from "./policy.js";
+
+export {
+  createApplicationAdapter,
+  evaluateObject,
+  evaluateObjects,
+  collectTargets,
+} from "./adapter.js";
 
 export {
   canonicalStringify,
@@ -115,4 +123,5 @@ export {
  * @typedef {import('./evaluator.js').ViewerState} ViewerState
  * @typedef {import('./evaluator.js').ReportRecord} ReportRecord
  * @typedef {import('./evaluator.js').MuteRecord} MuteRecord
+ * @typedef {import('./adapter.js').GovernanceApplicationAdapter<any>} GovernanceApplicationAdapter
  */

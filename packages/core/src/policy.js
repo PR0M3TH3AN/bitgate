@@ -9,6 +9,7 @@
 // collapsing those states into a single "hidden" boolean.
 
 import { createReason, dedupeReasons } from "./reasons.js";
+import { mergeEvidence } from "./evidence.js";
 
 /**
  * @typedef {import('./reasons.js').GovernanceReason} GovernanceReason
@@ -548,6 +549,15 @@ export function composeDecisions(decisions) {
   }
 
   composed.reasons = dedupeReasons(composed.reasons);
+
+  // Evidence is unioned rather than taken from the first decision: an object
+  // governed by several targets must explain itself with everything that
+  // contributed, not just whichever target happened to be evaluated first.
+  const evidence = decisions.map((decision) => decision.evidence).filter(Boolean);
+  if (evidence.length) {
+    composed.evidence = mergeEvidence(/** @type {any} */ (evidence));
+  }
+
   return composed;
 }
 

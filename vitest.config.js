@@ -4,6 +4,7 @@ export default defineConfig({
   test: {
     include: [
       "packages/**/test/**/*.test.js",
+      "examples/**/test/**/*.test.js",
       "tests/**/*.test.js",
     ],
     environment: "node",

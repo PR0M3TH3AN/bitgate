@@ -1,0 +1,15 @@
+{
+  "name": "@nostr-governance/example-commerce",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "description": "Proof-of-fit: the governance engine driving a marketplace, using only the public API.",
+  "main": "src/marketplace.js",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@nostr-governance/core": "*",
+    "@nostr-governance/runtime": "*"
+  }
+}
