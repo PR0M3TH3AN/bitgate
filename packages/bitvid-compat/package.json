@@ -3,15 +3,18 @@
   "version": "0.1.0",
   "type": "module",
   "main": "src/index.js",
-  "types": "dist/types/src/index.d.ts",
-  "files": ["src", "dist"],
+  "types": "dist/types/index.d.ts",
+  "files": [
+    "src",
+    "dist"
+  ],
   "exports": {
     ".": {
-      "types": "./dist/types/src/index.d.ts",
+      "types": "./dist/types/index.d.ts",
       "import": "./src/index.js"
     },
     "./profile": {
-      "types": "./dist/types/src/profile.d.ts",
+      "types": "./dist/types/profile.d.ts",
       "import": "./src/profile.js"
     }
   },

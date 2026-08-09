@@ -3,13 +3,17 @@
   "version": "0.1.0",
   "type": "module",
   "main": "src/index.js",
-  "types": "dist/types/src/index.d.ts",
-  "files": ["src", "dist"],
+  "types": "dist/types/index.d.ts",
+  "files": [
+    "src",
+    "dist"
+  ],
   "exports": {
     ".": {
-      "types": "./dist/types/src/index.d.ts",
+      "types": "./dist/types/index.d.ts",
       "import": "./src/index.js"
-    }
+    },
+    "./dist/types/*": "./dist/types/*"
   },
   "scripts": {
     "test": "vitest run"
