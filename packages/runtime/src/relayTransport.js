@@ -172,8 +172,10 @@ export function createRelayTransport(urls, options = {}) {
       }
     };
 
-    socket.onerror = (error) => {
-      diagnostic("relay socket error", { url, error: String(error?.message ?? error) });
+    socket.onerror = (/** @type {any} */ event) => {
+      // A socket error handler receives an Event, not an Error: the useful
+      // detail (if any) hangs off it rather than being the argument itself.
+      diagnostic("relay socket error", { url, error: String(event?.message ?? event?.type ?? event) });
     };
 
     socket.onclose = () => {
