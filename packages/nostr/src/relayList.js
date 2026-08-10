@@ -39,9 +39,26 @@ export function normalizeRelayUrl(value) {
     return "";
   }
   const trimmed = value.trim();
-  if (!/^wss?:\/\//i.test(trimmed)) {
+
+  // A relay URL comes from a followed contact's kind:10002 and flows straight
+  // to `new WebSocket(url)`. Control characters or internal whitespace have no
+  // legitimate place in a URL and are exactly what a CRLF-injection attempt
+  // looks like, so reject anything that is not a clean ws(s) URL. The URL
+  // constructor does the structural validation the old prefix regex skipped.
+  if (!/^wss?:\/\//i.test(trimmed) || /[\s\u0000-\u001f]/.test(trimmed)) {
     return "";
   }
+
+  let parsed;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    return "";
+  }
+  if ((parsed.protocol !== "wss:" && parsed.protocol !== "ws:") || !parsed.hostname) {
+    return "";
+  }
+
   return trimmed.replace(/\/+$/, "").toLowerCase();
 }
 

@@ -34,8 +34,11 @@ export function requestContext(element) {
   return detail.context;
 }
 
+/** @type {typeof globalThis.HTMLElement} */
 const ProviderBase =
-  typeof globalThis.HTMLElement === "function" ? globalThis.HTMLElement : /** @type {any} */ (class {});
+  typeof globalThis.HTMLElement === "function"
+    ? globalThis.HTMLElement
+    : /** @type {any} */ (class {});
 
 export class BitGateProvider extends ProviderBase {
   static get observedAttributes() {

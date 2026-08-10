@@ -172,8 +172,11 @@ export function targetFromAttributes(element) {
  * Falling back to a plain class keeps the module importable for a
  * server-rendering host; registration is still a no-op there.
  */
+/** @type {typeof globalThis.HTMLElement} */
 const ElementBase =
-  typeof globalThis.HTMLElement === "function" ? globalThis.HTMLElement : /** @type {any} */ (class {});
+  typeof globalThis.HTMLElement === "function"
+    ? globalThis.HTMLElement
+    : /** @type {any} */ (class {});
 
 export class GovernanceElement extends ElementBase {
   constructor() {

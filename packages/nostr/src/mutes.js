@@ -20,6 +20,9 @@ import { getTags } from "./replaceable.js";
 /** NIP-51 mute list kind. */
 export const MUTE_LIST_KIND = 10000;
 
+/** Largest encrypted mute payload decoded, in bytes of ciphertext. */
+export const MAX_MUTE_CONTENT_BYTES = 128 * 1024;
+
 /**
  * Resolve the category attached to a mute tag.
  *
@@ -93,6 +96,12 @@ export async function decodePrivateMuteEntries(event, { viewerPubkey, decrypt })
 
   const content = typeof event.content === "string" ? event.content.trim() : "";
   if (!content || typeof decrypt !== "function") {
+    return [];
+  }
+  // Bound the ciphertext before spending a decrypt and a parse on it. A mute
+  // list of any realistic size is far under this; anything larger is a resource
+  // trap, not a real list.
+  if (content.length > MAX_MUTE_CONTENT_BYTES) {
     return [];
   }
 

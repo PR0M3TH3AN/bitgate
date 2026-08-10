@@ -105,6 +105,15 @@ export function createRelayTransport(urls, options = {}) {
     const existing = connections.get(url) ?? { socket: null, ready: false, queue: [], attempts: 0, timer: null };
     connections.set(url, existing);
 
+    // Defence in depth: even though every internal caller pre-validates relay
+    // URLs, this is the last point before the socket constructor. A URL with
+    // control characters or whitespace is malformed by definition and never
+    // reaches the network.
+    if (typeof url !== "string" || !/^wss?:\/\//i.test(url) || /[\s\u0000-\u001f]/.test(url)) {
+      diagnostic("relay url rejected", { url });
+      return;
+    }
+
     let socket;
     try {
       socket = new SocketImpl(url);
@@ -232,6 +241,9 @@ export function createRelayTransport(urls, options = {}) {
     for (const candidate of targets) {
       const url = typeof candidate === "string" ? candidate.trim() : "";
       if (!url) {
+        continue;
+      }
+      if (typeof url !== "string" || !/^wss?:\/\//i.test(url) || /[\s\u0000-\u001f]/.test(url)) {
         continue;
       }
       if (!connections.has(url)) {

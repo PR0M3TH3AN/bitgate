@@ -349,3 +349,64 @@ describe("finding 7: growth is bounded", () => {
     expect(runtime.mutes.lists.size).toBeLessThanOrEqual(6);
   });
 });
+
+describe("second audit: relay url injection", () => {
+  it("rejects relay urls with control characters or whitespace", async () => {
+    const { normalizeRelayUrl } = await import("@bitgate/nostr");
+    for (const url of ["wss://a\r\nb", "ws:// spaces", "wss://\thost", "wss://", "javascript:alert(1)"]) {
+      expect(normalizeRelayUrl(url), url).toBe("");
+    }
+    expect(normalizeRelayUrl("wss://ok.example/")).toBe("wss://ok.example");
+  });
+
+  it("drops a malicious contact's crlf relay from an outbox grouping", async () => {
+    const { groupAuthorsByWriteRelay } = await import("@bitgate/nostr");
+    const pubkey = "d4".repeat(32);
+    const lists = new Map([
+      [pubkey, { pubkey, updatedAt: NOW, read: [], write: ["wss://evil\r\nInjected: x", "wss://good.example"] }],
+    ]);
+    const grouped = groupAuthorsByWriteRelay([pubkey], lists);
+    expect([...grouped.keys()]).toEqual(["wss://good.example"]);
+  });
+});
+
+describe("second audit: fingerprint cycle safety", () => {
+  it("does not overflow on a self-referential value", async () => {
+    const { canonicalStringify, fingerprint } = await import("@bitgate/core");
+    const cyclic = { a: 1 };
+    cyclic.self = cyclic;
+    expect(() => canonicalStringify(cyclic)).not.toThrow();
+    expect(() => fingerprint(cyclic)).not.toThrow();
+  });
+
+  it("still distinguishes genuinely different structures", async () => {
+    const { fingerprint } = await import("@bitgate/core");
+    expect(fingerprint({ a: 1 })).not.toBe(fingerprint({ a: 2 }));
+  });
+});
+
+describe("second audit: private mute payload is bounded", () => {
+  it("refuses an oversized encrypted payload before parsing", async () => {
+    const { decodePrivateMuteEntries, MUTE_LIST_KIND } = await import("@bitgate/nostr");
+    const viewer = "d4".repeat(32);
+    const event = {
+      id: "a".repeat(64),
+      pubkey: viewer,
+      kind: MUTE_LIST_KIND,
+      created_at: 1,
+      tags: [],
+      content: "x".repeat(200 * 1024),
+    };
+    let decryptCalled = false;
+    const entries = await decodePrivateMuteEntries(event, {
+      viewerPubkey: viewer,
+      decrypt: async () => {
+        decryptCalled = true;
+        return "[]";
+      },
+    });
+    expect(entries).toEqual([]);
+    // The bound is checked before spending a decrypt on it.
+    expect(decryptCalled).toBe(false);
+  });
+});

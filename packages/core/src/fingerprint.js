@@ -11,15 +11,26 @@
  * Canonical JSON: object keys sorted at every depth, so two structurally equal
  * values always serialize to the same string.
  * @param {unknown} value
+ * @param {WeakSet<object>} [seen] - Internal, for cycle detection across recursion
  * @returns {string}
  */
-export function canonicalStringify(value) {
+export function canonicalStringify(value, seen) {
   if (value === null || typeof value !== "object") {
     return JSON.stringify(value) ?? "null";
   }
 
+  // Cycle guard: a caller could hand us a snapshot fragment that references
+  // itself, and unguarded recursion is a stack-overflow DoS rather than a
+  // wrong answer. A repeated object serializes as a sentinel — fingerprints
+  // only need to be stable and collision-resistant, not reversible.
+  const visited = seen ?? new WeakSet();
+  if (visited.has(value)) {
+    return '"[cycle]"';
+  }
+  visited.add(value);
+
   if (Array.isArray(value)) {
-    return `[${value.map((entry) => canonicalStringify(entry)).join(",")}]`;
+    return `[${value.map((entry) => canonicalStringify(entry, visited)).join(",")}]`;
   }
 
   if (value instanceof Set) {
@@ -30,7 +41,7 @@ export function canonicalStringify(value) {
     const entries = Array.from(value.entries())
       .map(([key, entry]) => [String(key), entry])
       .sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
-    return `{${entries.map(([key, entry]) => `${JSON.stringify(key)}:${canonicalStringify(entry)}`).join(",")}}`;
+    return `{${entries.map(([key, entry]) => `${JSON.stringify(key)}:${canonicalStringify(entry, visited)}`).join(",")}}`;
   }
 
   const keys = Object.keys(/** @type {Record<string, unknown>} */ (value)).sort();
@@ -40,7 +51,7 @@ export function canonicalStringify(value) {
     if (entry === undefined) {
       continue;
     }
-    parts.push(`${JSON.stringify(key)}:${canonicalStringify(entry)}`);
+    parts.push(`${JSON.stringify(key)}:${canonicalStringify(entry, visited)}`);
   }
   return `{${parts.join(",")}}`;
 }
