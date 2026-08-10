@@ -302,3 +302,13 @@ describe("signature verification posture", () => {
     expect(provider.hasAttribute("data-unverified")).toBe(true);
   });
 });
+
+describe("environment safety", () => {
+  it("keeps the documented promise that it imports without a DOM", async () => {
+    // A class declaration evaluates `extends` at module load, so this used to
+    // throw in Node before any capability guard could run.
+    const { canRegisterElements } = await import("../src/base.js");
+    expect(typeof canRegisterElements).toBe("function");
+    expect(canRegisterElements()).toBe(true); // happy-dom is present here
+  });
+});

@@ -163,7 +163,19 @@ export function targetFromAttributes(element) {
  *
  * Subclasses implement `render()` and may implement `template()`.
  */
-export class GovernanceElement extends globalThis.HTMLElement {
+/**
+ * Base constructor for the elements.
+ *
+ * A class declaration evaluates its `extends` clause at module load, so
+ * `extends globalThis.HTMLElement` throws in Node before any capability guard
+ * could run — which made the "safe to import without a DOM" promise false.
+ * Falling back to a plain class keeps the module importable for a
+ * server-rendering host; registration is still a no-op there.
+ */
+const ElementBase =
+  typeof globalThis.HTMLElement === "function" ? globalThis.HTMLElement : /** @type {any} */ (class {});
+
+export class GovernanceElement extends ElementBase {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });

@@ -34,7 +34,10 @@ export function requestContext(element) {
   return detail.context;
 }
 
-export class BitGateProvider extends globalThis.HTMLElement {
+const ProviderBase =
+  typeof globalThis.HTMLElement === "function" ? globalThis.HTMLElement : /** @type {any} */ (class {});
+
+export class BitGateProvider extends ProviderBase {
   static get observedAttributes() {
     return [
       "relays",
