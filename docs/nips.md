@@ -8,7 +8,7 @@ this table for anything load-bearing.
 
 | NIP | Kind | How BitGate uses it |
 | --- | --- | --- |
-| **NIP-01** | — | Event shape, replaceable and parameterized-replaceable selection with a deterministic same-timestamp tiebreak |
+| **NIP-01** | — | Event shape, replaceable selection with a deterministic same-timestamp tiebreak, and signature verification via `@bitgate/verify` (id recomputed, then schnorr-checked) |
 | **NIP-02** | 3 | The viewer's follow list *is* the trust graph. Relay hints in the third tag position are captured as an outbox fallback. |
 | **NIP-19** | — | bech32 `npub`/`note` decoding at the codec edge, so the core stays hex-only |
 | **NIP-32** | 1985 | **Not yet** — see gaps below |

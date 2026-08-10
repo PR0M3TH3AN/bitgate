@@ -1,13 +1,11 @@
 {
-  "name": "@bitgate/widget",
+  "name": "@bitgate/verify",
   "version": "0.1.0",
   "type": "module",
+  "description": "Optional NIP-01 event signature verification for BitGate.",
   "main": "src/index.js",
   "types": "dist/types/index.d.ts",
-  "files": [
-    "src",
-    "dist"
-  ],
+  "files": ["src", "dist"],
   "exports": {
     ".": {
       "types": "./dist/types/index.d.ts",
@@ -16,12 +14,10 @@
     "./dist/types/*": "./dist/types/*"
   },
   "scripts": {
-    "test": "vitest run",
-    "build": "node build.mjs"
+    "test": "vitest run"
   },
   "dependencies": {
-    "@bitgate/core": "*",
-    "@bitgate/runtime": "*",
-    "@bitgate/verify": "*"
+    "@noble/curves": "^1.9.0",
+    "@noble/hashes": "^1.8.0"
   }
 }

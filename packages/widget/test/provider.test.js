@@ -273,3 +273,32 @@ describe("context discovery", () => {
     expect(veil.runtime).toBe(provider.runtime);
   });
 });
+
+describe("signature verification posture", () => {
+  it("verifies by default", async () => {
+    const provider = await mountProvider();
+    expect(provider.runtime.describe().signatureVerification).toBe("enabled");
+    expect(provider.hasAttribute("data-unverified")).toBe(false);
+  });
+
+  it("rejects a forged administrative event by default", async () => {
+    const provider = await mountProvider();
+    // Structurally plausible but unsigned — exactly what a hostile relay sends.
+    const accepted = provider.runtime.ingestEvent({
+      id: "ff".repeat(32),
+      pubkey: ROOT,
+      kind: 30078,
+      created_at: 1_750_000_000,
+      tags: [["d", "bitgate:governance:roles:v1"]],
+      content: "",
+      sig: "00".repeat(64),
+    });
+    expect(accepted).toBe(false);
+  });
+
+  it("can be disabled explicitly, and says so", async () => {
+    const provider = await mountProvider({ verify: "off" });
+    expect(provider.runtime.describe().signatureVerification).toBe("disabled");
+    expect(provider.hasAttribute("data-unverified")).toBe(true);
+  });
+});

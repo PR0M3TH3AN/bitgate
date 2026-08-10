@@ -23,13 +23,29 @@ Administrative state **fails closed** without it. With no `verifySignature`
 configured, roles, policy, and contribution documents are rejected and counted
 in `diagnostics.rejectedUnverified`.
 
+Use the optional package, or supply your own:
+
 ```js
+import { createVerifier } from "@bitgate/verify";
+
 createBitGate({
   root: ROOT_PUBKEY,
-  verifySignature: (event) => verifyEventSignature(event),   // your crypto library
+  verifySignature: createVerifier(),
   …
 });
 ```
+
+`<bitgate-provider>` does this automatically. Verification can be switched off
+with `verify="off"`, which sets `data-unverified` on the element and emits
+`bitgate:unverified` — it is meant for local development, and it is meant to be
+visible.
+
+Verification runs inside `ingestEvent` itself, not only in the loaders, because
+`ingestEvent` is public API: an application feeding events from its own relay
+pool would otherwise get none. An asynchronous verifier cannot be awaited on
+that synchronous path and is treated as unverified — use `ingestVerified()` or
+the loaders, both of which await properly. Failing closed is the only safe
+reading of "I could not check this".
 
 `trustUnsignedEvents: true` exists for local development and tests, where
 events are constructed in-process and there is no relay to lie. Never set it in

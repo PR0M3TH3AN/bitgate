@@ -335,8 +335,18 @@ export class GovernanceRuntime extends Emitter {
    * @param {NostrEvent} event
    * @returns {boolean} Whether the event was recognized
    */
-  ingestEvent(event) {
+  ingestEvent(event, { verified = false } = {}) {
     if (!event || typeof event.kind !== "number") {
+      return false;
+    }
+
+    // Verification here rather than only in the loaders: ingestEvent is public,
+    // and an application feeding events from its own relay pool — a documented
+    // use case — would otherwise get none. Internal callers that have already
+    // verified pass `verified: true` to avoid checking twice.
+    if (!verified && !this.#passesVerification(event)) {
+      this.diagnostics.rejectedSignatures += 1;
+      this.emit("rejected", { reason: "invalid-signature", id: event.id });
       return false;
     }
 
@@ -463,6 +473,50 @@ export class GovernanceRuntime extends Emitter {
    *
    * @returns {boolean}
    */
+  /**
+   * Run the configured verifier synchronously.
+   *
+   * A verifier that returns a promise cannot be awaited on this path, so it is
+   * treated as unverified: callers with an async verifier must use the loaders
+   * or `ingestVerified()`, both of which await properly. Failing closed is the
+   * only safe reading of "I could not check this".
+   *
+   * @param {NostrEvent} event
+   * @returns {boolean}
+   */
+  #passesVerification(event) {
+    if (!this.verifySignature) {
+      // No verifier configured: trust signals still flow, and administrative
+      // documents are refused separately by #adminIngestAllowed().
+      return true;
+    }
+    try {
+      const result = this.verifySignature(event);
+      if (typeof result === "boolean") {
+        return result;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Ingest an event, awaiting an asynchronous verifier when one is configured.
+   * @param {NostrEvent} event
+   * @returns {Promise<boolean>}
+   */
+  async ingestVerified(event) {
+    if (this.verifySignature) {
+      const [ok] = await this.#verified([event]);
+      if (!ok) {
+        this.diagnostics.rejectedSignatures += 1;
+        return false;
+      }
+    }
+    return this.ingestEvent(event, { verified: true });
+  }
+
   #adminIngestAllowed() {
     if (this.verifySignature || this.trustUnsignedEvents) {
       return true;
@@ -603,7 +657,7 @@ export class GovernanceRuntime extends Emitter {
         return false;
       }
     }
-    return this.ingestEvent(event);
+    return this.ingestEvent(event, { verified: true });
   }
 
   /**
@@ -678,7 +732,7 @@ export class GovernanceRuntime extends Emitter {
 
     const effective = Array.from(selectReplaceable(await this.#verified(events)).values());
     for (const event of effective) {
-      this.ingestEvent(event);
+      this.ingestEvent(event, { verified: true });
     }
 
     this.stale = false;
@@ -757,7 +811,7 @@ export class GovernanceRuntime extends Emitter {
       }
 
       for (const event of selectReplaceable(await this.#verified(events)).values()) {
-        if (this.ingestEvent(event)) {
+        if (this.ingestEvent(event, { verified: true })) {
           learned += 1;
         }
       }
@@ -787,7 +841,7 @@ export class GovernanceRuntime extends Emitter {
     }
 
     for (const event of selectReplaceable(await this.#verified(events)).values()) {
-      this.ingestEvent(event);
+      this.ingestEvent(event, { verified: true });
     }
 
     return this.trust.contacts.size;
@@ -838,7 +892,7 @@ export class GovernanceRuntime extends Emitter {
         }
 
         for (const event of selectReplaceable(await this.#verified(events)).values()) {
-          if (this.ingestEvent(event)) {
+          if (this.ingestEvent(event, { verified: true })) {
             ingested += 1;
           }
         }

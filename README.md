@@ -46,6 +46,7 @@ equivalent to following the operator's seed list.
 | `@bitgate/core` | Pure evaluation. No I/O, no browser globals, no dependencies. |
 | `@bitgate/nostr` | Codecs: canonical v1, NIP-56, NIP-51, legacy lists, bech32. |
 | `@bitgate/runtime` | Stores, transport orchestration, commands. |
+| `@bitgate/verify` | Optional NIP-01 signature verification, so the core stays dependency-free. |
 | `@bitgate/testing` | Conformance harness. |
 | `@bitgate/widget` | Drop-in custom elements: viewer controls and a moderator console. |
 | `@bitgate/bitvid-compat` | Reference application profile for the characterization corpus. |

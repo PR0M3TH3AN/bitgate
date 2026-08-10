@@ -11,6 +11,7 @@
 
 import { createBitGate, createCommands, createRelayTransport } from "@bitgate/runtime";
 import { getPolicyPreset } from "@bitgate/core";
+import { createVerifier } from "@bitgate/verify";
 
 import { GovernanceElement, defineElement, escapeHtml } from "./base.js";
 
@@ -35,7 +36,17 @@ export function requestContext(element) {
 
 export class BitGateProvider extends globalThis.HTMLElement {
   static get observedAttributes() {
-    return ["relays", "root", "policy", "profile", "application", "namespace", "viewer", "trust"];
+    return [
+      "relays",
+      "root",
+      "policy",
+      "profile",
+      "application",
+      "namespace",
+      "viewer",
+      "trust",
+      "verify",
+    ];
   }
 
   constructor() {
@@ -150,6 +161,23 @@ export class BitGateProvider extends globalThis.HTMLElement {
         return;
       }
 
+      // Verified by default. A relay can otherwise put the root's key on an
+      // event the root never wrote, and administrative state would fail closed
+      // anyway — so the secure path has to be the one that needs no opt-in.
+      const verificationDisabled = this.getAttribute("verify") === "off";
+      if (verificationDisabled) {
+        this.setAttribute("data-unverified", "");
+        this.dispatchEvent(
+          new CustomEvent("bitgate:unverified", {
+            detail: { reason: 'verify="off"' },
+            bubbles: true,
+            composed: true,
+          }),
+        );
+      } else {
+        this.removeAttribute("data-unverified");
+      }
+
       this.transport = transport;
       this.runtime = createBitGate({
         applicationId: this.getAttribute("application") ?? globalThis.location?.hostname ?? "bitgate",
@@ -159,6 +187,8 @@ export class BitGateProvider extends globalThis.HTMLElement {
         policy,
         storage: createLocalStorage(),
         now: () => Math.floor(Date.now() / 1000),
+        verifySignature: verificationDisabled ? undefined : createVerifier(),
+        trustUnsignedEvents: verificationDisabled,
       });
       this.commands = createCommands(this.runtime);
 

@@ -9,7 +9,7 @@
     "test:unit": "vitest run --passWithNoTests",
     "test:conformance": "vitest run tests/conformance --passWithNoTests",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "build:types": "tsc -p packages/core/tsconfig.types.json && tsc -p packages/nostr/tsconfig.types.json && tsc -p packages/runtime/tsconfig.types.json && tsc -p packages/bitvid-compat/tsconfig.types.json && tsc -p packages/widget/tsconfig.types.json && tsc -p packages/testing/tsconfig.types.json",
+    "build:types": "tsc -p packages/core/tsconfig.types.json && tsc -p packages/nostr/tsconfig.types.json && tsc -p packages/verify/tsconfig.types.json && tsc -p packages/runtime/tsconfig.types.json && tsc -p packages/bitvid-compat/tsconfig.types.json && tsc -p packages/widget/tsconfig.types.json && tsc -p packages/testing/tsconfig.types.json",
     "lint": "npm run check:references && npm run check:types",
     "check:references": "node scripts/verify-no-reference-imports.mjs",
     "check:types": "tsc -p tsconfig.json --noEmit && tsc -p packages/widget/tsconfig.json --noEmit",
