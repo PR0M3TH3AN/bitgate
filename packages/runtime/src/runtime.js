@@ -17,15 +17,21 @@ import {
 } from "@bitgate/core";
 import {
   CANONICAL_KIND,
+  CONTACT_LIST_KIND,
   LEGACY_KIND,
   MUTE_LIST_KIND,
+  RELAY_LIST_KIND,
   REPORT_KIND,
+  decodeContactList,
   decodeContribution,
   decodeLegacyList,
   decodeMuteList,
   decodePolicy,
+  decodePrivateMuteEntries,
+  decodeRelayList,
   decodeReport,
   decodeRoles,
+  groupAuthorsByWriteRelay,
   selectReplaceable,
   verifyEvents,
 } from "@bitgate/nostr";
@@ -149,6 +155,11 @@ export class GovernanceRuntime extends Emitter {
     // rather than pretending state was verified.
     this.verifySignature = verifySignature;
 
+    // The deployment's own relays, used as a fallback for authors who have
+    // published no NIP-65 list.
+    /** @type {string[]} */
+    this.defaultRelays = Array.isArray(transport.relays) ? [...transport.relays] : [];
+
     this.admin = new GovernanceAdminStore();
     this.trust = new TrustGraphStore();
     this.reports = new ReportStore();
@@ -181,6 +192,11 @@ export class GovernanceRuntime extends Emitter {
     this.stale = false;
     /** @type {number} */
     this.lastLoadedAt = 0;
+
+    // NIP-65 relay lists, keyed by pubkey. Populated by loadRelayLists() and
+    // consulted when fetching anything authored by a specific person.
+    /** @type {Map<string, import('@bitgate/nostr').RelayList>} */
+    this.relayLists = new Map();
 
     /** @type {Array<() => void>} */
     this.storeUnsubscribes = [
@@ -235,6 +251,7 @@ export class GovernanceRuntime extends Emitter {
       cacheMisses: 0,
       rejectedSignatures: 0,
       hydratedFromCache: false,
+      privateMutesApplied: 0,
     };
   }
 
@@ -283,6 +300,29 @@ export class GovernanceRuntime extends Emitter {
       const list = decodeMuteList(event);
       if (list) {
         this.mutes.replaceList(list);
+        // The viewer's own private entries are decrypted separately, since it
+        // needs a signer and cannot be synchronous.
+        if (list.hasEncryptedEntries && list.owner === this.viewerPubkey) {
+          void this.#absorbPrivateMutes(event);
+        }
+        return true;
+      }
+      return false;
+    }
+
+    if (event.kind === RELAY_LIST_KIND) {
+      const relayList = decodeRelayList(event);
+      if (relayList) {
+        this.relayLists.set(relayList.pubkey, relayList);
+        return true;
+      }
+      return false;
+    }
+
+    if (event.kind === CONTACT_LIST_KIND) {
+      const contactList = decodeContactList(event);
+      if (contactList && contactList.owner === this.viewerPubkey) {
+        this.trust.setContacts(contactList.contacts);
         return true;
       }
       return false;
@@ -486,6 +526,163 @@ export class GovernanceRuntime extends Emitter {
     }
 
     return effective.length;
+  }
+
+  /**
+   * Decrypt and apply the viewer's own private mute entries.
+   *
+   * Requires a signer exposing NIP-44 decryption. Without one the entries stay
+   * unread, which is a degradation rather than a failure — public mutes still
+   * apply.
+   *
+   * @param {NostrEvent} event
+   * @returns {Promise<number>} Number of private entries applied
+   */
+  async #absorbPrivateMutes(event) {
+    const decrypt = this.signer?.nip44?.decrypt ?? this.signer?.decrypt;
+    if (typeof decrypt !== "function") {
+      return 0;
+    }
+
+    let entries;
+    try {
+      entries = await decodePrivateMuteEntries(event, {
+        viewerPubkey: this.viewerPubkey,
+        decrypt: (pubkey, ciphertext) => decrypt.call(this.signer, pubkey, ciphertext),
+      });
+    } catch {
+      return 0;
+    }
+
+    if (!entries.length) {
+      return 0;
+    }
+
+    // A viewer's own mutes are viewer state, not a trusted-mute signal: they
+    // are a personal preference, not evidence about the target.
+    const combined = new Set([...this.trust.mutes, ...entries.map((entry) => entry.pubkey)]);
+    this.trust.setMutes(combined);
+    this.diagnostics.privateMutesApplied = entries.length;
+    return entries.length;
+  }
+
+  /**
+   * Load NIP-65 relay lists for a set of authors.
+   *
+   * Fetched from the configured relays, since a relay list is the one thing
+   * that cannot be fetched using itself.
+   *
+   * @param {string[]} authors
+   * @returns {Promise<number>} Number of lists learned
+   */
+  async loadRelayLists(authors) {
+    const pubkeys = Array.from(new Set((authors ?? []).map((key) => normalizePubkey(key)).filter(Boolean)));
+    if (!pubkeys.length) {
+      return 0;
+    }
+
+    let learned = 0;
+    for (const chunkOfAuthors of chunk(pubkeys, this.chunkSize)) {
+      let events;
+      try {
+        events = await this.transport.list([
+          { kinds: [RELAY_LIST_KIND], authors: chunkOfAuthors },
+        ]);
+      } catch (error) {
+        this.emit("stale", { reason: "relay-lists-unreachable", error: String(error) });
+        continue;
+      }
+
+      for (const event of selectReplaceable(await this.#verified(events)).values()) {
+        if (this.ingestEvent(event)) {
+          learned += 1;
+        }
+      }
+    }
+
+    return learned;
+  }
+
+  /**
+   * Load the viewer's follow list and adopt it as the trust graph.
+   *
+   * @returns {Promise<number>} Number of contacts adopted
+   */
+  async loadContacts() {
+    if (!this.viewerPubkey) {
+      return 0;
+    }
+
+    let events;
+    try {
+      events = await this.transport.list([
+        { kinds: [CONTACT_LIST_KIND], authors: [this.viewerPubkey] },
+      ]);
+    } catch (error) {
+      this.emit("stale", { reason: "contacts-unreachable", error: String(error) });
+      return 0;
+    }
+
+    for (const event of selectReplaceable(await this.#verified(events)).values()) {
+      this.ingestEvent(event);
+    }
+
+    return this.trust.contacts.size;
+  }
+
+  /**
+   * Load trusted mute lists using the outbox model.
+   *
+   * Each contact publishes their mute list to their own write relays, so a
+   * query against a fixed relay set finds only the subset who happen to write
+   * where this deployment reads. Fetching per-author from their advertised
+   * relays is the difference between a trust graph that works and one that
+   * silently reports low counts.
+   *
+   * Falls back to the configured relays for anyone with no published relay
+   * list — dropping them would be worse than querying the wrong place.
+   *
+   * @param {Object} [options]
+   * @param {boolean} [options.discoverRelays] - Fetch relay lists first
+   * @returns {Promise<number>} Number of mute lists ingested
+   */
+  async loadTrustedMuteLists({ discoverRelays = true } = {}) {
+    const owners = Array.from(this.trust.trustSet);
+    if (!owners.length) {
+      return 0;
+    }
+
+    if (discoverRelays) {
+      await this.loadRelayLists(owners);
+    }
+
+    const grouped = groupAuthorsByWriteRelay(owners, this.relayLists, {
+      fallback: this.defaultRelays,
+    });
+
+    let ingested = 0;
+    for (const [relay, authors] of grouped) {
+      for (const authorChunk of chunk(authors, this.chunkSize)) {
+        let events;
+        try {
+          events = await this.transport.list(
+            [{ kinds: [MUTE_LIST_KIND], authors: authorChunk }],
+            { relays: [relay] },
+          );
+        } catch (error) {
+          this.emit("stale", { reason: "mute-lists-unreachable", relay, error: String(error) });
+          continue;
+        }
+
+        for (const event of selectReplaceable(await this.#verified(events)).values()) {
+          if (this.ingestEvent(event)) {
+            ingested += 1;
+          }
+        }
+      }
+    }
+
+    return ingested;
   }
 
   /**
@@ -899,6 +1096,9 @@ export class GovernanceRuntime extends Emitter {
       lastLoadedAt: this.lastLoadedAt,
       signatureVerification: this.verifySignature ? "enabled" : "disabled",
       ...this.diagnostics,
+      // Derived from live state, so it is computed after the counters rather
+      // than stored alongside them where a stale copy could shadow it.
+      relayListsKnown: this.relayLists.size,
     };
   }
 

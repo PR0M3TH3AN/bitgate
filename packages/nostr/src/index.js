@@ -51,9 +51,24 @@ export {
   MUTE_LIST_KIND,
   extractMuteCategory,
   decodeMuteList,
+  decodePrivateMuteEntries,
   toMuteRecords,
   encodeMuteList,
 } from "./mutes.js";
+
+export {
+  RELAY_LIST_KIND,
+  normalizeRelayUrl,
+  decodeRelayList,
+  groupAuthorsByWriteRelay,
+  encodeRelayList,
+} from "./relayList.js";
+
+export {
+  CONTACT_LIST_KIND,
+  decodeContactList,
+  encodeContactList,
+} from "./contacts.js";
 
 export {
   LEGACY_KIND,
@@ -72,4 +87,6 @@ export {
  * @typedef {import('./replaceable.js').SignatureVerifier} SignatureVerifier
  * @typedef {import('./reports.js').DecodedReport} DecodedReport
  * @typedef {import('./mutes.js').DecodedMuteList} DecodedMuteList
+ * @typedef {import('./relayList.js').RelayList} RelayList
+ * @typedef {import('./contacts.js').ContactList} ContactList
  */

@@ -213,6 +213,35 @@ export function createRelayTransport(urls, options = {}) {
     connect(url);
   }
 
+  /**
+   * Resolve the relays a call should target, connecting to any that are new.
+   *
+   * The outbox model routinely needs relays that were never configured — that
+   * is the entire point of reading someone's relay list — so a target set is
+   * connected on demand rather than silently narrowed to what we already had.
+   *
+   * @param {string[]} [targets]
+   * @returns {string[]}
+   */
+  function resolveTargets(targets) {
+    if (!targets?.length) {
+      return relays;
+    }
+
+    const resolved = [];
+    for (const candidate of targets) {
+      const url = typeof candidate === "string" ? candidate.trim() : "";
+      if (!url) {
+        continue;
+      }
+      if (!connections.has(url)) {
+        connect(url);
+      }
+      resolved.push(url);
+    }
+    return resolved.length ? resolved : relays;
+  }
+
   return {
     relays,
 
@@ -224,17 +253,18 @@ export function createRelayTransport(urls, options = {}) {
      * and results already received are returned rather than discarded.
      *
      * @param {object[]} filters
-     * @param {{ timeout?: number }} [listOptions]
+     * @param {{ timeout?: number, relays?: string[] }} [listOptions]
      * @returns {Promise<NostrEvent[]>}
      */
     async list(filters, listOptions = {}) {
       const id = `bg-list-${(subscriptionCounter += 1)}`;
+      const targets = resolveTargets(listOptions.relays);
       /** @type {Map<string, NostrEvent>} */
       const collected = new Map();
 
       return new Promise((resolve) => {
         let settled = false;
-        let pendingEose = relays.length;
+        let pendingEose = targets.length;
 
         const finish = () => {
           if (settled) {
@@ -243,7 +273,7 @@ export function createRelayTransport(urls, options = {}) {
           settled = true;
           clearTimeout(timer);
           subscriptions.delete(id);
-          for (const url of relays) {
+          for (const url of targets) {
             send(url, JSON.stringify(["CLOSE", id]));
           }
           resolve([...collected.values()]);
@@ -271,7 +301,7 @@ export function createRelayTransport(urls, options = {}) {
           },
         });
 
-        for (const url of relays) {
+        for (const url of targets) {
           send(url, JSON.stringify(["REQ", id, ...filters]));
         }
       });
@@ -283,8 +313,9 @@ export function createRelayTransport(urls, options = {}) {
      * @param {SubscriptionHandlers} handlers
      * @returns {{ close: () => void }}
      */
-    subscribe(filters, handlers) {
+    subscribe(filters, handlers, subscribeOptions = {}) {
       const id = `bg-sub-${(subscriptionCounter += 1)}`;
+      const targets = resolveTargets(subscribeOptions.relays);
       /** @type {Set<string>} */
       const seen = new Set();
 
@@ -305,7 +336,7 @@ export function createRelayTransport(urls, options = {}) {
       });
 
       const payload = JSON.stringify(["REQ", id, ...filters]);
-      for (const url of relays) {
+      for (const url of targets) {
         send(url, payload);
       }
 
@@ -313,7 +344,7 @@ export function createRelayTransport(urls, options = {}) {
         close() {
           subscriptions.delete(id);
           const closePayload = JSON.stringify(["CLOSE", id]);
-          for (const url of relays) {
+          for (const url of targets) {
             send(url, closePayload);
           }
         },

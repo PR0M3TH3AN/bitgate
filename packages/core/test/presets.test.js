@@ -198,6 +198,37 @@ describe("admin-only preset", () => {
   });
 });
 
+describe("category vocabulary", () => {
+  // NIP-56 defines exactly these. A threshold for anything else can only fire
+  // if a bespoke client emits it.
+  const NIP56 = ["nudity", "malware", "profanity", "illegal", "spam", "impersonation", "other"];
+
+  it("uses only NIP-56 categories in the social preset", () => {
+    for (const category of Object.keys(SOCIAL_POLICY.profiles.feed.reports ?? {})) {
+      if (category === "default") continue;
+      expect(NIP56, `social preset declares "${category}"`).toContain(category);
+    }
+  });
+
+  it("keeps commerce extensions alongside the standard ones", () => {
+    const categories = Object.keys(COMMERCE_POLICY.profiles.browse.reports ?? {});
+    expect(categories).toContain("malware");
+    expect(categories).toContain("illegal");
+    // Marketplace-specific vocabulary is deliberate; it is documented as such.
+    expect(categories).toContain("scam");
+  });
+
+  it("gives every preset a default so unknown categories still land somewhere", () => {
+    for (const [name, policy] of Object.entries(POLICY_PRESETS)) {
+      for (const [profileName, profile] of Object.entries(policy.profiles)) {
+        const reports = profile.reports ?? {};
+        if (Object.keys(reports).length === 0) continue;
+        expect(reports.default, `${name}/${profileName}`).toBeDefined();
+      }
+    }
+  });
+});
+
 describe("preset hygiene", () => {
   it("gives every preset a version and a named default profile", () => {
     for (const [name, policy] of Object.entries(POLICY_PRESETS)) {

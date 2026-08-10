@@ -21,10 +21,20 @@
  */
 
 /**
+ * @typedef {Object} ListOptions
+ * @property {number} [timeout]
+ * @property {string[]} [relays] - Query only these relays, connecting if needed.
+ *   This is what makes outbox-model fetching possible: a contact's mute list
+ *   lives on their write relays, not on this deployment's.
+ */
+
+/**
  * @typedef {Object} GovernanceTransport
- * @property {(filters: object[], options?: object) => Promise<NostrEvent[]>} list
- * @property {(filters: object[], handlers: SubscriptionHandlers, options?: object) => GovernanceSubscription} subscribe
+ * @property {(filters: object[], options?: ListOptions) => Promise<NostrEvent[]>} list
+ * @property {(filters: object[], handlers: SubscriptionHandlers, options?: ListOptions) => GovernanceSubscription} subscribe
  * @property {(event: NostrEvent, options?: object) => Promise<PublishResult>} publish
+ * @property {string[]} [relays] - The transport's configured relays, used as an
+ *   outbox fallback for authors who have published no NIP-65 list
  */
 
 /**
@@ -35,9 +45,20 @@
  */
 
 /**
+ * @typedef {Object} Nip44
+ * @property {(pubkey: string, ciphertext: string) => Promise<string>} decrypt
+ * @property {(pubkey: string, plaintext: string) => Promise<string>} [encrypt]
+ */
+
+/**
  * @typedef {Object} GovernanceSigner
  * @property {() => Promise<string>} getPublicKey
  * @property {(event: object) => Promise<NostrEvent>} signEvent
+ * @property {Nip44} [nip44] - NIP-44 encryption, as NIP-07 providers expose it.
+ *   Optional: without it the viewer's private mute entries stay unread, which
+ *   degrades the feature rather than breaking anything.
+ * @property {(pubkey: string, ciphertext: string) => Promise<string>} [decrypt] -
+ *   Flat fallback for signers that expose decryption without the nip44 namespace
  */
 
 /**

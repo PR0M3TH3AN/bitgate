@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   MUTE_LIST_KIND,
   decodeMuteList,
+  decodePrivateMuteEntries,
   encodeMuteList,
   extractMuteCategory,
   toMuteRecords,
@@ -120,5 +121,71 @@ describe("encodeMuteList", () => {
 
   it("encodes a bare entry without a category slot", () => {
     expect(encodeMuteList([{ pubkey: CREATOR }]).tags).toEqual([["p", CREATOR]]);
+  });
+});
+
+describe("decodePrivateMuteEntries", () => {
+  const PRIVATE = JSON.stringify([["p", CREATOR], ["p", OTHER_OWNER, "", "spam"], ["t", "topic"]]);
+
+  /** A signer stand-in: returns the plaintext for the owner's own ciphertext. */
+  const decrypt = async (pubkey, ciphertext) => {
+    if (pubkey !== OWNER || ciphertext !== "cipher") {
+      throw new Error("cannot decrypt");
+    }
+    return PRIVATE;
+  };
+
+  it("decodes the viewer's own private entries", async () => {
+    const entries = await decodePrivateMuteEntries(event({ content: "cipher" }), {
+      viewerPubkey: OWNER,
+      decrypt,
+    });
+    expect(entries).toEqual([{ pubkey: CREATOR }, { pubkey: OTHER_OWNER, category: "spam" }]);
+  });
+
+  it("refuses to decrypt someone else's list", async () => {
+    // The privacy boundary lives here rather than in the caller's discipline.
+    const attempted = await decodePrivateMuteEntries(
+      event({ pubkey: OTHER_OWNER, content: "cipher" }),
+      { viewerPubkey: OWNER, decrypt },
+    );
+    expect(attempted).toEqual([]);
+  });
+
+  it("ignores non-p tags in the private payload", async () => {
+    const entries = await decodePrivateMuteEntries(event({ content: "cipher" }), {
+      viewerPubkey: OWNER,
+      decrypt,
+    });
+    expect(entries.every((entry) => typeof entry.pubkey === "string")).toBe(true);
+  });
+
+  it("degrades to nothing when decryption fails", async () => {
+    const entries = await decodePrivateMuteEntries(event({ content: "garbage" }), {
+      viewerPubkey: OWNER,
+      decrypt,
+    });
+    expect(entries).toEqual([]);
+  });
+
+  it("degrades to nothing without a decrypt function", async () => {
+    expect(
+      await decodePrivateMuteEntries(event({ content: "cipher" }), { viewerPubkey: OWNER }),
+    ).toEqual([]);
+  });
+
+  it("returns nothing when there is no private half", async () => {
+    expect(
+      await decodePrivateMuteEntries(event({ content: "" }), { viewerPubkey: OWNER, decrypt }),
+    ).toEqual([]);
+  });
+
+  it("rejects the wrong kind", async () => {
+    expect(
+      await decodePrivateMuteEntries(event({ kind: 30000, content: "cipher" }), {
+        viewerPubkey: OWNER,
+        decrypt,
+      }),
+    ).toEqual([]);
   });
 });

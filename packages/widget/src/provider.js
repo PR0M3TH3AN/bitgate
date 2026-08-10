@@ -35,7 +35,7 @@ export function requestContext(element) {
 
 export class BitGateProvider extends globalThis.HTMLElement {
   static get observedAttributes() {
-    return ["relays", "root", "policy", "profile", "application", "namespace", "viewer"];
+    return ["relays", "root", "policy", "profile", "application", "namespace", "viewer", "trust"];
   }
 
   constructor() {
@@ -157,6 +157,15 @@ export class BitGateProvider extends globalThis.HTMLElement {
       );
 
       await this.runtime.loadAdministrativeState();
+
+      // With a viewer known, build the trust graph without the host having to:
+      // fetch their follow list, then read each contact's mute list from that
+      // contact's own write relays.
+      if (this.runtime.viewerPubkey && this.getAttribute("trust") !== "manual") {
+        await this.runtime.loadContacts();
+        await this.runtime.loadTrustedMuteLists();
+      }
+
       this.dispatchEvent(new CustomEvent("bitgate:loaded", { bubbles: true, composed: true }));
     } catch (error) {
       this.error = /** @type {Error} */ (error);
@@ -205,6 +214,12 @@ export class BitGateProvider extends globalThis.HTMLElement {
     this.runtime.signer = signer;
     const pubkey = await signer.getPublicKey();
     this.runtime.setViewer(pubkey);
+
+    if (this.getAttribute("trust") !== "manual") {
+      await this.runtime.loadContacts();
+      await this.runtime.loadTrustedMuteLists();
+    }
+
     return pubkey;
   }
 }

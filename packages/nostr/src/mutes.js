@@ -1,9 +1,14 @@
 // NIP-51 mute list codec.
 //
-// A mute list is a replaceable kind:10000 event whose public entries are `p`
-// tags. Encrypted entries live in `content` and are deliberately not decoded
-// here: a private mute is private, and the governance engine has no business
-// reading another account's encrypted list even when it could.
+// A mute list is a replaceable kind:10000 event. Public entries are `p` tags;
+// private entries are a JSON array of the same shape, NIP-44 encrypted into
+// `content` to the author's own key.
+//
+// The privacy rule here is asymmetric on purpose. Another account's private
+// mutes are none of our business and are never decoded — only counted as
+// present. The *viewer's own* private mutes are theirs, they hold the key, and
+// ignoring them means a user who mutes privately gets no effect at all, which
+// reads as the product being broken.
 
 import { normalizePubkeyInput } from "./nip19.js";
 import { getTags } from "./replaceable.js";
@@ -57,6 +62,75 @@ export function extractMuteCategory(tag) {
  * @property {Array<{ pubkey: string, category?: string }>} entries
  * @property {boolean} hasEncryptedEntries - Whether private entries were present but not read
  */
+
+/**
+ * Decode the private half of a mute list.
+ *
+ * NIP-51 stores private entries as a JSON array mirroring the tag structure,
+ * encrypted to the author's own key. Decryption is delegated to a signer so
+ * this package needs no crypto implementation and no access to a secret key.
+ *
+ * Refuses outright when the list is not the viewer's own: the caller could
+ * technically pass any list, and the check belongs where the boundary is, not
+ * in the caller's discipline.
+ *
+ * @param {NostrEvent} event
+ * @param {Object} options
+ * @param {string} options.viewerPubkey - The signed-in viewer
+ * @param {(pubkey: string, ciphertext: string) => Promise<string>} [options.decrypt] - NIP-44 decrypt
+ * @returns {Promise<Array<{ pubkey: string, category?: string }>>}
+ */
+export async function decodePrivateMuteEntries(event, { viewerPubkey, decrypt }) {
+  if (!event || event.kind !== MUTE_LIST_KIND) {
+    return [];
+  }
+
+  const owner = normalizePubkeyInput(event.pubkey);
+  const viewer = normalizePubkeyInput(viewerPubkey);
+  if (!owner || !viewer || owner !== viewer) {
+    return [];
+  }
+
+  const content = typeof event.content === "string" ? event.content.trim() : "";
+  if (!content || typeof decrypt !== "function") {
+    return [];
+  }
+
+  let tags;
+  try {
+    const plaintext = await decrypt(owner, content);
+    tags = JSON.parse(plaintext);
+  } catch {
+    // A list encrypted with a key we do not hold, or written by a client we do
+    // not understand, degrades to "no private entries" rather than throwing.
+    return [];
+  }
+
+  if (!Array.isArray(tags)) {
+    return [];
+  }
+
+  /** @type {Array<{ pubkey: string, category?: string }>} */
+  const entries = [];
+  /** @type {Set<string>} */
+  const seen = new Set();
+
+  for (const tag of tags) {
+    if (!Array.isArray(tag) || tag[0] !== "p") {
+      continue;
+    }
+    const pubkey = normalizePubkeyInput(tag[1]);
+    if (!pubkey || seen.has(pubkey)) {
+      continue;
+    }
+    seen.add(pubkey);
+
+    const category = extractMuteCategory(tag);
+    entries.push(category ? { pubkey, category } : { pubkey });
+  }
+
+  return entries;
+}
 
 /**
  * Decode a NIP-51 mute list.

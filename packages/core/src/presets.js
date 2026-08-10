@@ -16,9 +16,14 @@ const DAY = 24 * 60 * 60;
 /**
  * Report thresholds for a social feed.
  *
+ * Categories are the NIP-56 vocabulary exactly — `nudity`, `malware`,
+ * `profanity`, `illegal`, `spam`, `impersonation`, `other`. Inventing a
+ * category here would be dead configuration: no standard client emits it, so
+ * the threshold could never fire.
+ *
  * Malware and impersonation escalate fastest because their harm is immediate
- * and specific. Broad categories like "spam" need more agreement before they
- * do anything visible, since they are the easiest to weaponize against someone
+ * and specific. Broad categories like `spam` need more agreement before doing
+ * anything visible, since they are the easiest to weaponize against someone
  * unpopular.
  *
  * @type {Record<string, import('./policy.js').CategoryThresholds>}
@@ -26,9 +31,10 @@ const DAY = 24 * 60 * 60;
 const SOCIAL_REPORTS = {
   malware: { warn: 1, restrict: 1, hide: 2, interactionDeny: 1 },
   impersonation: { warn: 1, restrict: 2, hide: 4 },
+  illegal: { warn: 1, restrict: 2, hide: 3 },
   nudity: { restrict: 2, requireExplicitAction: 2 },
+  profanity: { downrank: 1, warn: 2, restrict: 3, hide: 6 },
   spam: { downrank: 2, restrict: 4, hide: 8 },
-  harassment: { downrank: 1, warn: 2, restrict: 3, hide: 6 },
   default: { downrank: 2, warn: 4, restrict: 6 },
 };
 
@@ -97,6 +103,13 @@ export const SOCIAL_POLICY = createPolicyDefinition({
 /**
  * Report thresholds for a marketplace.
  *
+ * `malware`, `illegal`, and `spam` are NIP-56 categories. `scam`,
+ * `counterfeit`, and `not-as-described` are **not**: they are marketplace
+ * vocabulary that only a commerce client will emit. That is a deliberate
+ * trade — commerce harms have no NIP-56 equivalent — but it means reports from
+ * generic Nostr clients arrive as `other` and fall through to the default
+ * thresholds. Publish them as NIP-32 labels if you need cross-client meaning.
+ *
  * Money changes the calculus: one credible malware report should stop a sale,
  * because the cost of being wrong runs one way. Visibility stays more generous
  * than transaction throughout — a listing can remain readable while being
@@ -110,6 +123,8 @@ const COMMERCE_REPORTS = {
   counterfeit: { downrank: 1, warn: 2, restrict: 4, transactionReview: 3 },
   "not-as-described": { downrank: 2, warn: 4, transactionReview: 5 },
   misleading: { downrank: 2, warn: 3, restrict: 5, hide: 8 },
+  illegal: { warn: 1, restrict: 2, hide: 3, transactionDeny: 2 },
+  spam: { downrank: 2, restrict: 5 },
   default: { downrank: 2, warn: 4 },
 };
 
@@ -128,9 +143,15 @@ const COMMERCE_MUTES = {
  */
 const CHECKOUT_REPORTS = {
   malware: { transactionDeny: 1 },
+  illegal: { transactionDeny: 2 },
   scam: { transactionReview: 2, transactionDeny: 3 },
   counterfeit: { transactionReview: 3 },
   "not-as-described": { transactionReview: 5 },
+  // Reports whose category we cannot interpret — `other`, or a vocabulary from
+  // some client we have never seen — should not silently do nothing at the one
+  // place money changes hands. They do not auto-deny either: an unclassified
+  // complaint is not evidence of fraud. Enough of them earns a human look.
+  default: { transactionReview: 4 },
 };
 
 /**
