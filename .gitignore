@@ -12,3 +12,5 @@ coverage/
 
 # Built site output (Vercel builds it)
 packages/site/dist/
+.vercel
+.env*
