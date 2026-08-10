@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>BitGate — moderation your users actually control</title>
+<meta name="description" content="Decide what to show, what to allow, and what to sell — without writing the policy code yourself. Trust-graph moderation and access control for Nostr apps, in one script tag." />
+<link rel="icon" href="./assets/icon.svg" type="image/svg+xml" />
+<link rel="stylesheet" href="./assets/site.css" />
+</head>
+<body>
+
+<nav class="nav">
+  <a class="brand" href="./index.html">
+    <img class="mark" src="./assets/mark.svg" alt="" width="30" height="30" />
+    <span class="wordmark">BitGate</span>
+  </a>
+  <div class="links">
+    <a class="active" href="./index.html">Overview</a>
+    <a href="./docs.html">Integrate</a>
+    <a href="./demo.html">Try it</a>
+    <a href="https://github.com/PR0M3TH3AN/Nostr-Governance">Source</a>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="hero-grid">
+    <div>
+      <span class="eyebrow">Moderation, without the policy code</span>
+      <h1>One decision.<br />Every door it <em>guards</em>.</h1>
+      <p class="lead">
+        Ask BitGate what to do with a post, an account, or a listing. Get back an
+        answer built from who the viewer trusts and who you authorized — then
+        apply it. No thresholds to hand-roll, no ban logic scattered through
+        your views.
+      </p>
+      <div class="cta-row">
+        <a class="btn primary" href="./demo.html">Try the demo →</a>
+        <a class="btn secondary" href="./docs.html">Add it to your site</a>
+      </div>
+    </div>
+
+    <div class="gate-scene" aria-hidden="true">
+      <div class="item-card">
+        <div class="item-top">
+          <span class="item-thumb">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M3 12.5V5a2 2 0 0 1 2-2h7.5L21 11.5 12.5 20 3 12.5z" stroke="#04120e" stroke-width="1.9" stroke-linejoin="round"/><circle cx="8" cy="8" r="1.6" fill="#04120e"/></svg>
+          </span>
+          <div>
+            <div class="item-label">One listing</div>
+            <div class="item-name">Refurbished widget</div>
+          </div>
+        </div>
+        <div class="item-evidence">
+          <b>3</b> scam reports from people the viewer follows
+        </div>
+      </div>
+
+      <div class="verdict-rail">
+        <div class="verdict-row" style="--row-order:0">
+          <span class="verdict-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span>
+          <span class="verdict-surface">Marketplace<small>discovery</small></span>
+          <span class="verdict-stamp hard">hidden</span>
+        </div>
+        <div class="verdict-row" style="--row-order:1">
+          <span class="verdict-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M4 9h16" stroke="currentColor" stroke-width="1.7"/></svg></span>
+          <span class="verdict-surface">Product page<small>direct link</small></span>
+          <span class="verdict-stamp soft">behind a warning</span>
+        </div>
+        <div class="verdict-row" style="--row-order:2">
+          <span class="verdict-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6h13l-1.5 8H7.5zM7 6L6 3H3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9" cy="19" r="1.4" fill="currentColor"/><circle cx="17" cy="19" r="1.4" fill="currentColor"/></svg></span>
+          <span class="verdict-surface">Checkout<small>the moment it matters</small></span>
+          <span class="verdict-stamp hard">sale blocked</span>
+        </div>
+        <div class="verdict-row" style="--row-order:3">
+          <span class="verdict-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span>
+          <span class="verdict-surface">Seller's own view<small>with the evidence</small></span>
+          <span class="verdict-stamp pass">visible</span>
+        </div>
+      </div>
+      <div class="scene-caption">One snapshot. Four surfaces. Four different answers.</div>
+    </div>
+  </div>
+</header>
+
+<section class="container">
+  <h2>A decision is not a boolean</h2>
+  <p class="section-sub">
+    Most moderation code collapses everything into <code>hidden: true</code>, then
+    discovers it needs "visible but unbuyable", or "shown but ranked last", and
+    grows a second system to say so. BitGate answers four questions at once, each
+    on its own ladder.
+  </p>
+
+  <div class="ladder">
+    <div class="ladder-row">
+      <span class="dim">ranking</span>
+      <span class="steps"><b>normal</b> → downrank</span>
+    </div>
+    <div class="ladder-row">
+      <span class="dim">visibility</span>
+      <span class="steps"><b>allow</b> → warn → restrict → hide → deny</span>
+    </div>
+    <div class="ladder-row">
+      <span class="dim">interaction</span>
+      <span class="steps"><b>allow</b> → require-explicit-action → deny</span>
+    </div>
+    <div class="ladder-row">
+      <span class="dim">transaction</span>
+      <span class="steps"><b>allow</b> → require-review → deny</span>
+    </div>
+  </div>
+
+  <div class="callout">
+    <strong>Downranking is a sort input, not a filter.</strong> A downranked item
+    still appears and can still be acted on. Conflating the two is what makes
+    moderation feel like censorship to the people on the receiving end.
+  </div>
+</section>
+
+<section class="container">
+  <h2>Where the answer comes from</h2>
+  <p class="section-sub">
+    Two independent sources, deliberately kept apart. Being allowed to publish
+    grants no trust; being trusted grants no authority.
+  </p>
+
+  <div class="grid">
+    <div class="feature">
+      <h3>People the viewer follows</h3>
+      <p>
+        Reports and mutes count only when they come from the viewer's own trust
+        graph. The same content can be hidden for one person and fine for
+        another — because it genuinely is.
+      </p>
+    </div>
+    <div class="feature">
+      <h3>Moderators you authorized</h3>
+      <p>
+        A root key publishes the roster; each moderator publishes under their
+        own key. Revoke a role and their entries stop counting immediately, with
+        nothing to rewrite.
+      </p>
+    </div>
+    <div class="feature">
+      <h3>Community curators</h3>
+      <p>
+        Subscribe to someone else's deny list without handing them moderator
+        powers. A curator can contribute names and nothing more.
+      </p>
+    </div>
+    <div class="feature">
+      <h3>The viewer's own choices</h3>
+      <p>
+        Personal blocks always win, and "show it anyway" is available wherever
+        your policy permits it. Hidden content says why, instead of silently
+        vanishing.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section class="container">
+  <h2>Pairs with BitLogin</h2>
+  <p class="section-sub">
+    Two halves of the same question. Drop both in and a signed-in visitor gets
+    moderation shaped by their own follow graph.
+  </p>
+
+  <div class="pair">
+    <div class="pair-card">
+      <span class="pair-kicker">BitLogin</span>
+      <h3>Who are you?</h3>
+      <p>A login name and password that unlock a portable Nostr identity, with no account server.</p>
+    </div>
+    <div class="pair-join">+</div>
+    <div class="pair-card is-gate">
+      <span class="pair-kicker">BitGate</span>
+      <h3>What may you see, and do?</h3>
+      <p>A decision per item, per surface, built from that identity's trust graph and your roster.</p>
+    </div>
+  </div>
+
+  <pre><code>const provider = document.querySelector("bitgate-provider");
+await provider.ready;
+await provider.useSigner(window.nostr);   // BitLogin's NIP-07 provider</code></pre>
+</section>
+
+<section class="container">
+  <h2>Drop it in</h2>
+  <p class="section-sub">
+    One script tag and one element. The provider builds the runtime, loads your
+    administrative state, and every element inside finds it — no wiring code.
+  </p>
+
+  <pre><code>&lt;script type="module" src="/vendor/bitgate/bitgate.js"&gt;&lt;/script&gt;
+
+&lt;bitgate-provider relays="wss://relay.example" root="&lt;root-pubkey&gt;" policy="social"&gt;
+  &lt;bitgate-veil profile="feed" target-user="&lt;author-pubkey&gt;"&gt;
+    &lt;img src="thumbnail.jpg" alt="" /&gt;
+  &lt;/bitgate-veil&gt;
+&lt;/bitgate-provider&gt;</code></pre>
+
+  <div class="cta-row" style="margin-top:22px">
+    <a class="btn primary" href="./docs.html">Integration guide →</a>
+    <a class="btn secondary" href="./demo.html">See it running</a>
+  </div>
+</section>
+
+<section class="container">
+  <h2>Built to be borrowed</h2>
+  <p class="section-sub">
+    The engine carries no thresholds of its own. Presets ship in the box so the
+    first run takes one attribute; every number in them is a starting point you
+    are meant to replace.
+  </p>
+
+  <div class="grid">
+    <div class="feature">
+      <h3>Headless core</h3>
+      <p>Pure evaluation. No I/O, no browser globals, no dependencies. Runs the same in Node and a browser.</p>
+    </div>
+    <div class="feature">
+      <h3>Bring your own relays</h3>
+      <p>A WebSocket transport ships for convenience. Already have a relay pool? Pass an adapter instead.</p>
+    </div>
+    <div class="feature">
+      <h3>Your objects, your targets</h3>
+      <p>An adapter says what a product or post is in governance terms. Deny a seller and their whole catalogue goes with them.</p>
+    </div>
+    <div class="feature">
+      <h3>Explains itself</h3>
+      <p>Every decision carries stable reason identifiers and the evidence behind it — so appeals are possible.</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div>BitGate — GPL-3.0-or-later. Moderation infrastructure for the open web.</div>
+  <div class="footer-links">
+    <a href="./docs.html">Integrate</a>
+    <a href="./demo.html">Try it</a>
+    <a href="https://github.com/PR0M3TH3AN/Nostr-Governance">Source</a>
+    <a href="https://github.com/PR0M3TH3AN/bitlogin">BitLogin</a>
+  </div>
+</footer>
+
+</body>
+</html>

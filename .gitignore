@@ -9,3 +9,6 @@ coverage/
 .turbo/
 .cache/
 *.tsbuildinfo
+
+# Built site output (Vercel builds it)
+packages/site/dist/

@@ -8,6 +8,30 @@
 // Elements receive a runtime rather than creating one, so a host application
 // can share a single governance runtime across an entire page.
 
+// The bundle is the browser distribution of BitGate as a whole, not only its
+// elements: a static page has no package manager, so anything it might need
+// has to be reachable from this one file.
+export {
+  createBitGate,
+  createCommands,
+  createRelayTransport,
+  createMemoryTransport,
+  createMemoryStorage,
+  ERROR_CODES,
+} from "@bitgate/runtime";
+
+export {
+  SOCIAL_POLICY,
+  COMMERCE_POLICY,
+  ADMIN_ONLY_POLICY,
+  POLICY_PRESETS,
+  getPolicyPreset,
+  createPolicyDefinition,
+  createApplicationAdapter,
+  evaluateObject,
+  collectTargets,
+} from "@bitgate/core";
+
 export {
   BASE_STYLES,
   GovernanceElement,

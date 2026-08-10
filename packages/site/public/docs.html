@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Integrate BitGate — docs</title>
+<meta name="description" content="Add BitGate moderation to any site: one script tag, one element, and a policy preset. Then tune the thresholds to fit your own community." />
+<link rel="icon" href="./assets/icon.svg" type="image/svg+xml" />
+<link rel="stylesheet" href="./assets/site.css" />
+</head>
+<body>
+
+<nav class="nav">
+  <a class="brand" href="./index.html">
+    <img class="mark" src="./assets/mark.svg" alt="" width="30" height="30" />
+    <span class="wordmark">BitGate</span>
+  </a>
+  <div class="links">
+    <a href="./index.html">Overview</a>
+    <a class="active" href="./docs.html">Integrate</a>
+    <a href="./demo.html">Try it</a>
+    <a href="https://github.com/PR0M3TH3AN/Nostr-Governance">Source</a>
+  </div>
+</nav>
+
+<header class="hero" style="padding-top:48px; padding-bottom:8px">
+  <div class="container narrow" style="padding:0">
+    <span class="eyebrow">Integration guide</span>
+    <h1 style="font-size:clamp(32px, 4.5vw, 44px)">Add BitGate to your site</h1>
+    <p class="lead" style="max-width:560px">
+      No bundler required. Build the widget once, self-host it, and configure
+      everything in markup. Then replace the preset with thresholds that fit
+      your own community.
+    </p>
+  </div>
+</header>
+
+<section class="container narrow">
+  <ol class="step-list">
+    <li>
+      <h3>Build the widget from source</h3>
+      <p>
+        Clone the repository and build. The output is a single self-contained
+        file with no runtime dependencies.
+      </p>
+      <pre><code>git clone https://github.com/PR0M3TH3AN/Nostr-Governance
+cd Nostr-Governance
+npm install
+npm run build:widget      # → packages/widget/dist/bitgate.js</code></pre>
+      <div class="callout warn">
+        <strong>The bundle is deliberately not committed.</strong> A moderation
+        widget decides what people can see; build it from source you have read
+        rather than trusting a prebuilt minified blob. Copy the result onto your
+        own origin — do not hot-link this site's copy.
+      </div>
+    </li>
+
+    <li>
+      <h3>Include the script and the provider</h3>
+      <p>
+        <code>&lt;bitgate-provider&gt;</code> builds the runtime, loads
+        administrative state from your relays, and shares both with every
+        element inside it.
+      </p>
+      <pre><code>&lt;script type="module" src="/vendor/bitgate/bitgate.js"&gt;&lt;/script&gt;
+
+&lt;bitgate-provider
+  relays="wss://relay-one.example,wss://relay-two.example"
+  root="&lt;your-root-pubkey&gt;"
+  policy="social"&gt;
+  &lt;!-- everything governed goes in here --&gt;
+&lt;/bitgate-provider&gt;</code></pre>
+      <p style="margin-top:10px">
+        <code>root</code> is your deployment's administrator pubkey — the key
+        that publishes the moderator roster. It is configuration, not something
+        discovered at runtime.
+      </p>
+    </li>
+
+    <li>
+      <h3>Wrap what should be governed</h3>
+      <p>
+        Elements read their target from attributes, so a server-rendered page
+        needs no JavaScript at all.
+      </p>
+      <pre><code>&lt;bitgate-veil profile="feed" target-user="&lt;author-pubkey&gt;"&gt;
+  &lt;article&gt;…your post markup…&lt;/article&gt;
+&lt;/bitgate-veil&gt;
+
+&lt;bitgate-veil profile="feed" target-event="&lt;event-id&gt;" target-author="&lt;pubkey&gt;"&gt;…&lt;/bitgate-veil&gt;
+
+&lt;bitgate-veil profile="browse" target-address="30078:&lt;pubkey&gt;:sku-001"&gt;…&lt;/bitgate-veil&gt;</code></pre>
+      <p style="margin-top:10px">
+        The veil applies the decision: blur on <code>restrict</code>, a
+        disclosure with a "show anyway" control on <code>hide</code>, a warning
+        line on <code>warn</code>. Assigning <code>.target</code> in JavaScript
+        still works and wins over the attribute.
+      </p>
+    </li>
+
+    <li>
+      <h3>Connect a signer</h3>
+      <p>
+        BitGate needs to know who is looking, both to build the trust graph and
+        to check what they may do. BitLogin's provider fits without an adapter.
+      </p>
+      <pre><code>const provider = document.querySelector("bitgate-provider");
+await provider.ready;
+await provider.useSigner(window.nostr);
+
+// BitGate reads the follow graph from your app — it has no opinion
+// about how you fetch kind:3.
+provider.runtime.trust.setContacts(followList);</code></pre>
+      <div class="callout">
+        <strong>Await <code>ready</code>, don't listen for it.</strong> The
+        <code>bitgate:ready</code> event fires during element upgrade, which for a
+        page that defines elements after parsing is before a listener could be
+        attached. The promise never has that race.
+      </div>
+    </li>
+
+    <li>
+      <h3>Replace the preset</h3>
+      <p>
+        Presets exist so the first run works, not because the engine has an
+        opinion. Every number in them is a starting point.
+      </p>
+      <pre><code>import { createPolicyDefinition } from "@bitgate/core";
+
+const policy = createPolicyDefinition({
+  id: "my-app",
+  version: "1.0.0",
+  defaultProfile: "feed",
+  profiles: {
+    feed: {
+      name: "feed",
+      administrativeDeny: { visibility: "hide", interaction: "deny" },
+      reports: {
+        malware: { hide: 1, interactionDeny: 1 },
+        spam:    { downrank: 2, restrict: 4, hide: 8 },
+        default: { downrank: 2, warn: 4 },
+      },
+      mutes: { default: { downrank: 1, hide: 12 } },
+      muteWindowSeconds: 60 * 24 * 60 * 60,
+    },
+  },
+});
+
+provider.runtime.policies.setLocalPolicy(policy);</code></pre>
+    </li>
+  </ol>
+</section>
+
+<section class="container narrow">
+  <h2>Elements</h2>
+  <p class="section-sub">Embed only what you need; each is independent.</p>
+
+  <table class="surface-table">
+    <thead>
+      <tr><th>Element</th><th>What it does</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>bitgate-provider</code></td><td>Builds the runtime from attributes and shares it</td></tr>
+      <tr><td><code>bitgate-veil</code></td><td>Applies a decision to whatever it wraps</td></tr>
+      <tr><td><code>bitgate-report</code></td><td>Report dialog — needs no capability, anyone may report</td></tr>
+      <tr><td><code>bitgate-status</code></td><td>Effect, reasons, and evidence for one target</td></tr>
+      <tr><td><code>bitgate-capabilities</code></td><td>What the signed-in account may actually do</td></tr>
+      <tr><td><code>bitgate-action</code></td><td>A capability-gated button that explains refusals</td></tr>
+      <tr><td><code>bitgate-admin-panel</code></td><td>Effective state, attribution, and controls</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="container narrow">
+  <h2>Policy presets</h2>
+  <p class="section-sub">Set with the <code>policy</code> attribute.</p>
+
+  <table class="surface-table">
+    <thead><tr><th>Name</th><th>Profiles</th><th>For</th></tr></thead>
+    <tbody>
+      <tr><td><code>social</code></td><td>feed, profile, playback</td><td>Timelines and posts. Discovery declines to hard-hide.</td></tr>
+      <tr><td><code>commerce</code></td><td>browse, detail, checkout, seller-dashboard</td><td>Marketplaces. Checkout decides transactions only.</td></tr>
+      <tr><td><code>admin-only</code></td><td>default</td><td>Operator deny lists, with no trust-graph signals at all.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout">
+    <strong>A gate threshold of <code>0</code> means disabled</strong>, not
+    "fires on everything" — so zeroing a value is a safe way to switch it off.
+  </div>
+</section>
+
+<section class="container narrow">
+  <h2>Common mistakes</h2>
+
+  <div class="grid">
+    <div class="feature">
+      <h3>Recomputing policy in your views</h3>
+      <p>If your renderer compares report counts to thresholds, the point has been lost. Consume the decision.</p>
+    </div>
+    <div class="feature">
+      <h3>Reusing a listing-page verdict at checkout</h3>
+      <p>Evaluate transaction-critical actions against their own profile at the moment of action. State moves.</p>
+    </div>
+    <div class="feature">
+      <h3>Seeding trust before the viewer</h3>
+      <p><code>setViewer</code> clears viewer-scoped state by design. Set contacts, blocks, and overrides after it.</p>
+    </div>
+    <div class="feature">
+      <h3>Exposing evidence everywhere</h3>
+      <p>Public surfaces get counts; appeal surfaces get identities. <code>exposeEvidence</code> is off by default for a reason.</p>
+    </div>
+  </div>
+
+  <p style="color:var(--muted);font-size:14px">
+    The full guide, including the adapter contract and every profile option,
+    lives in
+    <a href="https://github.com/PR0M3TH3AN/Nostr-Governance/blob/main/docs/integration-guide.md">docs/integration-guide.md</a>.
+  </p>
+</section>
+
+<footer>
+  <div>BitGate — GPL-3.0-or-later.</div>
+  <div class="footer-links">
+    <a href="./index.html">Overview</a>
+    <a href="./demo.html">Try it</a>
+    <a href="https://github.com/PR0M3TH3AN/Nostr-Governance">Source</a>
+  </div>
+</footer>
+
+</body>
+</html>

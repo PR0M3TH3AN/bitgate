@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Try BitGate — live demo</title>
+<meta name="description" content="Add reports, restrict a seller, switch moderators — and watch four surfaces reach four different conclusions from the same evidence." />
+<link rel="icon" href="./assets/icon.svg" type="image/svg+xml" />
+<link rel="stylesheet" href="./assets/site.css" />
+</head>
+<body>
+
+<nav class="nav">
+  <a class="brand" href="./index.html">
+    <img class="mark" src="./assets/mark.svg" alt="" width="30" height="30" />
+    <span class="wordmark">BitGate</span>
+  </a>
+  <div class="links">
+    <a href="./index.html">Overview</a>
+    <a href="./docs.html">Integrate</a>
+    <a class="active" href="./demo.html">Try it</a>
+    <a href="https://github.com/PR0M3TH3AN/Nostr-Governance">Source</a>
+  </div>
+</nav>
+
+<header class="hero" style="padding-top:48px; padding-bottom:0">
+  <div class="container narrow" style="padding:0">
+    <span class="eyebrow">Live demo</span>
+    <h1 style="font-size:clamp(32px, 4.5vw, 44px)">Same evidence.<br />Different <em>answers</em>.</h1>
+    <p class="lead" style="max-width:560px">
+      This runs the real engine in your browser against an in-memory relay, so
+      nothing is published and nothing is fetched. Change the evidence on the
+      right and watch every surface re-decide.
+    </p>
+  </div>
+</header>
+
+<section class="container">
+  <div class="sandbox">
+    <div class="panel">
+      <h3>The listing</h3>
+      <p class="panel-sub">Wrapped in a real <code>&lt;bitgate-veil&gt;</code>, using the marketplace preset.</p>
+
+      <bitgate-veil id="veil" profile="browse">
+        <div class="demo-card">
+          <div class="art">Refurbished widget</div>
+          <div class="meta">
+            <div><strong>Refurbished widget</strong></div>
+            <div class="price">12,000 sats · sold by d4d4…d4d4</div>
+          </div>
+        </div>
+      </bitgate-veil>
+
+      <h3 style="margin-top:26px">Every surface, right now</h3>
+      <p class="panel-sub">One snapshot, evaluated four ways.</p>
+      <table class="surface-table" id="surfaces">
+        <thead>
+          <tr><th>Surface</th><th>Visibility</th><th>Transaction</th><th>Rank</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <ul class="reason-list" id="reasons"></ul>
+    </div>
+
+    <div class="panel">
+      <h3>Evidence</h3>
+      <p class="panel-sub">Everything here is signed state the engine reduces.</p>
+
+      <div class="control-row">
+        <button type="button" id="add-scam">+1 scam report</button>
+        <button type="button" id="add-malware">+1 malware report</button>
+      </div>
+      <div class="control-row">
+        <button type="button" id="add-mute">+1 trusted mute</button>
+        <button type="button" id="deny-seller">Restrict the seller</button>
+      </div>
+      <div class="control-row">
+        <button type="button" id="block">Block them yourself</button>
+        <button type="button" class="reset" id="reset">Reset</button>
+      </div>
+
+      <h3 style="margin-top:24px">Signed in as</h3>
+      <p class="panel-sub">Capability checks are enforced in the command layer, not the UI.</p>
+      <div class="control-row">
+        <button type="button" data-viewer="shopper">Shopper</button>
+        <button type="button" data-viewer="listing">Listing moderator</button>
+        <button type="button" data-viewer="seller">Seller moderator</button>
+      </div>
+
+      <bitgate-capabilities id="caps"></bitgate-capabilities>
+    </div>
+  </div>
+
+  <div class="callout">
+    <strong>Note the seller's view.</strong> However strong the evidence, the
+    seller dashboard never hides the listing from its own seller — hiding it
+    would leave no route to appeal.
+  </div>
+</section>
+
+<section class="container narrow">
+  <h2>The markup behind this</h2>
+  <p class="section-sub">
+    In production the provider takes relay URLs. Here it is handed an in-memory
+    runtime so the page works offline and publishes nothing.
+  </p>
+  <pre><code>&lt;bitgate-provider relays="wss://relay.example" root="&lt;root&gt;" policy="commerce"&gt;
+  &lt;bitgate-veil profile="browse" target-address="30078:&lt;seller&gt;:sku-001"&gt;
+    …your listing markup…
+  &lt;/bitgate-veil&gt;
+&lt;/bitgate-provider&gt;</code></pre>
+  <div class="cta-row" style="margin-top:20px">
+    <a class="btn primary" href="./docs.html">Integration guide →</a>
+    <a class="btn secondary" href="https://github.com/PR0M3TH3AN/Nostr-Governance">Read the source</a>
+  </div>
+</section>
+
+<footer>
+  <div>BitGate — GPL-3.0-or-later.</div>
+  <div class="footer-links">
+    <a href="./index.html">Overview</a>
+    <a href="./docs.html">Integrate</a>
+    <a href="https://github.com/PR0M3TH3AN/Nostr-Governance">Source</a>
+  </div>
+</footer>
+
+<script type="module">
+  import {
+    createBitGate,
+    createMemoryTransport,
+    defineBitGateElements,
+    COMMERCE_POLICY,
+  } from "./vendor/bitgate/bitgate.js";
+
+  defineBitGateElements();
+
+  const key = (seed) => seed.repeat(64).slice(0, 64);
+  const ROOT = key("a1");
+  const LISTING_MOD = key("b2");
+  const SELLER_MOD = key("c3");
+  const SELLER = key("d4");
+  const SHOPPER = key("e5");
+  const NOW = Math.floor(Date.now() / 1000);
+  const trusted = (index) => key(index.toString(16).padStart(2, "0"));
+
+  const TARGET = { type: "address", kind: "30078", pubkey: SELLER, identifier: "sku-001" };
+  const TARGET_KEY = `address:30078:${SELLER}:sku-001`;
+  const PROFILES = ["browse", "detail", "checkout", "seller-dashboard"];
+  const VIEWERS = { shopper: SHOPPER, listing: LISTING_MOD, seller: SELLER_MOD };
+
+  // An in-memory transport keeps the demo deterministic: nothing is fetched and
+  // nothing is published, so it works offline and cannot touch real relays.
+  const runtime = createBitGate({
+    applicationId: "bitgate-demo",
+    namespace: "demo",
+    root: ROOT,
+    transport: createMemoryTransport(),
+    policy: COMMERCE_POLICY,
+    now: () => NOW,
+  });
+
+  const COMMERCE_ROLES = {
+    listing_moderator: ["contribute-event-deny", "contribute-address-deny", "review-evidence"],
+    seller_moderator: ["contribute-user-deny", "review-evidence"],
+    super_admin: [
+      "manage-roles", "manage-policy", "manage-community-sources",
+      "contribute-user-allow", "contribute-user-deny", "contribute-event-deny",
+      "contribute-address-deny", "contribute-trust-seed", "review-evidence",
+    ],
+  };
+
+  let reportCount = 0;
+  let muteCount = 0;
+
+  function seedRoster() {
+    runtime.admin.setRoles({
+      root: ROOT,
+      roles: COMMERCE_ROLES,
+      actors: {
+        [ROOT]: ["super_admin"],
+        [LISTING_MOD]: ["listing_moderator"],
+        [SELLER_MOD]: ["seller_moderator"],
+      },
+    });
+  }
+
+  function setViewer(name) {
+    runtime.setViewer(VIEWERS[name]);
+    // Viewer switching clears viewer-scoped state by design, so trust is
+    // re-seeded afterwards — the same order a real integration must use.
+    runtime.trust.setContacts(Array.from({ length: 24 }, (_, i) => trusted(i + 1)));
+  }
+
+  function reset() {
+    reportCount = 0;
+    muteCount = 0;
+    runtime.reports.clearTarget(TARGET_KEY);
+    runtime.mutes.lists.clear();
+    runtime.admin.setContributions([]);
+    seedRoster();
+    setViewer("shopper");
+    runtime.invalidateDecisions();
+    render();
+  }
+
+  const veil = document.getElementById("veil");
+  const caps = document.getElementById("caps");
+  veil.runtime = runtime;
+  veil.target = TARGET;
+  caps.runtime = runtime;
+
+  function render() {
+    const body = document.querySelector("#surfaces tbody");
+    body.innerHTML = PROFILES.map((profile) => {
+      const decision = runtime.evaluate(TARGET, { profile });
+      const transaction = decision.transaction?.effect ?? "allow";
+      return `<tr>
+        <td><code>${profile}</code></td>
+        <td><span class="verdict ${decision.visibility.effect}">${decision.visibility.effect}</span></td>
+        <td><span class="verdict ${transaction}">${transaction}</span></td>
+        <td><span class="verdict ${decision.ranking.effect === "downrank" ? "downrank" : "allow"}">${decision.ranking.effect}</span></td>
+      </tr>`;
+    }).join("");
+
+    const detail = runtime.evaluate(TARGET, { profile: "seller-dashboard" });
+    const reasons = detail.reasons.map((reason) => reason.id);
+    document.getElementById("reasons").innerHTML = reasons.length
+      ? reasons.map((id) => `<li><code>${id}</code></li>`).join("")
+      : "<li>No governance signals yet — add some evidence.</li>";
+  }
+
+  runtime.on("change", render);
+
+  document.getElementById("add-scam").addEventListener("click", () => {
+    reportCount += 1;
+    runtime.reports.ingest(
+      { reporter: trusted(reportCount), category: "scam", createdAt: NOW - 60 },
+      TARGET_KEY,
+    );
+  });
+
+  document.getElementById("add-malware").addEventListener("click", () => {
+    reportCount += 1;
+    runtime.reports.ingest(
+      { reporter: trusted(reportCount), category: "malware", createdAt: NOW - 60 },
+      TARGET_KEY,
+    );
+  });
+
+  document.getElementById("add-mute").addEventListener("click", () => {
+    muteCount += 1;
+    runtime.mutes.replaceList({
+      owner: trusted(muteCount),
+      updatedAt: NOW - 60,
+      entries: [{ pubkey: SELLER }],
+      hasEncryptedEntries: false,
+    });
+  });
+
+  document.getElementById("deny-seller").addEventListener("click", () => {
+    runtime.admin.upsertContribution({
+      actor: SELLER_MOD,
+      kind: "user-deny",
+      targets: [{ type: "user", pubkey: SELLER }],
+      createdAt: NOW + reportCount + muteCount,
+    });
+  });
+
+  document.getElementById("block").addEventListener("click", () => {
+    runtime.trust.setBlocks([SELLER]);
+  });
+
+  document.getElementById("reset").addEventListener("click", reset);
+
+  for (const button of document.querySelectorAll("[data-viewer]")) {
+    button.addEventListener("click", () => setViewer(button.dataset.viewer));
+  }
+
+  reset();
+</script>
+
+</body>
+</html>
