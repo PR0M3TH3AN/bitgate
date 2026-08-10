@@ -250,6 +250,8 @@ describe("contribution round-trip", () => {
       transport: createMemoryTransport(),
       policy: POLICY,
       now: () => NOW,
+      root: ROOT,
+      trustUnsignedEvents: true,
     });
     fresh.admin.setRoles({
       root: ROOT,

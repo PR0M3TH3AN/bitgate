@@ -79,6 +79,7 @@ function makeRuntime({ storage, transport, verifySignature, root = ROOT } = {}) 
     now: () => NOW,
     verifySignature,
     root,
+    trustUnsignedEvents: true,
   });
 }
 
@@ -331,13 +332,13 @@ describe("community sources", () => {
     });
 
     const merged = await runtime.loadCommunitySources([
-      { curator: CURATOR, identifier: "app:bitgate:user-deny:v1", kind: CANONICAL_KIND },
+      { curator: CURATOR, identifier: "app:governance:user-deny:v1", kind: CANONICAL_KIND },
     ]);
 
     expect(merged).toBe(1);
     expect(runtime.admin.state.userDeny.has(`user:${CREATOR}`)).toBe(true);
     expect(runtime.admin.state.communitySources.get(`user:${CREATOR}`)).toEqual([
-      `${CURATOR}:app:bitgate:user-deny:v1`,
+      `${CURATOR}:app:governance:user-deny:v1`,
     ]);
   });
 
@@ -357,7 +358,7 @@ describe("community sources", () => {
     runtime.admin.setRoles({ root: ROOT, actors: { [CURATOR]: ["curator"] } });
 
     await runtime.loadCommunitySources([
-      { curator: CURATOR, identifier: "app:bitgate:event-deny:v1", kind: CANONICAL_KIND },
+      { curator: CURATOR, identifier: "app:governance:event-deny:v1", kind: CANONICAL_KIND },
     ]);
 
     expect(runtime.admin.state.eventDeny.size).toBe(0);

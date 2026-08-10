@@ -102,8 +102,10 @@ export function isGovernanceCapability(value) {
  * @returns {AuthorityState}
  */
 export function createAuthorityState(options = {}) {
+  // Role names arrive from published rosters; a null prototype keeps a
+  // "__proto__" role from mutating the object instead of being stored.
   /** @type {Record<string, readonly GovernanceCapability[]>} */
-  const roles = {};
+  const roles = Object.create(null);
   for (const [name, capabilities] of Object.entries(options.roles ?? DEFAULT_ROLE_CAPABILITIES)) {
     const trimmed = name.trim();
     if (!trimmed) {
@@ -115,7 +117,7 @@ export function createAuthorityState(options = {}) {
   }
 
   /** @type {Record<string, string[]>} */
-  const actors = {};
+  const actors = Object.create(null);
   for (const [pubkey, roleNames] of Object.entries(options.actors ?? {})) {
     const normalized = normalizePubkey(pubkey);
     if (!normalized) {
@@ -187,7 +189,8 @@ export function getActorCapabilities(pubkey, authority) {
   /** @type {Set<GovernanceCapability>} */
   const capabilities = new Set();
   for (const roleName of authority.actors[normalized] ?? []) {
-    for (const capability of authority.roles[roleName] ?? []) {
+    const granted = Object.hasOwn(authority.roles, roleName) ? authority.roles[roleName] : [];
+    for (const capability of granted) {
       capabilities.add(capability);
     }
   }

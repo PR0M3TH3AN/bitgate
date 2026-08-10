@@ -94,7 +94,9 @@ export function reduceAdminState(contributions, authority) {
       continue;
     }
 
-    const capability = KIND_CAPABILITY[contribution.kind];
+    const capability = Object.hasOwn(KIND_CAPABILITY, contribution.kind)
+      ? KIND_CAPABILITY[contribution.kind]
+      : undefined;
     if (!capability) {
       continue;
     }

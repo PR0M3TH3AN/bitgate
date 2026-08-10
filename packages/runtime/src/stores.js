@@ -231,10 +231,18 @@ export class TrustGraphStore extends Emitter {
  * NIP-56 reports, aggregated per target.
  */
 export class ReportStore extends Emitter {
-  constructor() {
+  /**
+   * @param {Object} [options]
+   * @param {number} [options.maxTargets] - Ceiling on distinct targets retained
+   */
+  constructor({ maxTargets = 0 } = {}) {
     super();
     /** @type {Map<string, Map<string, Map<string, number>>>} reports[targetKey][reporter][category] = createdAt */
     this.reports = new Map();
+    // Relays push reports for targets this viewer may never look at again.
+    // Without a ceiling a long-running session accumulates every target ever
+    // mentioned.
+    this.maxTargets = maxTargets;
     this.fingerprint = fingerprint({});
   }
 
@@ -275,6 +283,14 @@ export class ReportStore extends Emitter {
     }
 
     byCategory.set(report.category, createdAt);
+
+    if (this.maxTargets > 0 && this.reports.size > this.maxTargets) {
+      const oldest = this.reports.keys().next().value;
+      if (oldest !== undefined && oldest !== targetKey) {
+        this.reports.delete(oldest);
+      }
+    }
+
     this.#emitChange(targetKey);
   }
 
@@ -333,11 +349,14 @@ export class TrustedMuteStore extends Emitter {
    * @param {Object} [options]
    * @param {number} [options.windowSeconds] - Mutes older than this are pruned
    * @param {() => number} [options.now] - Injected clock, unix seconds
+   * @param {number} [options.maxLists] - Ceiling on retained lists; 0 disables eviction
    */
-  constructor({ windowSeconds = 0, now = () => 0 } = {}) {
+  constructor({ windowSeconds = 0, now = () => 0, maxLists = 0 } = {}) {
     super();
     this.windowSeconds = windowSeconds;
     this.now = now;
+    /** Ceiling on retained lists; 0 disables eviction. */
+    this.maxLists = maxLists;
     /** @type {Map<string, { owner: string, updatedAt: number, entries: Array<{ pubkey: string, category?: string }> }>} */
     this.lists = new Map();
     this.fingerprint = fingerprint({});
@@ -372,6 +391,14 @@ export class TrustedMuteStore extends Emitter {
       updatedAt: list.updatedAt,
       entries: list.entries,
     });
+
+    if (this.maxLists > 0 && this.lists.size > this.maxLists) {
+      const oldest = this.lists.keys().next().value;
+      if (oldest !== undefined && oldest !== list.owner) {
+        this.lists.delete(oldest);
+      }
+    }
+
     this.#emitChange(Array.from(affected));
   }
 

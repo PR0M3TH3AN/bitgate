@@ -49,6 +49,10 @@ export class BitGateProvider extends globalThis.HTMLElement {
     /** @type {Error|null} */
     this.error = null;
     this._ready = false;
+    // Increments on every start, so a start that was superseded mid-flight can
+    // tell it lost the race and clean up after itself instead of overwriting
+    // the newer runtime and leaking its own sockets.
+    this._generation = 0;
 
     // A promise as well as an event. The event fires during element upgrade,
     // which for a page that calls defineBitGateElements() after parsing is
@@ -92,8 +96,13 @@ export class BitGateProvider extends globalThis.HTMLElement {
   attributeChangedCallback(name, before, after) {
     // Only rebuild once connected and actually changed; the initial attribute
     // pass would otherwise construct several runtimes during parsing.
-    if (this._ready && before !== after) {
+    //
+    // `stop()` clears the ready flag, so it is restored here — otherwise the
+    // first attribute change would leave the guard permanently false and every
+    // later change would be silently ignored.
+    if (this._ready && this.isConnected && before !== after) {
       this.stop();
+      this._ready = true;
       void this.start();
     }
   }
@@ -114,6 +123,10 @@ export class BitGateProvider extends globalThis.HTMLElement {
    * whatever cached state exists.
    */
   async start() {
+    const generation = (this._generation += 1);
+    /** @type {any} */
+    let transport = null;
+
     try {
       const relays = this.relayUrls;
       const policyName = this.getAttribute("policy") ?? "admin-only";
@@ -128,12 +141,21 @@ export class BitGateProvider extends globalThis.HTMLElement {
         throw new Error("bitgate-provider requires a relays attribute");
       }
 
-      this.transport = createRelayTransport(relays);
+      transport = createRelayTransport(relays);
+
+      // A newer start began while this one was resolving its configuration.
+      // Close what was just opened rather than clobbering the newer runtime.
+      if (generation !== this._generation) {
+        transport.close();
+        return;
+      }
+
+      this.transport = transport;
       this.runtime = createBitGate({
         applicationId: this.getAttribute("application") ?? globalThis.location?.hostname ?? "bitgate",
         namespace: this.getAttribute("namespace") ?? "bitgate",
         root: this.getAttribute("root") ?? undefined,
-        transport: this.transport,
+        transport,
         policy,
         storage: createLocalStorage(),
         now: () => Math.floor(Date.now() / 1000),
@@ -156,6 +178,10 @@ export class BitGateProvider extends globalThis.HTMLElement {
         }),
       );
 
+      if (generation !== this._generation) {
+        return;
+      }
+
       await this.runtime.loadAdministrativeState();
 
       // With a viewer known, build the trust graph without the host having to:
@@ -168,6 +194,10 @@ export class BitGateProvider extends globalThis.HTMLElement {
 
       this.dispatchEvent(new CustomEvent("bitgate:loaded", { bubbles: true, composed: true }));
     } catch (error) {
+      transport?.close?.();
+      if (generation !== this._generation) {
+        return;
+      }
       this.error = /** @type {Error} */ (error);
       this.setAttribute("data-error", String(error));
       this._rejectReady?.(error);

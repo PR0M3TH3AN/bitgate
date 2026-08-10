@@ -230,8 +230,11 @@ export function normalizeCategoryThresholds(thresholds, location = "profile") {
     return {};
   }
 
+  // Null prototype: these keys come from policy documents, which may be
+  // relay-supplied. `normalized["__proto__"] = …` on a normal object literal
+  // would mutate the prototype rather than adding a key.
   /** @type {Record<string, CategoryThresholds>} */
-  const normalized = {};
+  const normalized = Object.create(null);
 
   for (const [category, config] of Object.entries(thresholds)) {
     if (!config || typeof config !== "object") {
@@ -243,7 +246,7 @@ export function normalizeCategoryThresholds(thresholds, location = "profile") {
     }
 
     /** @type {CategoryThresholds} */
-    const entry = {};
+    const entry = Object.create(null);
     for (const [gate, value] of Object.entries(config)) {
       if (!Number.isFinite(value)) {
         continue;
@@ -334,7 +337,7 @@ export function normalizePolicyDefinition(policy) {
   }
 
   /** @type {Record<string, PolicyProfile>} */
-  const profiles = {};
+  const profiles = Object.create(null);
   for (const [key, profile] of Object.entries(policy.profiles)) {
     const normalizedProfile = normalizePolicyProfile({ ...profile, name: profile?.name ?? key });
     profiles[key.trim()] = normalizedProfile;
@@ -369,13 +372,15 @@ export function normalizePolicyDefinition(policy) {
 export function resolveProfile(policy, context) {
   const requested = context?.policyProfile?.trim();
   if (requested) {
-    const profile = policy.profiles[requested];
-    if (!profile) {
+    if (!Object.hasOwn(policy.profiles, requested)) {
       throw new Error(`Unknown policy profile: ${requested}`);
     }
-    return profile;
+    return policy.profiles[requested];
   }
   const fallback = policy.defaultProfile ?? Object.keys(policy.profiles)[0];
+  if (!Object.hasOwn(policy.profiles, fallback)) {
+    throw new Error(`Unknown policy profile: ${fallback}`);
+  }
   return policy.profiles[fallback];
 }
 
@@ -390,10 +395,16 @@ export function resolveThresholds(table, category) {
     return {};
   }
   const normalizedCategory = typeof category === "string" ? category.trim().toLowerCase() : "";
-  if (normalizedCategory && table[normalizedCategory]) {
+
+  // Own-property checks, not bracket truthiness. A report category is
+  // attacker-supplied, and `table["constructor"]` would otherwise resolve to
+  // the Object constructor — a truthy value whose gates are all undefined,
+  // which silently exempts that category from every threshold including the
+  // default. `__proto__` does the same via Object.prototype.
+  if (normalizedCategory && Object.hasOwn(table, normalizedCategory)) {
     return table[normalizedCategory];
   }
-  return table.default ?? {};
+  return Object.hasOwn(table, "default") ? table.default : {};
 }
 
 /**

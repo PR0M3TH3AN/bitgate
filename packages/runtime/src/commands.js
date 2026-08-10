@@ -281,7 +281,7 @@ export class GovernanceCommands {
       kind: 30078,
       content: JSON.stringify(policy),
       tags: [
-        ["d", `${this.runtime.namespace}:bitgate:policy:v1`],
+        ["d", `${this.runtime.namespace}:governance:policy:v1`],
         ["v", "1"],
         ["client", "bitgate"],
         ["scope", "policy"],
@@ -307,7 +307,7 @@ export class GovernanceCommands {
     }
 
     const tags = [
-      ["d", `${this.runtime.namespace}:bitgate:community-sources:v1`],
+      ["d", `${this.runtime.namespace}:governance:community-sources:v1`],
       ["v", "1"],
       ["client", "bitgate"],
       ["scope", "community-sources"],

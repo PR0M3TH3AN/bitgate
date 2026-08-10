@@ -38,10 +38,13 @@
 export function createEmptyEvidence() {
   return {
     trustedReportTotal: 0,
-    trustedReportsByCategory: {},
+    // Null prototype throughout: categories originate in report and mute
+    // events, so a "__proto__" key on a normal object literal would be
+    // silently discarded while still counting toward the total.
+    trustedReportsByCategory: Object.create(null),
     trustedReporterPubkeys: [],
     trustedMuteTotal: 0,
-    trustedMutesByCategory: {},
+    trustedMutesByCategory: Object.create(null),
     trustedMuterPubkeys: [],
     personalBlock: false,
     personalMute: false,
@@ -65,13 +68,13 @@ export function createEmptyEvidence() {
  */
 export function freezeEvidence(evidence) {
   /** @type {Record<string, number>} */
-  const reportsByCategory = {};
+  const reportsByCategory = Object.create(null);
   for (const key of Object.keys(evidence.trustedReportsByCategory).sort()) {
     reportsByCategory[key] = evidence.trustedReportsByCategory[key];
   }
 
   /** @type {Record<string, number>} */
-  const mutesByCategory = {};
+  const mutesByCategory = Object.create(null);
   for (const key of Object.keys(evidence.trustedMutesByCategory).sort()) {
     mutesByCategory[key] = evidence.trustedMutesByCategory[key];
   }
@@ -112,12 +115,16 @@ export function mergeEvidence(records) {
     }
 
     for (const [category, count] of Object.entries(record.trustedReportsByCategory ?? {})) {
-      merged.trustedReportsByCategory[category] =
-        (merged.trustedReportsByCategory[category] ?? 0) + count;
+      const previous = Object.hasOwn(merged.trustedReportsByCategory, category)
+        ? merged.trustedReportsByCategory[category]
+        : 0;
+      merged.trustedReportsByCategory[category] = previous + count;
     }
     for (const [category, count] of Object.entries(record.trustedMutesByCategory ?? {})) {
-      merged.trustedMutesByCategory[category] =
-        (merged.trustedMutesByCategory[category] ?? 0) + count;
+      const previous = Object.hasOwn(merged.trustedMutesByCategory, category)
+        ? merged.trustedMutesByCategory[category]
+        : 0;
+      merged.trustedMutesByCategory[category] = previous + count;
     }
 
     merged.trustedReportTotal += record.trustedReportTotal ?? 0;

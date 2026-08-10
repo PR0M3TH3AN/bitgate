@@ -76,6 +76,7 @@ function makeRuntime(transport) {
     transport,
     policy: POLICY,
     now: () => NOW,
+    trustUnsignedEvents: true,
   });
   runtime.setViewer(VIEWER);
   return runtime;
@@ -238,6 +239,7 @@ describe("contact list loading", () => {
       transport,
       policy: POLICY,
       now: () => NOW,
+      trustUnsignedEvents: true,
     });
     expect(await runtime.loadContacts()).toBe(0);
   });
@@ -275,6 +277,7 @@ describe("the viewer's own private mutes", () => {
       signer: signerWithNip44(),
       policy: POLICY,
       now: () => NOW,
+      trustUnsignedEvents: true,
     });
     runtime.setViewer(VIEWER);
 
@@ -292,6 +295,7 @@ describe("the viewer's own private mutes", () => {
       signer: signerWithNip44(),
       policy: POLICY,
       now: () => NOW,
+      trustUnsignedEvents: true,
     });
     runtime.setViewer(VIEWER);
 

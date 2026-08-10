@@ -153,8 +153,11 @@ export function aggregateReports(key, snapshot, viewer, trustSet) {
     reporters.add(record.reporter);
   }
 
+  // Null prototype: categories come from report events, so a "__proto__" key
+  // on a plain object would be silently dropped from the map while still
+  // counting toward the total.
   /** @type {Record<string, number>} */
-  const counts = {};
+  const counts = Object.create(null);
   let total = 0;
   for (const [category, set] of byCategory.entries()) {
     counts[category] = set.size;
@@ -209,7 +212,7 @@ export function aggregateMutes(key, snapshot, viewer, trustSet, now, windowSecon
   }
 
   /** @type {Record<string, number>} */
-  const counts = {};
+  const counts = Object.create(null);
   for (const [category, set] of byCategory.entries()) {
     counts[category] = set.size;
   }
@@ -404,7 +407,8 @@ export function evaluateTarget(target, snapshot, context = { surface: "default" 
     applyEffects(decision, effects, reasons);
 
     for (const [category, count] of Object.entries(mutes.byCategory)) {
-      const categoryThresholds = profile.mutes?.[category];
+      const categoryThresholds =
+        profile.mutes && Object.hasOwn(profile.mutes, category) ? profile.mutes[category] : undefined;
       if (!categoryThresholds) {
         continue;
       }

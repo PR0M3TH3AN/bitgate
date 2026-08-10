@@ -39,6 +39,30 @@ import {
 import { snapshotFingerprint } from "@bitgate/core";
 
 import { Emitter } from "./emitter.js";
+
+/** Governance document scopes, used to build a bounded `#d` filter. */
+const GOVERNANCE_SCOPES = [
+  "roles",
+  "policy",
+  "user-allow",
+  "user-deny",
+  "event-deny",
+  "address-deny",
+  "trust-seed",
+  "community-sources",
+];
+
+/** Legacy administrative list identifiers, read for migration compatibility. */
+const LEGACY_IDENTIFIERS = [
+  "bitvid:admin:whitelist",
+  "bitvid:admin:blacklist",
+  "bitvid:admin:event-blacklist",
+  "bitvid:admin:editors",
+  "bitvid:admin:community-sources",
+];
+
+/** Maximum administrative events accepted from one query. */
+const DEFAULT_ADMIN_LIMIT = 500;
 import { createMemoryStorage, createNullSigner, storageKey } from "./interfaces.js";
 import {
   GovernanceAdminStore,
@@ -116,7 +140,12 @@ export class GovernanceRuntime extends Emitter {
    * @param {number} [options.chunkSize]
    * @param {number} [options.muteWindowSeconds]
    * @param {import('@bitgate/nostr').SignatureVerifier} [options.verifySignature]
+   * @param {boolean} [options.trustUnsignedEvents] - Accept administrative events
+   *   without a verifier. Development and tests only.
    * @param {string} [options.root] - Root administrator pubkey, from deployment config
+   * @param {number} [options.maxCachedDecisions] - Ceiling on cached decisions
+   * @param {number} [options.maxReportTargets] - Ceiling on targets held by the report store
+   * @param {number} [options.maxMuteLists] - Ceiling on mute lists held
    */
   constructor({
     applicationId,
@@ -129,7 +158,11 @@ export class GovernanceRuntime extends Emitter {
     chunkSize = DEFAULT_CHUNK_SIZE,
     muteWindowSeconds = 0,
     verifySignature,
+    trustUnsignedEvents,
     root,
+    maxCachedDecisions = 5_000,
+    maxReportTargets = 20_000,
+    maxMuteLists = 5_000,
   }) {
     super();
 
@@ -155,6 +188,10 @@ export class GovernanceRuntime extends Emitter {
     // rather than pretending state was verified.
     this.verifySignature = verifySignature;
 
+    // Opt-in escape hatch for local development and tests, where events are
+    // constructed in-process and there is no relay to lie.
+    this.trustUnsignedEvents = trustUnsignedEvents === true;
+
     // The deployment's own relays, used as a fallback for authors who have
     // published no NIP-65 list.
     /** @type {string[]} */
@@ -162,8 +199,12 @@ export class GovernanceRuntime extends Emitter {
 
     this.admin = new GovernanceAdminStore();
     this.trust = new TrustGraphStore();
-    this.reports = new ReportStore();
-    this.mutes = new TrustedMuteStore({ windowSeconds: muteWindowSeconds, now: this.now });
+    this.reports = new ReportStore({ maxTargets: maxReportTargets });
+    this.mutes = new TrustedMuteStore({
+      windowSeconds: muteWindowSeconds,
+      now: this.now,
+      maxLists: maxMuteLists,
+    });
     /** @type {PolicyStore} */
     this.policies = new PolicyStore(policy ?? NEUTRAL_POLICY);
     this.overrides = new OverrideStore({ now: this.now });
@@ -172,8 +213,15 @@ export class GovernanceRuntime extends Emitter {
     // Seeding it here keeps the storage key stable from construction; without
     // it, hydration could not find its own cache, because the key is derived
     // from the root fingerprint the cache would have to supply.
-    if (root) {
-      this.admin.setRoles({ root });
+    // Kept separate from admin.authority.root on purpose. The authority state
+    // can be rewritten by ingested documents; this is the deployment's own
+    // configuration and is what every authorship check compares against, so a
+    // bad ingest cannot move the goalposts for the next one.
+    /** @type {string} */
+    this.configuredRoot = root ? normalizePubkey(root) : "";
+
+    if (this.configuredRoot) {
+      this.admin.setRoles({ root: this.configuredRoot });
     }
 
     /** @type {string} */
@@ -234,6 +282,10 @@ export class GovernanceRuntime extends Emitter {
     // for every card is the cost the extraction is supposed to remove.
     /** @type {Map<string, GovernanceDecision>} */
     this.decisionCache = new Map();
+    // Without a ceiling this grows for the lifetime of the page: an
+    // infinite-scroll feed evaluates new targets forever and never revisits
+    // most of them. Insertion order gives a cheap approximation of LRU.
+    this.maxCachedDecisions = maxCachedDecisions;
 
     // The snapshot and its fingerprint are rebuilt only when a store changes.
     // Deriving them per target walks every report and mute list, which turns a
@@ -252,6 +304,8 @@ export class GovernanceRuntime extends Emitter {
       rejectedSignatures: 0,
       hydratedFromCache: false,
       privateMutesApplied: 0,
+      rejectedUnauthorized: 0,
+      rejectedUnverified: 0,
     };
   }
 
@@ -331,18 +385,32 @@ export class GovernanceRuntime extends Emitter {
     if (event.kind === CANONICAL_KIND) {
       const roles = decodeRoles(event);
       if (roles) {
+        // The roster is the root of the entire trust model: it decides who may
+        // deny whom, and who is protected. Accepting one from an arbitrary
+        // author lets anybody declare themselves root. Only the deployment's
+        // configured root may publish it.
+        if (!this.#isRootAuthored(event)) {
+          this.diagnostics.rejectedUnauthorized += 1;
+          this.emit("rejected", { reason: "roles-not-root", pubkey: event.pubkey });
+          return false;
+        }
+        if (!this.#adminIngestAllowed()) {
+          return false;
+        }
         this.admin.setRoles(roles);
         return true;
       }
 
       const policyDocument = decodePolicy(event);
       if (policyDocument) {
-        this.applyRootPolicy(policyDocument, event.pubkey);
-        return true;
+        return this.applyRootPolicy(policyDocument, event.pubkey);
       }
 
       const contribution = decodeContribution(event);
       if (contribution) {
+        if (!this.#adminIngestAllowed()) {
+          return false;
+        }
         this.admin.upsertContribution(contribution);
         return true;
       }
@@ -351,12 +419,56 @@ export class GovernanceRuntime extends Emitter {
     if (event.kind === LEGACY_KIND) {
       const contribution = decodeLegacyList(event);
       if (contribution) {
+        if (!this.#adminIngestAllowed()) {
+          return false;
+        }
         this.admin.upsertContribution(contribution);
         return true;
       }
     }
 
     this.diagnostics.unknownEvents += 1;
+    return false;
+  }
+
+  /**
+   * Whether an event was authored by the deployment's configured root.
+   *
+   * Falls back to the current authority root only when no root was configured,
+   * which is a development convenience — a deployment with no configured root
+   * has no way to distinguish its administrator from anyone else.
+   *
+   * @param {NostrEvent} event
+   * @returns {boolean}
+   */
+  #isRootAuthored(event) {
+    const root = this.configuredRoot || this.admin.authority.root;
+    if (!root) {
+      return false;
+    }
+    return normalizePubkey(event?.pubkey ?? "") === root;
+  }
+
+  /**
+   * Whether administrative state may be ingested at all.
+   *
+   * Without signature verification, `event.pubkey` is an unauthenticated claim:
+   * a hostile relay can put the root's key on an event the root never wrote, so
+   * an authorship check alone proves nothing. Administrative documents
+   * therefore fail closed unless a verifier is configured, or the application
+   * explicitly opts in for local and test use.
+   *
+   * Trust signals — reports, mutes — are not gated here: they are bounded by
+   * the viewer's own trust graph rather than by authority.
+   *
+   * @returns {boolean}
+   */
+  #adminIngestAllowed() {
+    if (this.verifySignature || this.trustUnsignedEvents) {
+      return true;
+    }
+    this.diagnostics.rejectedUnverified += 1;
+    this.emit("rejected", { reason: "unverified-administrative-event" });
     return false;
   }
 
@@ -372,7 +484,7 @@ export class GovernanceRuntime extends Emitter {
    * @returns {boolean} Whether the policy was accepted
    */
   applyRootPolicy(document, publisher) {
-    const root = this.admin.authority.root;
+    const root = this.configuredRoot || this.admin.authority.root;
     if (!root || normalizePubkey(publisher) !== root) {
       this.emit("policy-rejected", { reason: "not-root", publisher });
       return false;
@@ -435,8 +547,19 @@ export class GovernanceRuntime extends Emitter {
 
     const admin = /** @type {any} */ (await this.storage.read(this.storageKeyFor("admin")));
     if (admin?.schemaVersion === this.schemaVersion) {
+      // Cache is a performance tier, never an authority tier. Storage is
+      // writable by anything running on this origin, so a cached roster naming
+      // a different root would turn any same-origin XSS into a persistent
+      // moderation takeover. A mismatch means the cache is not ours.
+      const cachedRoot = normalizePubkey(admin.authority?.root ?? "");
+      if (this.configuredRoot && cachedRoot && cachedRoot !== this.configuredRoot) {
+        this.emit("rejected", { reason: "cached-root-mismatch", pubkey: cachedRoot });
+        this.diagnostics.hydratedFromCache = false;
+        return false;
+      }
+
       if (admin.authority) {
-        this.admin.setRoles(admin.authority);
+        this.admin.setRoles({ ...admin.authority, root: this.configuredRoot || cachedRoot });
       }
       if (Array.isArray(admin.contributions)) {
         this.admin.setContributions(admin.contributions);
@@ -461,6 +584,26 @@ export class GovernanceRuntime extends Emitter {
 
     this.diagnostics.hydratedFromCache = restored;
     return restored;
+  }
+
+  /**
+   * Ingest an event that arrived on a live subscription.
+   *
+   * Subscriptions previously called ingestEvent directly, so state fetched at
+   * load was verified and the identical state arriving live was not — an
+   * attacker only had to wait. Verification is async, so this wraps it.
+   *
+   * @param {NostrEvent} event
+   * @returns {Promise<boolean>}
+   */
+  async #ingestFromSubscription(event) {
+    if (this.verifySignature) {
+      const [verified] = await this.#verified([event]);
+      if (!verified) {
+        return false;
+      }
+    }
+    return this.ingestEvent(event);
   }
 
   /**
@@ -498,15 +641,35 @@ export class GovernanceRuntime extends Emitter {
       await this.hydrate();
     }
 
+    // Narrowed to the exact documents governance uses. An unfiltered query for
+    // kinds 30078 and 30000 asks a relay for every application-data and
+    // people-list event in existence: a self-inflicted denial of service on
+    // page load, and a privacy problem since it pulls unrelated app data.
+    const identifiers = GOVERNANCE_SCOPES.map(
+      (scope) => `${this.namespace}:governance:${scope}:v1`,
+    );
+
     /** @type {any} */
-    const filter = { kinds: [CANONICAL_KIND, LEGACY_KIND] };
+    const canonicalFilter = {
+      kinds: [CANONICAL_KIND],
+      "#d": identifiers,
+      limit: DEFAULT_ADMIN_LIMIT,
+    };
+    /** @type {any} */
+    const legacyFilter = {
+      kinds: [LEGACY_KIND],
+      "#d": LEGACY_IDENTIFIERS,
+      limit: DEFAULT_ADMIN_LIMIT,
+    };
+
     if (authors?.length) {
-      filter.authors = authors;
+      canonicalFilter.authors = authors;
+      legacyFilter.authors = authors;
     }
 
     let events;
     try {
-      events = await this.transport.list([filter]);
+      events = await this.transport.list([canonicalFilter, legacyFilter]);
     } catch (error) {
       this.stale = true;
       this.emit("stale", { reason: "relay-unreachable", error: String(error) });
@@ -703,7 +866,7 @@ export class GovernanceRuntime extends Emitter {
       if (!authorChunk.length) continue;
       opened.push(
         this.transport.subscribe([{ kinds: [MUTE_LIST_KIND], authors: authorChunk }], {
-          onEvent: (event) => this.ingestEvent(event),
+          onEvent: (event) => void this.#ingestFromSubscription(event),
         }),
       );
     }
@@ -791,7 +954,7 @@ export class GovernanceRuntime extends Emitter {
       if (!ids.length) continue;
       opened.push(
         this.transport.subscribe([{ kinds: [REPORT_KIND], "#e": ids }], {
-          onEvent: (event) => this.ingestEvent(event),
+          onEvent: (event) => void this.#ingestFromSubscription(event),
         }),
       );
     }
@@ -800,7 +963,7 @@ export class GovernanceRuntime extends Emitter {
       if (!keys.length) continue;
       opened.push(
         this.transport.subscribe([{ kinds: [REPORT_KIND], "#p": keys }], {
-          onEvent: (event) => this.ingestEvent(event),
+          onEvent: (event) => void this.#ingestFromSubscription(event),
         }),
       );
     }
@@ -966,6 +1129,17 @@ export class GovernanceRuntime extends Emitter {
     // Frozen because the cache hands out the same object to every caller; a
     // consumer mutating a decision would otherwise corrupt later reads.
     this.decisionCache.set(cacheKey, deepFreeze(decision));
+
+    if (this.decisionCache.size > this.maxCachedDecisions) {
+      // Maps iterate in insertion order, so the first key is the least
+      // recently added — good enough eviction for a cache whose miss cost is
+      // one pure evaluation.
+      const oldest = this.decisionCache.keys().next().value;
+      if (oldest !== undefined) {
+        this.decisionCache.delete(oldest);
+      }
+    }
+
     return decision;
   }
 

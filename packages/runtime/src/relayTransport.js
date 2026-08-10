@@ -316,6 +316,11 @@ export function createRelayTransport(urls, options = {}) {
     subscribe(filters, handlers, subscribeOptions = {}) {
       const id = `bg-sub-${(subscriptionCounter += 1)}`;
       const targets = resolveTargets(subscribeOptions.relays);
+      // Bounded: a long-lived subscription on a busy relay would otherwise
+      // retain every event id it has ever seen for the life of the page. The
+      // window only needs to be wide enough to catch the same event arriving
+      // from several relays at once.
+      const maxSeen = subscribeOptions.maxSeen ?? 10_000;
       /** @type {Set<string>} */
       const seen = new Set();
 
@@ -326,6 +331,12 @@ export function createRelayTransport(urls, options = {}) {
           onEvent: (event) => {
             if (!event?.id || seen.has(event.id)) {
               return;
+            }
+            if (seen.size >= maxSeen) {
+              const oldest = seen.values().next().value;
+              if (oldest !== undefined) {
+                seen.delete(oldest);
+              }
             }
             seen.add(event.id);
             handlers.onEvent?.(event);

@@ -72,6 +72,8 @@ function makeRuntime(events = []) {
     transport,
     policy: POLICY,
     now: () => NOW,
+    root: ROOT,
+    trustUnsignedEvents: true,
   });
   return { runtime, transport };
 }
@@ -132,7 +134,9 @@ describe("construction", () => {
   it("changes its storage key when the root authority changes", () => {
     const { runtime } = makeRuntime();
     const before = runtime.storageKeyFor("admin");
-    runtime.admin.setRoles({ root: ROOT, actors: {} });
+    // Rotating the root must invalidate the cache namespace so a new
+    // administration cannot inherit the previous one's stored state.
+    runtime.admin.setRoles({ root: CREATOR, actors: {} });
     expect(runtime.storageKeyFor("admin")).not.toBe(before);
   });
 });
@@ -266,6 +270,8 @@ describe("loadAdministrativeState", () => {
       transport,
       policy: POLICY,
       now: () => NOW,
+      root: ROOT,
+      trustUnsignedEvents: true,
     });
 
     await runtime.loadAdministrativeState({ authors: [MODERATOR] });
@@ -284,6 +290,8 @@ describe("active targets and subscriptions", () => {
       policy: POLICY,
       now: () => NOW,
       chunkSize: 2,
+      root: ROOT,
+      trustUnsignedEvents: true,
     });
 
     runtime.setActiveTargets([
@@ -305,6 +313,8 @@ describe("active targets and subscriptions", () => {
       transport,
       policy: POLICY,
       now: () => NOW,
+      root: ROOT,
+      trustUnsignedEvents: true,
     });
 
     runtime.setActiveTargets([

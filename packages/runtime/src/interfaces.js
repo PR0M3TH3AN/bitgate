@@ -23,6 +23,7 @@
 /**
  * @typedef {Object} ListOptions
  * @property {number} [timeout]
+ * @property {number} [maxSeen] - Ceiling on the per-subscription dedupe window
  * @property {string[]} [relays] - Query only these relays, connecting if needed.
  *   This is what makes outbox-model fetching possible: a contact's mute list
  *   lives on their write relays, not on this deployment's.

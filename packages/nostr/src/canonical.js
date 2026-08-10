@@ -31,13 +31,19 @@ const SCOPE_TO_KIND = {
 };
 
 /**
- * Build a canonical `d` identifier.
+ * Build a canonical `d` identifier: `<namespace>:governance:<scope>:v1`.
+ *
+ * The middle segment is deliberately the generic word rather than the product
+ * name. The identifier describes the kind of document, not the library that
+ * wrote it — another implementation should be able to publish and read the
+ * same events without adopting our branding.
+ *
  * @param {string} namespace - Application namespace, e.g. "bitroad"
  * @param {string} scope - e.g. "user-deny"
  * @returns {string}
  */
 export function canonicalIdentifier(namespace, scope) {
-  return `${namespace}:bitgate:${scope}:v${CANONICAL_VERSION}`;
+  return `${namespace}:governance:${scope}:v${CANONICAL_VERSION}`;
 }
 
 /**
@@ -49,7 +55,7 @@ export function parseIdentifier(identifier) {
   if (typeof identifier !== "string") {
     return null;
   }
-  const match = /^([^:]+):bitgate:([^:]+):v(\d+)$/.exec(identifier.trim());
+  const match = /^([^:]+):governance:([^:]+):v(\d+)$/.exec(identifier.trim());
   if (!match) {
     return null;
   }

@@ -266,5 +266,8 @@ export function getPolicyPreset(name) {
   if (typeof name !== "string") {
     return null;
   }
-  return POLICY_PRESETS[name.trim().toLowerCase()] ?? null;
+  const key = name.trim().toLowerCase();
+  // Own-property check: POLICY_PRESETS["constructor"] would otherwise hand back
+  // the Object constructor as if it were a policy.
+  return Object.hasOwn(POLICY_PRESETS, key) ? POLICY_PRESETS[key] : null;
 }

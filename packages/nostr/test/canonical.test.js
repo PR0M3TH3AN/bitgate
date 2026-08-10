@@ -37,7 +37,7 @@ const event = (parts) => ({
 describe("canonical identifiers", () => {
   it("builds a namespaced identifier", () => {
     expect(canonicalIdentifier("bitroad", "address-deny")).toBe(
-      "bitroad:bitgate:address-deny:v1",
+      "bitroad:governance:address-deny:v1",
     );
   });
 
