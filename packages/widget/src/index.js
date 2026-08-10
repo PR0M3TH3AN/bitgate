@@ -33,6 +33,14 @@ export {
 } from "@bitgate/core";
 
 export {
+  LABEL_KIND,
+  decodeLabels,
+  labelsToContributions,
+  encodeLabel,
+  contributionToLabel,
+} from "@bitgate/nostr";
+
+export {
   BASE_STYLES,
   GovernanceElement,
   canRegisterElements,

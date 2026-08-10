@@ -24,6 +24,7 @@ import {
   REPORT_KIND,
   decodeContactList,
   decodeContribution,
+  decodeLabels,
   decodeLegacyList,
   decodeMuteList,
   decodePolicy,
@@ -32,8 +33,10 @@ import {
   decodeReport,
   decodeRoles,
   groupAuthorsByWriteRelay,
+  labelsToContributions,
   selectReplaceable,
   verifyEvents,
+  LABEL_KIND,
 } from "@bitgate/nostr";
 
 import { snapshotFingerprint } from "@bitgate/core";
@@ -143,6 +146,8 @@ export class GovernanceRuntime extends Emitter {
    * @param {boolean} [options.trustUnsignedEvents] - Accept administrative events
    *   without a verifier. Development and tests only.
    * @param {string} [options.root] - Root administrator pubkey, from deployment config
+   * @param {import('@bitgate/nostr').LabelMapping} [options.labelMapping] - Which NIP-32
+   *   label namespace and values to treat as moderation
    * @param {number} [options.maxCachedDecisions] - Ceiling on cached decisions
    * @param {number} [options.maxReportTargets] - Ceiling on targets held by the report store
    * @param {number} [options.maxMuteLists] - Ceiling on mute lists held
@@ -160,6 +165,7 @@ export class GovernanceRuntime extends Emitter {
     verifySignature,
     trustUnsignedEvents,
     root,
+    labelMapping,
     maxCachedDecisions = 5_000,
     maxReportTargets = 20_000,
     maxMuteLists = 5_000,
@@ -196,6 +202,18 @@ export class GovernanceRuntime extends Emitter {
     // published no NIP-65 list.
     /** @type {string[]} */
     this.defaultRelays = Array.isArray(transport.relays) ? [...transport.relays] : [];
+
+    // Which NIP-32 label namespace and vocabulary this deployment reads as
+    // moderation. Defaults to the app namespace with a plain "deny"/"allow"
+    // vocabulary, so BitGate reads its own emitted labels; an application
+    // consuming a third-party labeller overrides it. A label only ever denies
+    // when its author holds the capability, exactly like any contribution.
+    /** @type {import('@bitgate/nostr').LabelMapping} */
+    this.labelMapping = labelMapping ?? {
+      namespace: namespace,
+      denyValues: ["deny"],
+      allowValues: ["allow"],
+    };
 
     this.admin = new GovernanceAdminStore();
     this.trust = new TrustGraphStore();
@@ -435,6 +453,23 @@ export class GovernanceRuntime extends Emitter {
         this.admin.upsertContribution(contribution);
         return true;
       }
+    }
+
+    if (event.kind === LABEL_KIND) {
+      // NIP-32 labels are a shared wire format for the same allow/deny model.
+      // They map to contributions and are gated identically: a label denies
+      // someone only if its author holds the capability at reduce time.
+      const contributions = labelsToContributions(decodeLabels(event), this.labelMapping);
+      if (!contributions.length) {
+        return false;
+      }
+      if (!this.#adminIngestAllowed()) {
+        return false;
+      }
+      for (const contribution of contributions) {
+        this.admin.upsertContribution(contribution);
+      }
+      return true;
     }
 
     this.diagnostics.unknownEvents += 1;
@@ -818,6 +853,44 @@ export class GovernanceRuntime extends Emitter {
     }
 
     return learned;
+  }
+
+  /**
+   * Load NIP-32 labels published by a set of labellers.
+   *
+   * Labels only take effect for labellers the roster grants a contribution
+   * capability, so this is safe to point at any labeller: an untrusted one's
+   * labels reduce to nothing. Fetched from the configured relays.
+   *
+   * @param {string[]} labellers - Pubkeys whose labels to read
+   * @returns {Promise<number>} Number of label events ingested
+   */
+  async loadLabels(labellers) {
+    const authors = Array.from(
+      new Set((labellers ?? []).map((key) => normalizePubkey(key)).filter(Boolean)),
+    );
+    if (!authors.length) {
+      return 0;
+    }
+
+    let ingested = 0;
+    for (const chunkOfAuthors of chunk(authors, this.chunkSize)) {
+      let events;
+      try {
+        events = await this.transport.list([{ kinds: [LABEL_KIND], authors: chunkOfAuthors }]);
+      } catch (error) {
+        this.emit("stale", { reason: "labels-unreachable", error: String(error) });
+        continue;
+      }
+
+      for (const event of selectReplaceable(await this.#verified(events)).values()) {
+        if (this.ingestEvent(event, { verified: true })) {
+          ingested += 1;
+        }
+      }
+    }
+
+    return ingested;
   }
 
   /**

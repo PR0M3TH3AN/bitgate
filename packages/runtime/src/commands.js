@@ -12,7 +12,7 @@ import {
   isProtectedActor,
   isValidTarget,
 } from "@bitgate/core";
-import { encodeContribution, encodeReport, encodeRoles } from "@bitgate/nostr";
+import { encodeContribution, encodeLabel, encodeReport, encodeRoles } from "@bitgate/nostr";
 
 /**
  * Stable error codes. Applications match on these rather than on message text.
@@ -338,6 +338,59 @@ export class GovernanceCommands {
     let template;
     try {
       template = encodeReport(target, category, content);
+    } catch (error) {
+      return failure(ERROR_CODES.INVALID_ARGUMENT, String(error));
+    }
+
+    return this.#publish(template);
+  }
+
+  /**
+   * Publish a NIP-32 label for a target.
+   *
+   * Requires the same capability as denying the target directly, because a
+   * "deny" label from an authorized moderator has the same effect — it would be
+   * incoherent to gate the private form and not the shared one. The value and
+   * namespace are free, so an application can publish its own richer vocabulary
+   * (`"nsfw"`, `"scam"`) and decide elsewhere what each means.
+   *
+   * @param {import('@bitgate/core').GovernanceTarget} target
+   * @param {string} value - The label value, e.g. "deny" or "nsfw"
+   * @param {Object} [options]
+   * @param {string} [options.namespace]
+   * @param {string} [options.content] - Explanation
+   * @returns {Promise<CommandResult>}
+   */
+  async publishLabel(target, value, { namespace, content = "" } = {}) {
+    if (!isValidTarget(target)) {
+      return failure(ERROR_CODES.INVALID_TARGET, JSON.stringify(target));
+    }
+
+    const capability =
+      target.type === "user"
+        ? "contribute-user-deny"
+        : target.type === "event"
+          ? "contribute-event-deny"
+          : "contribute-address-deny";
+
+    let actor;
+    try {
+      actor = await this.#actor();
+    } catch (error) {
+      return failure(ERROR_CODES.NO_SIGNER, String(error));
+    }
+    if (!hasCapability(actor, capability, this.runtime.admin.authority)) {
+      return failure(ERROR_CODES.NOT_AUTHORIZED, `actor lacks ${capability}`);
+    }
+
+    let template;
+    try {
+      template = encodeLabel({
+        value,
+        namespace: namespace ?? this.runtime.labelMapping?.namespace,
+        targets: [target],
+        content,
+      });
     } catch (error) {
       return failure(ERROR_CODES.INVALID_ARGUMENT, String(error));
     }

@@ -44,7 +44,7 @@ equivalent to following the operator's seed list.
 | Package | Purpose |
 | --- | --- |
 | `@bitgate/core` | Pure evaluation. No I/O, no browser globals, no dependencies. |
-| `@bitgate/nostr` | Codecs: canonical v1, NIP-56, NIP-51, legacy lists, bech32. |
+| `@bitgate/nostr` | Codecs: canonical v1, NIP-56, NIP-51, NIP-32, NIP-65, NIP-02, bech32. |
 | `@bitgate/runtime` | Stores, transport orchestration, commands. |
 | `@bitgate/verify` | Optional NIP-01 signature verification, so the core stays dependency-free. |
 | `@bitgate/testing` | Conformance harness. |

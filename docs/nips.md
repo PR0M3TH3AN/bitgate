@@ -11,7 +11,7 @@ this table for anything load-bearing.
 | **NIP-01** | — | Event shape, replaceable selection with a deterministic same-timestamp tiebreak, and signature verification via `@bitgate/verify` (id recomputed, then schnorr-checked) |
 | **NIP-02** | 3 | The viewer's follow list *is* the trust graph. Relay hints in the third tag position are captured as an outbox fallback. |
 | **NIP-19** | — | bech32 `npub`/`note` decoding at the codec edge, so the core stays hex-only |
-| **NIP-32** | 1985 | **Not yet** — see gaps below |
+| **NIP-32** | 1985 | Labels, both directions. Consumed as capability-gated contributions via a configurable namespace/vocabulary; emitted with `publishLabel`. See [ADR 0007](adr/0007-nip32-labelling.md). |
 | **NIP-51** | 10000 | Mute lists. Public `p` entries always; the viewer's *own* private entries decrypted through their signer. |
 | **NIP-44** | — | Decryption of the viewer's own private mute entries, delegated to the signer |
 | **NIP-56** | 1984 | Reports. The report type is read from the 3rd tag position, with fallbacks for clients that place it elsewhere. |
@@ -39,13 +39,6 @@ review rather than an automatic denial.
 injected verifier before anything authoritative is accepted.
 
 ## Known gaps
-
-**NIP-32 labelling (kind 1985) — the interop gap.** BitGate's contribution
-lists are a private vocabulary. NIP-32 is the standard way to publish
-moderation labels (`L` namespace, `l` value, targeting `e`/`p`/`a`), and our
-user/event/address denials map onto it almost exactly. Emitting NIP-32 would
-let other clients honour these moderators; consuming it would let BitGate
-subscribe to third-party label sets. This is the highest-value remaining work.
 
 **Trust is binary.** `resolveTrustSet` is "in the viewer's follows, or not".
 Most things called web-of-trust weight by hop distance — follows-of-follows at

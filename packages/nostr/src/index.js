@@ -71,6 +71,15 @@ export {
 } from "./contacts.js";
 
 export {
+  LABEL_KIND,
+  labelTargets,
+  decodeLabels,
+  labelsToContributions,
+  encodeLabel,
+  contributionToLabel,
+} from "./labels.js";
+
+export {
   LEGACY_KIND,
   LEGACY_IDENTIFIERS,
   LEGACY_EDITORS_IDENTIFIER,
@@ -89,4 +98,6 @@ export {
  * @typedef {import('./mutes.js').DecodedMuteList} DecodedMuteList
  * @typedef {import('./relayList.js').RelayList} RelayList
  * @typedef {import('./contacts.js').ContactList} ContactList
+ * @typedef {import('./labels.js').Label} Label
+ * @typedef {import('./labels.js').LabelMapping} LabelMapping
  */
