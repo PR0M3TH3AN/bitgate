@@ -176,3 +176,45 @@ unchanged.
 - [ ] Decide whether standalone output is generated from the canonical engine
       directly or from a separately maintained browser entry point.
 - [ ] Decide how browser builds expose version and integrity metadata.
+
+## BitBlocks App Kit compatibility layer
+
+Do this only after BitLogin, BitGate, and BitFeed each have clean standalone
+APIs. BitBlocks is an optional integration layer, not a replacement for any of
+the three libraries. It must not merge their implementations or make an app
+depend on the kit when it only needs BitGate.
+
+- [ ] Create a tiny optional BitBlocks integration layer.
+- [ ] Keep BitLogin, BitGate, and BitFeed as separate replaceable libraries;
+      the App Kit must compose them rather than absorb them.
+- [ ] Provide shared initialization, for example:
+
+      const app = await BitBlocks.create({
+        login: {},
+        gate: {},
+        feed: {},
+        relays: [...]
+      });
+
+- [ ] Standardize the viewer context exchanged between the components without
+      changing BitGate's policy engine, signed-policy format, or four-axis
+      decision contract.
+- [ ] Centralize optional common Nostr plumbing in the kit: relay connections,
+      subscriptions, EOSE handling, reconnects, deduplication, timeouts,
+      publishing, OK responses, profile lookup, follow-list lookup, and
+      mute-list lookup.
+- [ ] Expose `app.viewer`, `app.signer`, `app.relays`, `app.gate`, and
+      `app.feed` through documented interfaces.
+- [ ] Keep each underlying library independently usable and independently
+      versioned.
+- [ ] Do not make applications depend on BitBlocks when they use only
+      BitGate's policy and governance capabilities.
+- [ ] Add integration tests proving the kit is an adapter over the standalone
+      APIs, not a second implementation of identity, policy, or feed logic.
+
+### BitBlocks definition of done
+
+A developer or AI agent can take `bitlogin.js`, `bitgate.js`, `bitfeed.js`, and
+`bitblocks.js` and build a functional static Nostr application with almost no
+infrastructure or integration boilerplate, while each individual library
+remains usable without BitBlocks.
