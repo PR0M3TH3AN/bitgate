@@ -230,30 +230,36 @@ adoption the obvious choice.
 
 ### Why we didn't reach for BitGate first
 
-- **No obvious "just the engine + events over Nostr" path for a static site.**
-  We wanted: moderators publish signed decisions to relays; every client
-  resolves the honored set and composes decisions ladder-max; enforce in the UI.
-  That is precisely BitGate's model, but the on-ramp we found was the
-  `<bitgate-provider>`/`<bitgate-veil>` widgets, which assume you're veiling
-  DOM content, not making install/transaction decisions in app logic. A
-  documented recipe for "headless `@bitgate/core` + your own decision events +
-  your own enforcement" would have won us over.
-- **The decision event format is ours, not yours.** We invented a 33604 shape
-  because we didn't find a canonical BitGate "decision/label event" to emit and
-  consume over relays. If BitGate defines (or blesses a NIP-32-based) wire
-  format for a signed decision across the four dimensions, other clients —
-  including ours — could interoperate instead of each inventing one.
+- **[ADDRESSED 2026-08-11] No obvious "just the engine + events over Nostr" path
+  for a static site.** The headless path existed but was buried under the widget
+  on-ramp. Added a "Headless, straight from NIP-32 labels" subsection to the
+  README (four pure functions: decode → contributions → reduce → evaluate, no
+  runtime transport, no DOM) and a runnable `examples/headless-quickstart.mjs`.
+  Pinned by `tests/headless-quickstart.test.js`.
+- **[ADDRESSED 2026-08-11] The decision event format is ours, not yours.** There
+  was no need to invent 33604: **NIP-32 label events (kind 1985) are the
+  canonical signed decision format** — `@bitgate/nostr` already has the codec
+  (`encodeLabel`/`decodeLabels`/`labelsToContributions`) and `docs/labels.md`
+  documents interop. The README and the headless example now say so explicitly
+  and round-trip real 1985 events into a four-dimension decision, so other
+  clients interoperate instead of each inventing a shape.
 
 ### High-value asks
 
-- **Headless quickstart**: `@bitgate/core` composing decisions from an array of
-  events + a viewer + a policy, with zero DOM. Show the `transaction` dimension
-  gating a non-visual action (install/checkout), which is where the four-
-  dimension model really shines and where a `hidden` boolean can't reach.
-- **Moderator-set as data.** Tessera made "who is a moderator" a signed,
-  root-controlled kind-30000 set resolved at runtime, so moderators can be
-  added in-app without a redeploy. A first-class BitGate primitive for the
-  honored-moderator/authority set (with delegation) would be broadly useful.
+- **[DONE 2026-08-11] Headless quickstart**: shipped `examples/headless-quickstart.mjs`
+  and a README subsection — `@bitgate/core` composing a decision from an array
+  of kind-1985 label events + an honored moderator set + a policy, zero DOM. It
+  shows exactly the `transaction`-dimension case the ask names: a malware plugin
+  stays **visible (warn)** but **not installable (transaction deny)** — where a
+  `hidden` boolean can't reach. Pinned by `tests/headless-quickstart.test.js`
+  (incl. that an out-of-set labeller's deny is ignored).
+- **[PARTIAL 2026-08-11] Moderator-set as data.** The primitive exists
+  (`createAuthorityState({ root, actors })` + capability-gated
+  `reduceAdminState`), and the headless example demonstrates resolving the
+  honored set as data and ignoring an unauthorized labeller. Still open as a
+  first-class helper: resolving that actor map from a *signed, root-controlled
+  kind-30000 set* at runtime (with delegation) rather than the app assembling
+  the `actors` object itself. Left as a focused follow-up.
 - **[DONE 2026-08-11] Allowlist / whitelist mode.** The engine already honored
   `requireAllowlist` + `allowlistMiss` (evaluator.js), and the commerce example
   configured a seller allowlist by hand — but there was no reusable named

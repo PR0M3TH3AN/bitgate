@@ -127,6 +127,34 @@ const decision = runtime.evaluate({ type: "user", pubkey: authorPubkey }, { prof
 if (decision.visibility.effect === "hide") return null;
 ```
 
+### Headless, straight from NIP-32 labels
+
+If you don't want the runtime's transport orchestration either — you already
+have relay events in hand and just want the engine — the whole path is four
+pure functions. **NIP-32 label events (kind 1985) are the canonical, signed
+decision format**; you don't invent one:
+
+```js
+import { createSnapshot, evaluateTarget, reduceAdminState, createAuthorityState } from "@bitgate/core";
+import { decodeLabels, labelsToContributions } from "@bitgate/nostr";
+
+const authority = createAuthorityState({ root: ROOT, actors: honoredModerators }); // moderator set as data
+const contributions = labelsToContributions(
+  labelEvents.flatMap(decodeLabels),                 // kind-1985 events off your relays
+  { namespace: "org.bitblocks.plugins", denyValues: ["deny"], allowValues: ["allow"] },
+);
+const snapshot = createSnapshot({ authority, admin: reduceAdminState(contributions, authority) });
+const decision = evaluateTarget(target, snapshot, { policy, surface: "registry" });
+
+if (!decision.transaction || decision.transaction.effect === "allow") install();  // gate a non-visual action
+```
+
+A decision has four dimensions, so `transaction` can block an install or
+checkout while `visibility` still shows the listing with a warning — something a
+`hidden` boolean can't express. [`examples/headless-quickstart.mjs`](examples/headless-quickstart.mjs)
+is a runnable end-to-end walkthrough (`node examples/headless-quickstart.mjs`);
+[docs/labels.md](docs/labels.md) covers the NIP-32 wire format and interop.
+
 ## Extending to a new application
 
 Write an adapter saying what your object is in governance terms, and a policy
