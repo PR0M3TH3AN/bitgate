@@ -161,6 +161,12 @@ No bundler? `npm run build:standalone` produces `packages/standalone/dist/bitgat
 ESM file. Self-host it and `import { evaluateTarget, decodeLabels } from "./bitgate.js"`;
 everything in this section works from that single file.
 
+The soft dimension, `ranking`, feeds an ordering rather than a gate:
+`decision.ranking` is `{ effect: "normal" | "downrank", weight }`, which an app
+turns into a multiplier on its own feed score — a reported author drops in the
+feed without being hidden. [`examples/feed-ranking.mjs`](examples/feed-ranking.mjs)
+is a runnable walkthrough.
+
 ## Extending to a new application
 
 Write an adapter saying what your object is in governance terms, and a policy

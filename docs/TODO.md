@@ -282,5 +282,12 @@ adoption the obvious choice.
   whole headless path. Verified dependency-free (no bare imports in the output)
   and end-to-end (a smoke test composes a decision from the entry). Documented
   in the README Packages table and the headless section; wired into `npm run build`.
-- A worked example of BitGate feeding a feed ranking (the `ranking` dimension →
-  a score multiplier) would have saved us reinventing it in the feed recipe.
+- **[DONE 2026-08-11]** A worked example of BitGate feeding a feed ranking.
+  **Shipped** `examples/feed-ranking.mjs` (runnable): it reads `decision.ranking`
+  (`{ effect: "normal" | "downrank", weight }`) and turns it into a score
+  multiplier (`base ** weight` for a downrank), so trusted spam reports push two
+  high-base authors below a clean lower-base one **without hiding them** —
+  visibility stays a separate dimension, capped at `restrict` on a feed. The
+  multiplier lives in the example, not the engine (core ships no such numbers).
+  Pinned by `tests/feed-ranking.test.js`; the README headless section points to
+  it.
