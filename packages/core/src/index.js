@@ -89,6 +89,7 @@ export {
   SOCIAL_POLICY,
   COMMERCE_POLICY,
   ADMIN_ONLY_POLICY,
+  ALLOWLIST_POLICY,
   POLICY_PRESETS,
   getPolicyPreset,
 } from "./presets.js";

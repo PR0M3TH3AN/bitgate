@@ -218,3 +218,57 @@ A developer or AI agent can take `bitlogin.js`, `bitgate.js`, `bitfeed.js`, and
 `bitblocks.js` and build a functional static Nostr application with almost no
 infrastructure or integration boilerplate, while each individual library
 remains usable without BitBlocks.
+
+## Feedback from Tessera building a moderation layer (2026-08-11)
+
+Tessera needed exactly what BitGate provides (moderation as policy over public
+Nostr events) but ended up building a **client-side stand-in** — a kind-33604
+"moderation decision" event carrying the four dimensions, ladder-max
+composition, a signed root-controlled moderator set, and a browser console —
+rather than integrating `@bitgate/*`. Notes on why, and what would have made
+adoption the obvious choice.
+
+### Why we didn't reach for BitGate first
+
+- **No obvious "just the engine + events over Nostr" path for a static site.**
+  We wanted: moderators publish signed decisions to relays; every client
+  resolves the honored set and composes decisions ladder-max; enforce in the UI.
+  That is precisely BitGate's model, but the on-ramp we found was the
+  `<bitgate-provider>`/`<bitgate-veil>` widgets, which assume you're veiling
+  DOM content, not making install/transaction decisions in app logic. A
+  documented recipe for "headless `@bitgate/core` + your own decision events +
+  your own enforcement" would have won us over.
+- **The decision event format is ours, not yours.** We invented a 33604 shape
+  because we didn't find a canonical BitGate "decision/label event" to emit and
+  consume over relays. If BitGate defines (or blesses a NIP-32-based) wire
+  format for a signed decision across the four dimensions, other clients —
+  including ours — could interoperate instead of each inventing one.
+
+### High-value asks
+
+- **Headless quickstart**: `@bitgate/core` composing decisions from an array of
+  events + a viewer + a policy, with zero DOM. Show the `transaction` dimension
+  gating a non-visual action (install/checkout), which is where the four-
+  dimension model really shines and where a `hidden` boolean can't reach.
+- **Moderator-set as data.** Tessera made "who is a moderator" a signed,
+  root-controlled kind-30000 set resolved at runtime, so moderators can be
+  added in-app without a redeploy. A first-class BitGate primitive for the
+  honored-moderator/authority set (with delegation) would be broadly useful.
+- **[DONE 2026-08-11] Allowlist / whitelist mode.** The engine already honored
+  `requireAllowlist` + `allowlistMiss` (evaluator.js), and the commerce example
+  configured a seller allowlist by hand — but there was no reusable named
+  preset. **Shipped** `ALLOWLIST_POLICY` (registry name `allowlist`): only
+  publishers with a `user-allow` contribution are shown, every unlisted one is
+  hidden across all four dimensions, administrative denials still apply on top,
+  and protected actors (root/mods) are never gated. Symmetric to the denylist —
+  populate `userAllow` the same way (signed contributions / NIP-32 allow
+  labels). Covered by presets.test.js (unlisted hidden, allowlisted shown,
+  protected bypasses); surfaced in the README preset list.
+
+### Medium
+
+- Ship `@bitgate/core` as a standalone ESM single-file (like BitFeed's
+  `standalone`) so a no-build static site can vendor it the way we vendor
+  `@tessera/core`. Dependency-free + no build step was a hard requirement for us.
+- A worked example of BitGate feeding a feed ranking (the `ranking` dimension →
+  a score multiplier) would have saved us reinventing it in the feed recipe.

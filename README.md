@@ -81,9 +81,10 @@ await provider.ready;
 await provider.useSigner(window.nostr);   // BitLogin's NIP-07 provider
 ```
 
-Policy presets: `social`, `commerce`, `admin-only`. Every number in them is a
-starting point — see the [integration guide](docs/integration-guide.md) to
-write your own.
+Policy presets: `social`, `commerce`, `admin-only`, and `allowlist` (only
+allowlisted publishers are shown — the symmetric twin of a denylist, for
+invite-only or curated surfaces). Every number in them is a starting point —
+see the [integration guide](docs/integration-guide.md) to write your own.
 
 ## Quick start — JavaScript
 

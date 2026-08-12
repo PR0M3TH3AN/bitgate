@@ -5,6 +5,7 @@ import { reduceAdminState } from "../src/adminState.js";
 import { createSnapshot, evaluateTarget } from "../src/evaluator.js";
 import {
   ADMIN_ONLY_POLICY,
+  ALLOWLIST_POLICY,
   COMMERCE_POLICY,
   POLICY_PRESETS,
   SOCIAL_POLICY,
@@ -65,7 +66,16 @@ describe("preset registry", () => {
   });
 
   it("exposes every preset in the registry", () => {
-    expect(Object.keys(POLICY_PRESETS).sort()).toEqual(["admin-only", "commerce", "social"]);
+    expect(Object.keys(POLICY_PRESETS).sort()).toEqual([
+      "admin-only",
+      "allowlist",
+      "commerce",
+      "social",
+    ]);
+  });
+
+  it("resolves the allowlist preset by name", () => {
+    expect(getPolicyPreset("allowlist")).toBe(ALLOWLIST_POLICY);
   });
 });
 
@@ -195,6 +205,43 @@ describe("admin-only preset", () => {
     const decision = evaluateWithReports(ADMIN_ONLY_POLICY, "default", "malware", 16);
     expect(decision.visibility.effect).toBe("allow");
     expect(decision.ranking.effect).toBe("normal");
+  });
+});
+
+describe("allowlist preset", () => {
+  const evaluateUser = (pubkey, contributions = []) => {
+    const auth = authority();
+    const snapshot = createSnapshot({ authority: auth, admin: reduceAdminState(contributions, auth) });
+    return evaluateTarget({ type: "user", pubkey }, snapshot, {
+      surface: "default",
+      policyProfile: "default",
+      policy: ALLOWLIST_POLICY,
+      now: NOW,
+    });
+  };
+
+  it("hides an unlisted publisher across every dimension", () => {
+    const decision = evaluateUser(CREATOR);
+    expect(decision.visibility.effect).toBe("hide");
+    expect(decision.interaction.effect).toBe("deny");
+    expect(decision.transaction?.effect).toBe("deny");
+    expect(decision.reasons.map((reason) => reason.id)).toContain("allowlist-miss");
+  });
+
+  it("shows a publisher once an authorized actor allowlists them", () => {
+    const allow = [
+      { actor: ROOT, kind: "user-allow", targets: [{ type: "user", pubkey: CREATOR }] },
+    ];
+    const decision = evaluateUser(CREATOR, /** @type {any} */ (allow));
+    expect(decision.visibility.effect).toBe("allow");
+    expect(decision.transaction?.effect ?? "allow").toBe("allow");
+    expect(decision.evidence?.userAllowed).toBe(true);
+  });
+
+  it("never gates a protected actor by the allowlist", () => {
+    // ROOT is protected, so it shows even though nobody allowlisted it — the
+    // people who curate the list can always see.
+    expect(evaluateUser(ROOT).visibility.effect).toBe("allow");
   });
 });
 

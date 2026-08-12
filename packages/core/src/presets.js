@@ -248,6 +248,41 @@ export const ADMIN_ONLY_POLICY = createPolicyDefinition({
 });
 
 /**
+ * Allowlist-only — the symmetric twin of the denylist.
+ *
+ * A denylist names who is OUT; this names who is IN. A publisher is shown only
+ * when an authorized actor has contributed a `user-allow` for them (from a
+ * NIP-32 allow label, or an admin allowlist), and every unlisted publisher
+ * misses the allowlist and is hidden across all four dimensions. It composes
+ * with everything else: administrative denials still apply on top of an
+ * allowlisted publisher, and protected actors (root, moderators) are never
+ * gated by the allowlist — the people who curate the list can always see.
+ *
+ * Use it for invite-only or curated surfaces where "unknown until vouched for"
+ * is the correct default. Populate `userAllow` exactly as you populate the
+ * denylist: signed contributions resolved from relays.
+ */
+export const ALLOWLIST_POLICY = createPolicyDefinition({
+  id: "bitgate-allowlist",
+  name: "Allowlist only",
+  description: "Only allowlisted publishers are shown; every unlisted one is hidden.",
+  version: "1.0.0",
+  defaultProfile: "default",
+  profiles: {
+    default: {
+      name: "default",
+      requireAllowlist: true,
+      allowlistMiss: { visibility: "hide", interaction: "deny", transaction: "deny" },
+      administrativeDeny: { visibility: "hide", interaction: "deny", transaction: "deny" },
+      viewerBlock: { visibility: "hide", interaction: "deny" },
+      allowViewerOverride: true,
+      reports: {},
+      mutes: {},
+    },
+  },
+});
+
+/**
  * Presets addressable by name, for attribute-driven setup.
  * @type {Record<string, import('./policy.js').PolicyDefinition>}
  */
@@ -255,6 +290,7 @@ export const POLICY_PRESETS = {
   social: SOCIAL_POLICY,
   commerce: COMMERCE_POLICY,
   "admin-only": ADMIN_ONLY_POLICY,
+  allowlist: ALLOWLIST_POLICY,
 };
 
 /**
