@@ -49,6 +49,7 @@ equivalent to following the operator's seed list.
 | `@bitgate/verify` | Optional NIP-01 signature verification, so the core stays dependency-free. |
 | `@bitgate/testing` | Conformance harness. |
 | `@bitgate/widget` | Drop-in custom elements: viewer controls and a moderator console. |
+| `@bitgate/standalone` | The headless engine + Nostr codecs bundled into one self-contained ESM file for no-build static sites. |
 | `@bitgate/bitvid-compat` | Reference application profile for the characterization corpus. |
 
 ## Quick start — a static page
@@ -154,6 +155,11 @@ checkout while `visibility` still shows the listing with a warning — something
 `hidden` boolean can't express. [`examples/headless-quickstart.mjs`](examples/headless-quickstart.mjs)
 is a runnable end-to-end walkthrough (`node examples/headless-quickstart.mjs`);
 [docs/labels.md](docs/labels.md) covers the NIP-32 wire format and interop.
+
+No bundler? `npm run build:standalone` produces `packages/standalone/dist/bitgate.js`
+— the engine and the Nostr codecs above in one self-contained, dependency-free
+ESM file. Self-host it and `import { evaluateTarget, decodeLabels } from "./bitgate.js"`;
+everything in this section works from that single file.
 
 ## Extending to a new application
 

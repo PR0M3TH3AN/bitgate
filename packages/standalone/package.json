@@ -1,0 +1,19 @@
+{
+  "name": "@bitgate/standalone",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "GPL-3.0-or-later",
+  "description": "Headless BitGate engine + Nostr codecs bundled into a single self-contained ESM file for no-build static sites.",
+  "main": "src/index.js",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "dependencies": {
+    "@bitgate/core": "*",
+    "@bitgate/nostr": "*"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  }
+}

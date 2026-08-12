@@ -273,8 +273,14 @@ adoption the obvious choice.
 
 ### Medium
 
-- Ship `@bitgate/core` as a standalone ESM single-file (like BitFeed's
-  `standalone`) so a no-build static site can vendor it the way we vendor
-  `@tessera/core`. Dependency-free + no build step was a hard requirement for us.
+- **[DONE 2026-08-11]** Ship a standalone ESM single-file. **Shipped**
+  `@bitgate/standalone` (`packages/standalone/`, `npm run build:standalone` →
+  `dist/bitgate.js`, ~44 KB): the headless engine (core) + the Nostr codecs
+  (nostr, incl. the kind-1985 label round-trip) esbuilt into one self-contained,
+  dependency-free ESM file — `@bitgate/verify`'s @noble deps are deliberately
+  not pulled in. A no-build static site vendors the single file and gets the
+  whole headless path. Verified dependency-free (no bare imports in the output)
+  and end-to-end (a smoke test composes a decision from the entry). Documented
+  in the README Packages table and the headless section; wired into `npm run build`.
 - A worked example of BitGate feeding a feed ranking (the `ranking` dimension →
   a score multiplier) would have saved us reinventing it in the feed recipe.

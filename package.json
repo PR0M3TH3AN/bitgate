@@ -14,7 +14,8 @@
     "check:references": "node scripts/verify-no-reference-imports.mjs",
     "check:types": "tsc -p tsconfig.json --noEmit && tsc -p packages/widget/tsconfig.json --noEmit",
     "build:widget": "node packages/widget/build.mjs",
-    "build": "npm run build:types && npm run build:widget && npm run build:site",
+    "build:standalone": "node packages/standalone/build.mjs",
+    "build": "npm run build:types && npm run build:widget && npm run build:standalone && npm run build:site",
     "build:site": "node packages/site/build.mjs",
     "dev:site": "node packages/site/build.mjs && node packages/site/serve.mjs"
   },
