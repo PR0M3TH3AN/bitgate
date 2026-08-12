@@ -293,3 +293,20 @@ adoption the obvious choice.
   multiplier lives in the example, not the engine (core ships no such numbers).
   Pinned by `tests/feed-ranking.test.js`; the README headless section points to
   it.
+
+## Design review — external critique (2026-08-11)
+
+From an outside review of the BitBlocks stack. BitGate was called "underrated."
+
+- **[agree — positioning, NOT new scope] Position BitGate as a general policy
+  evaluation engine, not "moderation."** The primitive already answers "given
+  this actor, object, context, and evidence, what is permitted?" — which spans
+  permissions, marketplace-fraud controls, age/reputation gates, community
+  rules, transaction policy, content warnings, and app governance, not just
+  hide/allow. This is a DOCS/framing task: lead the README with the general
+  framing and add a couple of non-moderation worked examples (e.g. an
+  access/permission gate, a transaction-policy gate). **Deliberately not a
+  feature request** — the engine is already general; per the stack-wide
+  "resist over-expansion" discipline, reframe rather than expand.
+- The four-dimension decision model and the trust-vs-authority split were called
+  out as the strong, differentiated ideas — lead with them.
