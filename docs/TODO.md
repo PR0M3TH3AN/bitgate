@@ -253,13 +253,15 @@ adoption the obvious choice.
   stays **visible (warn)** but **not installable (transaction deny)** — where a
   `hidden` boolean can't reach. Pinned by `tests/headless-quickstart.test.js`
   (incl. that an out-of-set labeller's deny is ignored).
-- **[PARTIAL 2026-08-11] Moderator-set as data.** The primitive exists
-  (`createAuthorityState({ root, actors })` + capability-gated
-  `reduceAdminState`), and the headless example demonstrates resolving the
-  honored set as data and ignoring an unauthorized labeller. Still open as a
-  first-class helper: resolving that actor map from a *signed, root-controlled
-  kind-30000 set* at runtime (with delegation) rather than the app assembling
-  the `actors` object itself. Left as a focused follow-up.
+- **[DONE 2026-08-11] Moderator-set as data.** Shipped `resolveAuthorityRoster`
+  (`@bitgate/nostr`): resolves the honored actor→roles map from signed kind-30000
+  "role set" events and spreads straight into `createAuthorityState`. It honors
+  **only** root-signed sets, plus role-based delegation (`signer: "moderator"`
+  lets a resolved moderator publish a further set, one ordered pass), keeps the
+  latest set per publisher (replaceable), and ignores anyone unauthorized — so
+  moderators change by publishing a signed set, no redeploy. Covered by
+  `roster.test.js` (root-only, unauthorized-ignored, delegation, replaceable,
+  and feeds `createAuthorityState`); README "headless" section shows it.
 - **[DONE 2026-08-11] Allowlist / whitelist mode.** The engine already honored
   `requireAllowlist` + `allowlistMiss` (evaluator.js), and the commerce example
   configured a seller allowlist by hand — but there was no reusable named

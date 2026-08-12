@@ -91,6 +91,8 @@ export {
   decodeMixedContributions,
 } from "./legacy.js";
 
+export { ROLE_SET_KIND, resolveAuthorityRoster } from "./roster.js";
+
 /**
  * @typedef {import('./replaceable.js').NostrEvent} NostrEvent
  * @typedef {import('./replaceable.js').SignatureVerifier} SignatureVerifier

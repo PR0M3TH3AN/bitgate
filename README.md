@@ -150,6 +150,23 @@ const decision = evaluateTarget(target, snapshot, { policy, surface: "registry" 
 if (!decision.transaction || decision.transaction.effect === "allow") install();  // gate a non-visual action
 ```
 
+Don't hand-build `honoredModerators`. "Who is a moderator" is data that should
+change without a redeploy, so let the root publish it as a signed kind-30000 set
+and resolve it at runtime with `resolveAuthorityRoster` — it honors only
+root-signed sets (and, with `signer`, one-role-delegates-another chains), and
+its output spreads straight into `createAuthorityState`:
+
+```js
+import { resolveAuthorityRoster } from "@bitgate/nostr";
+const authority = createAuthorityState(resolveAuthorityRoster(roleSetEvents, {
+  root: ROOT,
+  rosters: [
+    { identifier: "bitgate:moderators", role: "moderator" },                 // root names moderators
+    { identifier: "bitgate:curators",   role: "curator", signer: "moderator" }, // moderators name curators
+  ],
+}));
+```
+
 A decision has four dimensions, so `transaction` can block an install or
 checkout while `visibility` still shows the listing with a warning — something a
 `hidden` boolean can't express. [`examples/headless-quickstart.mjs`](examples/headless-quickstart.mjs)
