@@ -59,3 +59,13 @@ Open work is tracked in `docs/TODO.md`.
 - Behavior changes must update the corresponding tests (including conformance
   fixtures where applicable).
 - Never weaken, skip, or delete tests to make a change pass.
+
+## Repo memory
+
+Curated agent memory lives in `.agents/` (index: `.agents/MEMORY.md`). Read it
+before substantive work — it holds the fails-closed verification and
+relays-are-untrusted conclusions with evidence refs into `docs/security.md`.
+Propose additions as files in `.agents/proposals/`; trusted memory under
+`.agents/memory/` changes only through reviewed commits. Durable
+multi-session plans live under `.agents/plans/` (the canonical backlog stays
+`docs/TODO.md`). Code, tests, and configuration always outrank memory.
