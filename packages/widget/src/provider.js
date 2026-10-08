@@ -151,7 +151,7 @@ export class BitGateProvider extends ProviderBase {
 
       if (!policy) {
         throw new Error(
-          `Unknown policy preset "${policyName}". Use social, commerce, admin-only, or set .policy directly.`,
+          `Unknown policy preset "${policyName}". Use social, commerce, admin-only, allowlist, or set .policy directly.`,
         );
       }
       if (relays.length === 0) {

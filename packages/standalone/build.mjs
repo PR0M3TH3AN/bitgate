@@ -15,6 +15,8 @@ import { build, context } from "esbuild";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { bitgateVersionPlugin } from "../../scripts/esbuild-bitgate-version.mjs";
+
 const HERE = dirname(fileURLToPath(import.meta.url));
 
 /** @type {import("esbuild").BuildOptions} */
@@ -31,6 +33,7 @@ const options = {
   banner: {
     js: "/*! BitGate (headless standalone) — GPL-3.0-or-later — https://github.com/PR0M3TH3AN/Nostr-Governance */",
   },
+  plugins: [bitgateVersionPlugin()],
 };
 
 const watch = process.argv.includes("--watch");

@@ -11,7 +11,7 @@
 // Second, nothing here computes policy. The console displays effective state
 // and issues commands; every accept/reject decision belongs to the runtime.
 
-import { GovernanceElement, defineElement, escapeHtml, shortenKey } from "./base.js";
+import { GovernanceElement, defineElement, escapeHtml, shortenKey, themeVar } from "./base.js";
 
 /**
  * @typedef {import('@bitgate/runtime').GovernanceCommands} GovernanceCommands
@@ -213,10 +213,10 @@ export class GovernanceAdminPanel extends GovernanceElement {
     this.renderHtml(`
       <style>
         table { border-collapse: collapse; width: 100%; }
-        td, th { text-align: left; padding: 0.3em 0.5em; border-bottom: 1px solid var(--gov-border); }
+        td, th { text-align: left; padding: 0.3em 0.5em; border-bottom: 1px solid ${themeVar("border")}; }
         code { font-size: 0.9em; }
         h3 { margin: 0; font-size: 1em; }
-        .stale { color: var(--gov-warn); }
+        .stale { color: ${themeVar("warn")}; }
       </style>
       <div class="stack" part="panel">
         ${

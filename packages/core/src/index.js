@@ -111,6 +111,8 @@ export {
   aggregateMutes,
 } from "./evaluator.js";
 
+export { VERSION } from "./version.js";
+
 /**
  * @typedef {import('./identifiers.js').GovernanceTarget} GovernanceTarget
  * @typedef {import('./identifiers.js').UserTarget} UserTarget

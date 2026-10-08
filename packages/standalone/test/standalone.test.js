@@ -2,9 +2,15 @@
 // engine (core) + label codec (nostr) — so a no-build site gets everything from
 // the single bundled file. Tests the entry, not the built artifact (dist is
 // gitignored); the build itself is exercised by `npm run build:standalone`.
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import * as bitgate from "../src/index.js";
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+const rootPkg = JSON.parse(readFileSync(join(HERE, "..", "..", "..", "package.json"), "utf8"));
 
 describe("standalone entry surface", () => {
   it("re-exports the core engine and the Nostr label codec together", () => {
@@ -17,6 +23,7 @@ describe("standalone entry surface", () => {
       "createPolicyDefinition",
       "createEventTarget",
       "ALLOWLIST_POLICY",
+      "VERSION",
       // nostr label codec
       "decodeLabels",
       "encodeLabel",
@@ -66,5 +73,16 @@ describe("standalone entry surface", () => {
     });
 
     expect(decision.transaction?.effect).toBe("deny");
+  });
+
+  it("exports VERSION matching package.json", () => {
+    expect(bitgate.VERSION).toBe(rootPkg.version);
+  });
+
+  it("publishes version onto a window-like global without replacing other keys", () => {
+    const target = { bitgate: { extra: true } };
+    bitgate.exposeBitGateVersion(target);
+    expect(target.bitgate.version).toBe(bitgate.VERSION);
+    expect(target.bitgate.extra).toBe(true);
   });
 });

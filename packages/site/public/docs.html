@@ -181,6 +181,7 @@ provider.runtime.policies.setLocalPolicy(policy);</code></pre>
       <tr><td><code>social</code></td><td>feed, profile, playback</td><td>Timelines and posts. Discovery declines to hard-hide.</td></tr>
       <tr><td><code>commerce</code></td><td>browse, detail, checkout, seller-dashboard</td><td>Marketplaces. Checkout decides transactions only.</td></tr>
       <tr><td><code>admin-only</code></td><td>default</td><td>Operator deny lists, with no trust-graph signals at all.</td></tr>
+      <tr><td><code>allowlist</code></td><td>default</td><td>Only allowlisted publishers are shown; unlisted ones are hidden. Symmetric twin of a denylist, for invite-only or curated surfaces.</td></tr>
     </tbody>
   </table>
 
