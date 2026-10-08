@@ -21,9 +21,11 @@ export {
 } from "@bitgate/runtime";
 
 export {
+  VERSION,
   SOCIAL_POLICY,
   COMMERCE_POLICY,
   ADMIN_ONLY_POLICY,
+  ALLOWLIST_POLICY,
   POLICY_PRESETS,
   getPolicyPreset,
   createPolicyDefinition,
@@ -42,6 +44,7 @@ export {
 
 export {
   BASE_STYLES,
+  THEME_DEFAULTS,
   GovernanceElement,
   canRegisterElements,
   defineElement,
@@ -49,7 +52,10 @@ export {
   requestContext,
   shortenKey,
   targetFromAttributes,
+  themeVar,
 } from "./base.js";
+
+export { exposeBitGateVersion } from "./expose-version.js";
 
 export {
   BitGateError,
@@ -76,8 +82,11 @@ export {
 } from "./admin.js";
 
 import { defineAdminElements } from "./admin.js";
+import { exposeBitGateVersion } from "./expose-version.js";
 import { defineProviderElements } from "./provider.js";
 import { defineViewerElements } from "./viewer.js";
+
+exposeBitGateVersion();
 
 /**
  * Register every governance element.

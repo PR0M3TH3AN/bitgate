@@ -175,7 +175,9 @@ unchanged.
       authority or leaking private application context.
 - [ ] Decide whether standalone output is generated from the canonical engine
       directly or from a separately maintained browser entry point.
-- [ ] Decide how browser builds expose version and integrity metadata.
+- [x] Decide how browser builds expose version and integrity metadata.
+      `VERSION` + `window.bitgate.version` equal `package.json`, injected at
+      build time. Integrity manifests remain open (distribution / D7).
 
 ## BitBlocks App Kit compatibility layer
 

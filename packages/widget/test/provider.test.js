@@ -135,6 +135,11 @@ describe("<bitgate-provider>", () => {
     expect(provider.runtime.policies.policy.id).toBe("bitgate-commerce");
   });
 
+  it("accepts the allowlist policy preset", async () => {
+    const provider = await mountProvider({ policy: "allowlist" });
+    expect(provider.runtime.policies.policy.id).toBe("bitgate-allowlist");
+  });
+
   it("defaults to administrative-only governance", async () => {
     const provider = await mountProvider({ policy: null });
     expect(provider.runtime.policies.policy.id).toBe("bitgate-admin-only");
@@ -154,6 +159,7 @@ describe("<bitgate-provider>", () => {
     const provider = await mountProvider({ policy: "invented" });
     expect(provider.runtime).toBeNull();
     expect(provider.getAttribute("data-error")).toMatch(/Unknown policy preset/);
+    expect(provider.getAttribute("data-error")).toMatch(/allowlist/);
   });
 
   it("reports a missing relays attribute", async () => {

@@ -27,34 +27,75 @@ export function canRegisterElements() {
   return typeof globalThis.HTMLElement === "function" && typeof globalThis.customElements === "object";
 }
 
+/**
+ * Default values for widget theme tokens.
+ *
+ * `--gov-*` names are the historical prefix (from Nostr-Governance). `--bitgate-*`
+ * is the agreed prefix. Usage sites prefer the new name, then the old one, then
+ * this default, so existing pages and `--gov-*` overrides keep working.
+ *
+ * @type {Readonly<{
+ *   fg: string,
+ *   muted: string,
+ *   border: string,
+ *   surface: string,
+ *   warn: string,
+ *   danger: string,
+ *   radius: string,
+ * }>}
+ */
+export const THEME_DEFAULTS = Object.freeze({
+  fg: "currentColor",
+  muted: "color-mix(in srgb, currentColor 60%, transparent)",
+  border: "color-mix(in srgb, currentColor 20%, transparent)",
+  surface: "color-mix(in srgb, canvas 96%, currentColor)",
+  warn: "#b45309",
+  danger: "#b91c1c",
+  radius: "8px",
+});
+
+/**
+ * CSS value for a theme token: `--bitgate-*` wins, then deprecated `--gov-*`,
+ * then the existing default.
+ *
+ * `--bitgate-*` is deliberately not assigned on `:host`. Assigning it would
+ * make `var(--bitgate-*, …)` always hit and ignore `--gov-*` overrides.
+ *
+ * @param {keyof typeof THEME_DEFAULTS} name
+ * @returns {string}
+ */
+export function themeVar(name) {
+  return `var(--bitgate-${name}, var(--gov-${name}, ${THEME_DEFAULTS[name]}))`;
+}
+
 /** Base styles shared by every element, scoped inside each shadow root. */
 export const BASE_STYLES = `
   :host {
-    --gov-fg: currentColor;
-    --gov-muted: color-mix(in srgb, currentColor 60%, transparent);
-    --gov-border: color-mix(in srgb, currentColor 20%, transparent);
-    --gov-surface: color-mix(in srgb, canvas 96%, currentColor);
-    --gov-warn: #b45309;
-    --gov-danger: #b91c1c;
-    --gov-radius: 8px;
+    --gov-fg: ${THEME_DEFAULTS.fg};
+    --gov-muted: ${THEME_DEFAULTS.muted};
+    --gov-border: ${THEME_DEFAULTS.border};
+    --gov-surface: ${THEME_DEFAULTS.surface};
+    --gov-warn: ${THEME_DEFAULTS.warn};
+    --gov-danger: ${THEME_DEFAULTS.danger};
+    --gov-radius: ${THEME_DEFAULTS.radius};
     display: block;
-    color: var(--gov-fg);
+    color: ${themeVar("fg")};
     font: inherit;
   }
   :host([hidden]) { display: none; }
   button {
     font: inherit;
     color: inherit;
-    background: var(--gov-surface);
-    border: 1px solid var(--gov-border);
-    border-radius: var(--gov-radius);
+    background: ${themeVar("surface")};
+    border: 1px solid ${themeVar("border")};
+    border-radius: ${themeVar("radius")};
     padding: 0.4em 0.8em;
     cursor: pointer;
   }
-  button:hover:not(:disabled) { border-color: var(--gov-fg); }
+  button:hover:not(:disabled) { border-color: ${themeVar("fg")}; }
   button:disabled { opacity: 0.5; cursor: not-allowed; }
   .reason {
-    color: var(--gov-muted);
+    color: ${themeVar("muted")};
     font-size: 0.875em;
   }
   .row { display: flex; gap: 0.5em; align-items: center; flex-wrap: wrap; }

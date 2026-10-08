@@ -34,9 +34,13 @@ both with every descendant. Nothing else to wire.
 | --- | --- |
 | `relays` | Comma-separated relay URLs (required) |
 | `root` | Root administrator pubkey, from your deployment config |
-| `policy` | `social`, `commerce`, or `admin-only` (default) |
+| `policy` | `social`, `commerce`, `admin-only` (default), or `allowlist` |
 | `viewer` | Viewer pubkey, if known at render time |
 | `application` / `namespace` | Storage and event namespacing |
+
+`allowlist` is the symmetric twin of a denylist: only publishers with a
+`user-allow` contribution are shown, unlisted ones are hidden across all four
+dimensions, and protected actors (root, moderators) are never gated.
 
 ### Target attributes
 
@@ -161,12 +165,43 @@ button teaches nothing about the authority model. The command layer enforces
 the same check independently — the UI is an explanation, never the gate.
 
 **Styling is yours.** Elements expose `part` attributes and inherit `color` and
-`font` from the host. Override the CSS custom properties (`--gov-fg`,
-`--gov-surface`, `--gov-warn`, `--gov-danger`, `--gov-radius`) or target parts:
+`font` from the host. Override the CSS custom properties or target parts:
+
+| Token | Purpose |
+| --- | --- |
+| `--bitgate-fg` | Foreground / text (`currentColor`) |
+| `--bitgate-muted` | Secondary text |
+| `--bitgate-border` | Control borders |
+| `--bitgate-surface` | Button / panel background |
+| `--bitgate-warn` | Warning copy |
+| `--bitgate-danger` | Danger / destructive accent |
+| `--bitgate-radius` | Control corner radius |
+
+Each token prefers `--bitgate-*`, then the deprecated `--gov-*` name
+(`--gov-fg`, `--gov-muted`, `--gov-border`, `--gov-surface`, `--gov-warn`,
+`--gov-danger`, `--gov-radius`), then the built-in default. Existing `--gov-*`
+overrides keep working; new pages should set `--bitgate-*`. `::part()` names
+are unchanged.
 
 ```css
+bitgate-veil { --bitgate-warn: #c2410c; }
 bitgate-veil::part(veil) { border: 1px solid red; }
 ```
+
+## Version
+
+The library version is the `package.json` version, injected into browser
+bundles at build time:
+
+```js
+import { VERSION } from "@bitgate/widget";
+console.log(VERSION);              // e.g. "0.1.0"
+console.log(window.bitgate.version); // same string, for script-tag hosts
+```
+
+`window.bitgate` is created if missing; if a host already put an object there,
+only `.version` is written. Spec / wire versions (`bitgate/1`, policy
+`schemaVersion`) are independent of this package version.
 
 ## Environment
 

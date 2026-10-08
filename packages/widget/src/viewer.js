@@ -10,6 +10,7 @@ import {
   escapeHtml,
   shortenKey,
   targetFromAttributes,
+  themeVar,
 } from "./base.js";
 
 /**
@@ -161,7 +162,7 @@ export class GovernanceVeil extends GovernanceElement {
           position: absolute; inset: 0; display: grid; place-content: center;
           gap: 0.5em; text-align: center; padding: 1em;
         }
-        .warn { color: var(--gov-warn); }
+        .warn { color: ${themeVar("warn")}; }
       </style>
       <div class="overlay" part="container">
         <div class="${blurred ? "blurred" : ""}" part="content"><slot></slot></div>

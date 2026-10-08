@@ -87,6 +87,11 @@ allowlisted publishers are shown — the symmetric twin of a denylist, for
 invite-only or curated surfaces). Every number in them is a starting point —
 see the [integration guide](docs/integration-guide.md) to write your own.
 
+The package version is exported as `VERSION` and, in browser bundles, as
+`window.bitgate.version`. Both are injected from `package.json` at build time.
+Widget theme tokens use `--bitgate-*` custom properties; the older `--gov-*`
+names remain as fallbacks (see [`packages/widget/README.md`](packages/widget/README.md)).
+
 ## Quick start — JavaScript
 
 ```js

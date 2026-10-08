@@ -11,5 +11,10 @@
 // Both re-exported packages are dependency-free (@bitgate/verify, the only
 // package with third-party deps, is intentionally not pulled in), so the bundle
 // carries no external code.
+import { exposeBitGateVersion } from "./expose-version.js";
+
 export * from "@bitgate/core";
 export * from "@bitgate/nostr";
+export { exposeBitGateVersion };
+
+exposeBitGateVersion();
