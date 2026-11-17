@@ -294,6 +294,48 @@ adoption the obvious choice.
   Pinned by `tests/feed-ranking.test.js`; the README headless section points to
   it.
 
+## Requests from BitPortal / NSWP (2026-11-17)
+
+BitPortal is a proposed spatial-web directory built on the four blocks
+(`PR0M3TH3AN/Nostr-Spatial-Web-Protocol--NSWP-`, `spec.md` v0.3 §15, §21.1).
+It is a spec only; nothing consumes BitGate yet. These are the gaps found while
+writing it. None is approved work, and each needs the owner's go-ahead.
+
+BitPortal maps the four dimensions directly: `visibility` on lobby shelves,
+`interaction` at the portal confirmation step, `transaction` before a paid
+entry, and `ranking` as a BitFeed scorer. Its targets are world announcements
+(addressable events), their publishers, and the web origins the worlds are
+served from.
+
+### New ask (not tracked elsewhere in this file)
+
+- [ ] **Web origin (or URL) as a target type.** Targets today are `user`,
+  `event` and `address` (`packages/core/src`). A world is a website, and a bad
+  actor can keep one domain while rotating keys and world IDs, which escapes
+  both pubkey and coordinate labels. Wanted: a label or report that targets an
+  origin, carried as an `r` tag in NIP-32 / NIP-56 events, evaluated like the
+  other targets. To decide first: origin vs. full URL vs. registrable domain,
+  and how an origin decision composes with decisions on the coordinates served
+  from it. This would also serve any app that moderates links. (NSWP spec Q6.)
+
+### Already tracked here, now with a second consumer waiting
+
+- **Relicense to MIT** (BitBlocks convention D11; accepted as the target, not
+  yet done). BitPortal is MIT and will not vendor BitGate until this ships. It
+  is the only thing blocking BitPortal Phase 3b.
+- A released `bitgate.js` with an integrity manifest (Priority 1). The
+  standalone bundle builds but is not published anywhere a consumer can pin.
+- The shared BitViewer v1 context, including `setViewer(viewer)` (Priority 3;
+  BitBlocks convention D10),
+  so BitPortal can pass one viewer to BitGate and BitFeed.
+
+### Uses existing features as they are
+
+- The `allowlist` preset, for the starter set shown to users with no follows.
+- The rule that trust seeds are a fallback and stop counting once a viewer has
+  real contacts. BitPortal's starter set relies on exactly this.
+- Kebab reason IDs, mapped to BitPortal's own wording.
+
 ## Design review — external critique (2026-08-11)
 
 From an outside review of the BitBlocks stack. BitGate was called "underrated."
