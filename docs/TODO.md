@@ -308,8 +308,6 @@ The design was agreed with it; the record is `docs/reports/2026-11-21-lists-answ
   coming with NSWP's sealed kind.
 - [ ] Decide whether application-wide lists get an entry cap. Refusing a long
   block list unblocks everyone on it.
-- [ ] Ask BitUnlock (through the orchestrator) to refuse listing names
-  containing `:governance:`.
 
 ## Requests from BitPortal / NSWP (2026-11-17)
 

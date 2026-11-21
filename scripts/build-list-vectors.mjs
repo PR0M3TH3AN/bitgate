@@ -33,7 +33,7 @@ const IMPOSTOR_SK = secret(2);
 const KEEPER_SK = secret(3);
 const OWNER = hex(schnorr.getPublicKey(OWNER_SK));
 const IMPOSTOR = hex(schnorr.getPublicKey(IMPOSTOR_SK));
-// A key a reader may be given as a signer, e.g. an owner's everyday key for a
+// A key a reader may be given as the root, e.g. an owner's everyday key for a
 // world announced by a deploy key.
 const KEEPER = hex(schnorr.getPublicKey(KEEPER_SK));
 
@@ -86,7 +86,7 @@ const refused = (reason) => ({ ok: false, reason });
 
 export function buildVectors() {
   const decode = [];
-  /** @param {{ signers?: string[], now?: number }} [reader] - What the reader was given, when not the defaults */
+  /** @param {{ root?: string | string[] }} [reader] - What the reader was given, when not the defaults */
   const add = (name, note, event, expect, reader) => decode.push({ name, note, ...(reader ? { reader } : {}), event, expect });
 
   // ---- Read ----
@@ -112,10 +112,13 @@ export function buildVectors() {
     sign({ tags: listTags({ drop: ["client"], entries: [ALICE] }) }), ok("user-allow", HOME, [ALICE]));
   add("another-client-tag", "What the client tag says never matters.",
     sign({ tags: [...listTags({ drop: ["client"], entries: [ALICE] }), ["client", "nswp"]] }), ok("user-allow", HOME, [ALICE]));
-  add("signed-by-a-given-key",
-    "A reader given a set of signers accepts any of them: here the world's own key and an everyday key.",
-    sign({ tags: listTags({ entries: [ALICE] }) }, KEEPER_SK), ok("user-allow", HOME, [ALICE], 0, KEEPER),
-    { signers: [OWNER, KEEPER] });
+  const keeperList = sign({ tags: listTags({ entries: [ALICE] }) }, KEEPER_SK);
+  add("signed-by-a-given-root",
+    "A reader given a root of one key accepts that key: here an everyday key that is not the world's own.",
+    keeperList, ok("user-allow", HOME, [ALICE], 0, KEEPER), { root: KEEPER });
+  add("signed-by-one-of-a-given-root",
+    "A root may be up to four keys; a list signed by any of them is read.",
+    keeperList, ok("user-allow", HOME, [ALICE], 0, KEEPER), { root: [OWNER, KEEPER] });
   add("dated-at-the-limit", `Dated exactly ${MAX_FUTURE_SECONDS} seconds ahead of the reader's clock: read.`,
     sign({ created_at: NOW + MAX_FUTURE_SECONDS, tags: listTags({ entries: [ALICE] }) }), ok("user-allow", HOME, [ALICE]));
   add("malformed-entries-skipped",
@@ -172,12 +175,16 @@ export function buildVectors() {
     sign({ tags: [...listTags({ entries: [ALICE] }), ["scope", "user-allow"]] }), refused("tag_mismatch"));
   add("signed-by-someone-else", "Only the subject's own pubkey may sign its lists.",
     sign({ tags: listTags({ entries: [IMPOSTOR] }) }, IMPOSTOR_SK), refused("wrong_signer"));
-  add("given-keys-replace-the-default",
-    "A given set replaces the default rather than adding to it: the world's own key is not in this set.",
-    sign({ tags: listTags({ entries: [ALICE] }) }), refused("wrong_signer"), { signers: [KEEPER] });
+  add("no-root-given",
+    "The same everyday-key list read with no root given: the root is the world's own key, so it is refused.",
+    keeperList, refused("wrong_signer"));
+  add("given-root-replaces-the-default",
+    "A given root replaces the default rather than adding to it: the world's own key is not in this root.",
+    sign({ tags: listTags({ entries: [ALICE] }) }), refused("wrong_signer"), { root: KEEPER });
   add("trailing-space-in-subject-tag", "The subject tag is compared with d character for character; no trimming.",
     sign({ tags: [...listTags({ drop: ["subject"], entries: [ALICE] }), ["subject", `${HOME} `]] }), refused("tag_mismatch"));
-  add("dated-too-far-ahead", `Dated more than ${MAX_FUTURE_SECONDS} seconds ahead of the reader's clock: refused.`,
+  add("dated-too-far-ahead",
+    `Read on its own, an event dated more than ${MAX_FUTURE_SECONDS} seconds ahead is refused. When choosing among copies it is dropped instead (see resolve).`,
     sign({ created_at: NOW + MAX_FUTURE_SECONDS + 1, tags: listTags({ entries: [ALICE] }) }), refused("from_the_future"));
   add("content-not-empty", "v1 content is empty. Hidden entries would be a new version, never read by a v1 reader.",
     sign({ content: "encrypted-looking", tags: listTags({ entries: [ALICE] }) }), refused("content_not_empty"));
@@ -204,6 +211,7 @@ export function buildVectors() {
   const otherWorld = sign({ created_at: CREATED_AT + 400, tags: listTags({ subject: `37300:${OWNER}:other`, entries: [CAROL] }) });
 
   const fromTheFuture = sign({ created_at: NOW + 365 * 24 * 60 * 60, tags: listTags({ entries: [CAROL] }) });
+  const malformedFromTheFuture = sign({ created_at: NOW + 365 * 24 * 60 * 60, content: "x", tags: listTags({ entries: [CAROL] }) });
   const keeperNewer = sign({ created_at: CREATED_AT + 100, tags: listTags({ entries: [CAROL] }) }, KEEPER_SK);
 
   const resolve = [
@@ -222,18 +230,30 @@ export function buildVectors() {
     { name: "other-world-not-found", note: "A list for another world does not answer for this one.",
       query, events: [otherWorld], expect: refused("not_found") },
     { name: "a-list-from-the-future-does-not-stand",
-      note: "A list dated a year ahead is not a candidate, so it cannot pin itself; the current list stands.",
-      query, events: [older, fromTheFuture], expect: ok("user-allow", HOME, [ALICE]) },
-    { name: "newest-across-the-given-keys",
-      note: "With several signers given, the newest list from any of them is the list.",
-      query: { ...query, signers: [OWNER, KEEPER] }, events: [older, keeperNewer],
+      note: "A list dated a year ahead is dropped before choosing, and reported; the current list stands.",
+      query, events: [older, fromTheFuture], expect: ok("user-allow", HOME, [ALICE]), futureDated: [fromTheFuture.id] },
+    { name: "a-malformed-list-from-the-future-does-not-make-it-unreadable",
+      note: "Dropped before choosing, not refused as the newest: the current list stands.",
+      query, events: [older, malformedFromTheFuture], expect: ok("user-allow", HOME, [ALICE]), futureDated: [malformedFromTheFuture.id] },
+    { name: "only-a-list-from-the-future",
+      note: "If every copy is dated too far ahead, the list is not found, and the reader says it saw them.",
+      query, events: [fromTheFuture], expect: refused("not_found"), futureDated: [fromTheFuture.id] },
+    { name: "newest-across-the-given-root",
+      note: "With a root of several keys, the newest list from any of them is the list.",
+      query: { ...query, root: [OWNER, KEEPER] }, events: [older, keeperNewer],
       expect: ok("user-allow", HOME, [CAROL], 0, KEEPER) },
-    { name: "a-key-not-given-is-not-a-candidate",
-      note: "The same newer list, read with the default signers: only the world's own key counts.",
+    { name: "a-key-outside-the-root-is-not-a-candidate",
+      note: "The same newer list, read with no root given: only the world's own key counts.",
       query, events: [older, keeperNewer], expect: ok("user-allow", HOME, [ALICE]) },
     { name: "nothing-returned", note: "No events: not found. A reader says so; it is not an empty list.",
       query, events: [], expect: refused("not_found") },
   ];
+
+  // Every resolve case also says which candidates were dropped as future-dated.
+  for (const testCase of resolve) {
+    testCase.expect = { ...testCase.expect, futureDated: [...(testCase.futureDated ?? [])].sort() };
+    delete testCase.futureDated;
+  }
 
   return {
     description:
@@ -241,7 +261,7 @@ export function buildVectors() {
     format: "bitgate-scoped-lists-vectors/1",
     now: NOW,
     reader:
-      "Each case is read with the reader's clock at `now` and, unless the case gives `reader.signers`, with the subject's own key as the only accepted signer.",
+      "Each case is read with the reader's clock at `now` and, unless the case gives `reader.root` (resolve: `query.root`), with the subject's own key as the root. A resolve result also lists `futureDated`: the ids of copies dropped for being dated more than 600 seconds ahead.",
     keys: { owner: OWNER, impostor: IMPOSTOR, keeper: KEEPER, guests: { alice: ALICE, bob: BOB, carol: CAROL } },
     decode,
     resolve,

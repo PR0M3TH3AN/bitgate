@@ -2,7 +2,7 @@
   "description": "Scoped allow and block lists (docs/governance-lists.md). Each `decode` case is one event and what a reader must make of it; each `resolve` case is what relays returned and which list is current. Secret keys 1, 2 and 3 are public test keys.",
   "format": "bitgate-scoped-lists-vectors/1",
   "now": 1763701000,
-  "reader": "Each case is read with the reader's clock at `now` and, unless the case gives `reader.signers`, with the subject's own key as the only accepted signer.",
+  "reader": "Each case is read with the reader's clock at `now` and, unless the case gives `reader.root` (resolve: `query.root`), with the subject's own key as the root. A resolve result also lists `futureDated`: the ids of copies dropped for being dated more than 600 seconds ahead.",
   "keys": {
     "owner": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
     "impostor": "c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5",
@@ -266,10 +266,41 @@
       }
     },
     {
-      "name": "signed-by-a-given-key",
-      "note": "A reader given a set of signers accepts any of them: here the world's own key and an everyday key.",
+      "name": "signed-by-a-given-root",
+      "note": "A reader given a root of one key accepts that key: here an everyday key that is not the world's own.",
       "reader": {
-        "signers": ["79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798","f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9"]
+        "root": "f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9"
+      },
+      "event": {
+        "id": "a618d618c7d2ea2492de5902f39ee0b3db11d1425db8209dbdae137d615c4459",
+        "pubkey": "f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9",
+        "created_at": 1763700000,
+        "kind": 30078,
+        "tags": [
+          ["d","nswp:governance:user-allow:v1:37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home"],
+          ["v","1"],
+          ["scope","user-allow"],
+          ["subject","37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home"],
+          ["client","bitgate"],
+          ["p","01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab"]
+        ],
+        "content": "",
+        "sig": "d47a6a2f391fabf841e8c47b7dac0eafa40f6f8bd373338abfb9e1c724ca26f6d76fce7d1b1c2d0bb3297a25a7cd8e280314292f41673dceadb8c69df587bedd"
+      },
+      "expect": {
+        "ok": true,
+        "scope": "user-allow",
+        "subject": "37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home",
+        "signer": "f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9",
+        "entries": ["01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab"],
+        "skipped": 0
+      }
+    },
+    {
+      "name": "signed-by-one-of-a-given-root",
+      "note": "A root may be up to four keys; a list signed by any of them is read.",
+      "reader": {
+        "root": ["79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798","f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9"]
       },
       "event": {
         "id": "a618d618c7d2ea2492de5902f39ee0b3db11d1425db8209dbdae137d615c4459",
@@ -2896,10 +2927,34 @@
       }
     },
     {
-      "name": "given-keys-replace-the-default",
-      "note": "A given set replaces the default rather than adding to it: the world's own key is not in this set.",
+      "name": "no-root-given",
+      "note": "The same everyday-key list read with no root given: the root is the world's own key, so it is refused.",
+      "event": {
+        "id": "a618d618c7d2ea2492de5902f39ee0b3db11d1425db8209dbdae137d615c4459",
+        "pubkey": "f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9",
+        "created_at": 1763700000,
+        "kind": 30078,
+        "tags": [
+          ["d","nswp:governance:user-allow:v1:37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home"],
+          ["v","1"],
+          ["scope","user-allow"],
+          ["subject","37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home"],
+          ["client","bitgate"],
+          ["p","01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab"]
+        ],
+        "content": "",
+        "sig": "d47a6a2f391fabf841e8c47b7dac0eafa40f6f8bd373338abfb9e1c724ca26f6d76fce7d1b1c2d0bb3297a25a7cd8e280314292f41673dceadb8c69df587bedd"
+      },
+      "expect": {
+        "ok": false,
+        "reason": "wrong_signer"
+      }
+    },
+    {
+      "name": "given-root-replaces-the-default",
+      "note": "A given root replaces the default rather than adding to it: the world's own key is not in this root.",
       "reader": {
-        "signers": ["f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9"]
+        "root": "f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9"
       },
       "event": {
         "id": "d0e6a212f7da405f81a9b6e4e99bb54eb4c177b79f983bc17f05d99a5544b4bb",
@@ -2948,7 +3003,7 @@
     },
     {
       "name": "dated-too-far-ahead",
-      "note": "Dated more than 600 seconds ahead of the reader's clock: refused.",
+      "note": "Read on its own, an event dated more than 600 seconds ahead is refused. When choosing among copies it is dropped instead (see resolve).",
       "event": {
         "id": "888b203c68a9b928d86eaed6a1158329c8e8208b7c1aa753f6608b3ce69bfb6e",
         "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
@@ -5117,7 +5172,8 @@
         "subject": "37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home",
         "signer": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
         "entries": ["02ab02ab02ab02ab02ab02ab02ab02ab02ab02ab02ab02ab02ab02ab02ab02ab"],
-        "skipped": 0
+        "skipped": 0,
+        "futureDated": []
       }
     },
     {
@@ -5168,7 +5224,8 @@
         "subject": "37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home",
         "signer": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
         "entries": ["01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab"],
-        "skipped": 0
+        "skipped": 0,
+        "futureDated": []
       }
     },
     {
@@ -5219,7 +5276,8 @@
         "subject": "37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home",
         "signer": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
         "entries": ["01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab"],
-        "skipped": 0
+        "skipped": 0,
+        "futureDated": []
       }
     },
     {
@@ -5270,7 +5328,8 @@
         "subject": "37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home",
         "signer": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
         "entries": ["01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab"],
-        "skipped": 0
+        "skipped": 0,
+        "futureDated": []
       }
     },
     {
@@ -5317,7 +5376,8 @@
       ],
       "expect": {
         "ok": false,
-        "reason": "content_not_empty"
+        "reason": "content_not_empty",
+        "futureDated": []
       }
     },
     {
@@ -5348,12 +5408,13 @@
       ],
       "expect": {
         "ok": false,
-        "reason": "not_found"
+        "reason": "not_found",
+        "futureDated": []
       }
     },
     {
       "name": "a-list-from-the-future-does-not-stand",
-      "note": "A list dated a year ahead is not a candidate, so it cannot pin itself; the current list stands.",
+      "note": "A list dated a year ahead is dropped before choosing, and reported; the current list stands.",
       "query": {
         "namespace": "nswp",
         "scope": "user-allow",
@@ -5399,17 +5460,102 @@
         "subject": "37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home",
         "signer": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
         "entries": ["01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab"],
-        "skipped": 0
+        "skipped": 0,
+        "futureDated": ["ed263681945ef1351a0bfbe231c98f137347795c5b62c143926f4ebb59ef4fe5"]
       }
     },
     {
-      "name": "newest-across-the-given-keys",
-      "note": "With several signers given, the newest list from any of them is the list.",
+      "name": "a-malformed-list-from-the-future-does-not-make-it-unreadable",
+      "note": "Dropped before choosing, not refused as the newest: the current list stands.",
+      "query": {
+        "namespace": "nswp",
+        "scope": "user-allow",
+        "subject": "37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home"
+      },
+      "events": [
+        {
+          "id": "d0e6a212f7da405f81a9b6e4e99bb54eb4c177b79f983bc17f05d99a5544b4bb",
+          "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+          "created_at": 1763700000,
+          "kind": 30078,
+          "tags": [
+            ["d","nswp:governance:user-allow:v1:37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home"],
+            ["v","1"],
+            ["scope","user-allow"],
+            ["subject","37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home"],
+            ["client","bitgate"],
+            ["p","01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab"]
+          ],
+          "content": "",
+          "sig": "234e0e4afe5584a79e46f006e8466956329bd7eb4f2a08021ea54fb4bf676286f59728021f257dc99a50616bb44184f173a179c9df7564d77c28f1d904d0fc74"
+        },
+        {
+          "id": "d4c280758619d941731652cb59887c1f7b7e259562d224f231a4edd7a7cabaab",
+          "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+          "created_at": 1795237000,
+          "kind": 30078,
+          "tags": [
+            ["d","nswp:governance:user-allow:v1:37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home"],
+            ["v","1"],
+            ["scope","user-allow"],
+            ["subject","37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home"],
+            ["client","bitgate"],
+            ["p","03ab03ab03ab03ab03ab03ab03ab03ab03ab03ab03ab03ab03ab03ab03ab03ab"]
+          ],
+          "content": "x",
+          "sig": "4920a2996fc41036ba0bdff96c481b47b43e23ab2263fa80b16bd54dd1fb8021a14cf888c63139930a6a1a669d97a8d1745b916a6cf63318e5da78f326ba9350"
+        }
+      ],
+      "expect": {
+        "ok": true,
+        "scope": "user-allow",
+        "subject": "37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home",
+        "signer": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+        "entries": ["01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab"],
+        "skipped": 0,
+        "futureDated": ["d4c280758619d941731652cb59887c1f7b7e259562d224f231a4edd7a7cabaab"]
+      }
+    },
+    {
+      "name": "only-a-list-from-the-future",
+      "note": "If every copy is dated too far ahead, the list is not found, and the reader says it saw them.",
+      "query": {
+        "namespace": "nswp",
+        "scope": "user-allow",
+        "subject": "37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home"
+      },
+      "events": [
+        {
+          "id": "ed263681945ef1351a0bfbe231c98f137347795c5b62c143926f4ebb59ef4fe5",
+          "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+          "created_at": 1795237000,
+          "kind": 30078,
+          "tags": [
+            ["d","nswp:governance:user-allow:v1:37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home"],
+            ["v","1"],
+            ["scope","user-allow"],
+            ["subject","37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home"],
+            ["client","bitgate"],
+            ["p","03ab03ab03ab03ab03ab03ab03ab03ab03ab03ab03ab03ab03ab03ab03ab03ab"]
+          ],
+          "content": "",
+          "sig": "23b9e3fcbc551329999f9dd5a890f5948b99214d34a70106555237f5d55b935c4814d382473f59423bdb4635dac15364a4f1263d0990339a824d40567cf40ff4"
+        }
+      ],
+      "expect": {
+        "ok": false,
+        "reason": "not_found",
+        "futureDated": ["ed263681945ef1351a0bfbe231c98f137347795c5b62c143926f4ebb59ef4fe5"]
+      }
+    },
+    {
+      "name": "newest-across-the-given-root",
+      "note": "With a root of several keys, the newest list from any of them is the list.",
       "query": {
         "namespace": "nswp",
         "scope": "user-allow",
         "subject": "37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home",
-        "signers": ["79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798","f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9"]
+        "root": ["79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798","f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9"]
       },
       "events": [
         {
@@ -5451,12 +5597,13 @@
         "subject": "37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home",
         "signer": "f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9",
         "entries": ["03ab03ab03ab03ab03ab03ab03ab03ab03ab03ab03ab03ab03ab03ab03ab03ab"],
-        "skipped": 0
+        "skipped": 0,
+        "futureDated": []
       }
     },
     {
-      "name": "a-key-not-given-is-not-a-candidate",
-      "note": "The same newer list, read with the default signers: only the world's own key counts.",
+      "name": "a-key-outside-the-root-is-not-a-candidate",
+      "note": "The same newer list, read with no root given: only the world's own key counts.",
       "query": {
         "namespace": "nswp",
         "scope": "user-allow",
@@ -5502,7 +5649,8 @@
         "subject": "37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home",
         "signer": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
         "entries": ["01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab"],
-        "skipped": 0
+        "skipped": 0,
+        "futureDated": []
       }
     },
     {
@@ -5516,7 +5664,8 @@
       "events": [],
       "expect": {
         "ok": false,
-        "reason": "not_found"
+        "reason": "not_found",
+        "futureDated": []
       }
     }
   ]

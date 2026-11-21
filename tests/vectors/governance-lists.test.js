@@ -23,8 +23,9 @@ const vectors = JSON.parse(readFileSync(VECTORS_PATH, "utf8"));
 
 /** What a reader made of an event, in the vectors' own terms. */
 function observed(result, expect) {
+  const note = "futureDated" in expect ? { futureDated: result.futureDated } : {};
   if (!result.ok) {
-    return { ok: false, reason: result.reason };
+    return { ok: false, reason: result.reason, ...note };
   }
   const view = {
     ok: true,
@@ -38,7 +39,7 @@ function observed(result, expect) {
   } else {
     view.entries = result.entries;
   }
-  return view;
+  return { ...view, ...note };
 }
 
 describe("scoped-list vectors", () => {
@@ -91,7 +92,7 @@ describe("scoped lists without a verifier", () => {
     });
     expect(
       resolveScopedList([event], /** @type {any} */ ({ namespace: "nswp", scope: "user-allow", subject: event.tags[3][1] })),
-    ).toEqual({ ok: false, reason: "no_verifier" });
+    ).toEqual({ ok: false, reason: "no_verifier", futureDated: [] });
   });
 
   it("treat a verifier that throws as a failed check", () => {
@@ -161,13 +162,12 @@ describe("a world's own lists, end to end", () => {
   });
 });
 
-describe("a world governed by given keys", () => {
-  it("counts lists from every given key and never blocks one of them", () => {
+describe("a world governed by a given root", () => {
+  it("counts lists from every root key and never blocks one of them", () => {
     const { owner, keeper } = vectors.keys;
     const { alice, carol } = vectors.keys.guests;
     const subject = `37300:${owner}:home`;
-    const signers = [owner, keeper];
-    const authority = scopedListAuthority(subject, signers);
+    const authority = scopedListAuthority(subject, [owner, keeper]);
 
     // The keeper invites Alice and Carol; the owner blocks Carol and, by mistake, the keeper.
     const admin = reduceAdminState(
@@ -188,12 +188,17 @@ describe("a world governed by given keys", () => {
     expect(decide(owner)).toBe("allow");
   });
 
-  it("refuses a malformed set of signers rather than guessing", () => {
+  it("refuses a malformed root rather than guessing", () => {
     const event = vectors.decode.find((c) => c.name === "allow-list").event;
-    for (const signers of [[], ["NOTHEX"], [vectors.keys.owner.toUpperCase()]]) {
-      expect(() => decodeScopedList(event, { verify: verifyEvent, now: vectors.now, signers })).toThrow(TypeError);
+    const five = Array.from({ length: 5 }, (_, i) => (i + 1).toString(16).padStart(64, "0"));
+    for (const root of [[], "NOTHEX", ["NOTHEX"], [vectors.keys.owner.toUpperCase()], five]) {
+      expect(() => decodeScopedList(event, { verify: verifyEvent, now: vectors.now, root })).toThrow(TypeError);
     }
     expect(() => scopedListAuthority(`37300:${vectors.keys.owner}:home`, [])).toThrow(TypeError);
+    // Four keys is the most a root may have.
+    expect(decodeScopedList(event, { verify: verifyEvent, now: vectors.now, root: [vectors.keys.owner, ...five.slice(0, 3)] }).ok).toBe(
+      true,
+    );
   });
 
   it("reads the system clock when none is given, and refuses a clock that is not whole seconds", () => {

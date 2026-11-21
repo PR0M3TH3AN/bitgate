@@ -9,19 +9,21 @@ public API changes with it.
 
 ### Changed — scoped lists, after the NSWP kit's review
 
-- **Who may sign:** a reader may be given the set of accepted signers
-  (`signers`). By default it is the subject's own key. A given set replaces
-  the default, and the newest copy across the set is the list.
-  `scopedListAuthority(subject, signers)` builds the matching authority, in
-  which no signer can be blocked from their own subject.
-- **Future-dated lists:** a list dated more than 600 seconds ahead of the
-  reader's clock (`now`) is refused (`from_the_future`) and is not a
-  candidate. A fast clock can no longer pin a list in place.
+- **Who may sign:** a reader may be given the subject's root (`root`), one
+  key or a list of at most four. By default it is the subject's own key. A
+  given root replaces the default, and the newest copy across the root's keys
+  is the list. `scopedListAuthority(subject, root)` builds the matching
+  authority, in which no root key can be blocked from its own subject.
+- **Future-dated lists:** a copy dated more than 600 seconds ahead of the
+  reader's clock (`now`) is dropped before choosing; it is not refused as the
+  newest. So a fast clock can neither pin a list nor make it unreadable.
+  `resolveScopedList` reports such copies in `futureDated`. Read on its own,
+  such an event is refused (`from_the_future`).
 - **Spec additions:** the subject's name is everything after the pubkey's
   colon; the `client` tag never matters; the NSWP conventions are written
   down (namespace `nswp`, writers stop at 500 entries, and an empty allow list
   means nobody but the owner).
-- **Vectors:** 41 decode and 10 resolve cases, read at a fixed `now`.
+- **Vectors:** 43 decode and 12 resolve cases, read at a fixed `now`.
 
 ### Added — scoped lists, and allow for worlds and listings
 
