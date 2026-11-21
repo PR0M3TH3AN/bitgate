@@ -11,9 +11,10 @@ import {
   encodeScopedList,
   formatSubjectCoordinate,
   resolveScopedList,
+  scopedListAuthority,
   scopedListToContribution,
 } from "@bitgate/nostr";
-import { createAuthorityState, createSnapshot, evaluateTarget, reduceAdminState, ALLOWLIST_POLICY } from "@bitgate/core";
+import { createSnapshot, evaluateTarget, reduceAdminState, ALLOWLIST_POLICY } from "@bitgate/core";
 import { verifyEvent } from "@bitgate/verify";
 
 import { VECTORS_PATH, serializeVectors } from "../../scripts/build-list-vectors.mjs";
@@ -58,6 +59,7 @@ describe("scoped-list vectors", () => {
       "wrong_signer",
       "content_not_empty",
       "too_many_entries",
+      "from_the_future",
       "bad_signature",
     ]) {
       expect(reasons, reason).toContain(reason);
@@ -66,14 +68,14 @@ describe("scoped-list vectors", () => {
 
   for (const testCase of vectors.decode) {
     it(`decode: ${testCase.name}`, () => {
-      const result = decodeScopedList(testCase.event, { verify: verifyEvent });
+      const result = decodeScopedList(testCase.event, { verify: verifyEvent, now: vectors.now, ...testCase.reader });
       expect(observed(result, testCase.expect)).toEqual(testCase.expect);
     });
   }
 
   for (const testCase of vectors.resolve) {
     it(`resolve: ${testCase.name}`, () => {
-      const result = resolveScopedList(testCase.events, { ...testCase.query, verify: verifyEvent });
+      const result = resolveScopedList(testCase.events, { ...testCase.query, verify: verifyEvent, now: vectors.now });
       expect(observed(result, testCase.expect)).toEqual(testCase.expect);
     });
   }
@@ -136,13 +138,13 @@ describe("encodeScopedList", () => {
 
 describe("a world's own lists, end to end", () => {
   it("let an invited guest in, keep everyone else out, and let a block beat an invitation", () => {
-    const allowList = decodeScopedList(vectors.decode.find((c) => c.name === "allow-list").event, { verify: verifyEvent });
-    const blockList = decodeScopedList(vectors.decode.find((c) => c.name === "block-list").event, { verify: verifyEvent });
+    const allowList = decodeScopedList(vectors.decode.find((c) => c.name === "allow-list").event, { verify: verifyEvent, now: vectors.now });
+    const blockList = decodeScopedList(vectors.decode.find((c) => c.name === "block-list").event, { verify: verifyEvent, now: vectors.now });
     expect(allowList.ok && blockList.ok).toBe(true);
     if (!allowList.ok || !blockList.ok) return;
 
     // One snapshot per world, with the world's owner as root. No roster, no curator.
-    const authority = createAuthorityState({ root: allowList.subject.pubkey });
+    const authority = scopedListAuthority(allowList.subject);
     const carolInvitedToo = { ...scopedListToContribution(allowList) };
     carolInvitedToo.targets = [...carolInvitedToo.targets, { type: "user", pubkey: vectors.keys.guests.carol }];
     const admin = reduceAdminState([carolInvitedToo, scopedListToContribution(blockList)], authority);
@@ -156,5 +158,53 @@ describe("a world's own lists, end to end", () => {
     expect(decide(carol)).toBe("deny"); // invited and blocked: blocked wins
     expect(decide(vectors.keys.impostor)).toBe("deny"); // never invited
     expect(decide(allowList.subject.pubkey)).toBe("allow"); // the owner is always let into their own world
+  });
+});
+
+describe("a world governed by given keys", () => {
+  it("counts lists from every given key and never blocks one of them", () => {
+    const { owner, keeper } = vectors.keys;
+    const { alice, carol } = vectors.keys.guests;
+    const subject = `37300:${owner}:home`;
+    const signers = [owner, keeper];
+    const authority = scopedListAuthority(subject, signers);
+
+    // The keeper invites Alice and Carol; the owner blocks Carol and, by mistake, the keeper.
+    const admin = reduceAdminState(
+      [
+        { actor: keeper, kind: "user-allow", targets: [alice, carol].map((pubkey) => ({ type: "user", pubkey })) },
+        { actor: owner, kind: "user-deny", targets: [carol, keeper].map((pubkey) => ({ type: "user", pubkey })) },
+      ],
+      authority,
+    );
+    const snapshot = createSnapshot({ authority, admin });
+    const decide = (/** @type {string} */ pubkey) =>
+      evaluateTarget({ type: "user", pubkey }, snapshot, { surface: "default", policy: ALLOWLIST_POLICY, now: 0 }).interaction
+        .effect;
+
+    expect(decide(alice)).toBe("allow");
+    expect(decide(carol)).toBe("deny");
+    expect(decide(keeper)).toBe("allow");
+    expect(decide(owner)).toBe("allow");
+  });
+
+  it("refuses a malformed set of signers rather than guessing", () => {
+    const event = vectors.decode.find((c) => c.name === "allow-list").event;
+    for (const signers of [[], ["NOTHEX"], [vectors.keys.owner.toUpperCase()]]) {
+      expect(() => decodeScopedList(event, { verify: verifyEvent, now: vectors.now, signers })).toThrow(TypeError);
+    }
+    expect(() => scopedListAuthority(`37300:${vectors.keys.owner}:home`, [])).toThrow(TypeError);
+  });
+
+  it("reads the system clock when none is given, and refuses a clock that is not whole seconds", () => {
+    const testCase = vectors.decode.find((c) => c.name === "allow-list");
+    // Dated in the past against any real clock, so it reads with the default.
+    expect(decodeScopedList(testCase.event, { verify: verifyEvent }).ok).toBe(true);
+    // Read with a clock far behind its date, the same event is from the future.
+    expect(decodeScopedList(testCase.event, { verify: verifyEvent, now: 0 })).toEqual({
+      ok: false,
+      reason: "from_the_future",
+    });
+    expect(() => decodeScopedList(testCase.event, { verify: verifyEvent, now: 1.5 })).toThrow(TypeError);
   });
 });

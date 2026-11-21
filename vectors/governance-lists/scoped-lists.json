@@ -1,9 +1,12 @@
 {
-  "description": "Scoped allow and block lists (docs/governance-lists.md). Each `decode` case is one event and what a reader must make of it; each `resolve` case is what relays returned and which list is current. Secret keys 1 and 2 are public test keys.",
+  "description": "Scoped allow and block lists (docs/governance-lists.md). Each `decode` case is one event and what a reader must make of it; each `resolve` case is what relays returned and which list is current. Secret keys 1, 2 and 3 are public test keys.",
   "format": "bitgate-scoped-lists-vectors/1",
+  "now": 1763701000,
+  "reader": "Each case is read with the reader's clock at `now` and, unless the case gives `reader.signers`, with the subject's own key as the only accepted signer.",
   "keys": {
     "owner": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
     "impostor": "c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5",
+    "keeper": "f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9",
     "guests": {
       "alice": "01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab",
       "bob": "02ab02ab02ab02ab02ab02ab02ab02ab02ab02ab02ab02ab02ab02ab02ab02ab",
@@ -146,6 +149,176 @@
         "ok": true,
         "scope": "user-allow",
         "subject": "30078:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:sku-1",
+        "signer": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+        "entries": ["01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab"],
+        "skipped": 0
+      }
+    },
+    {
+      "name": "name-with-a-colon",
+      "note": "Everything after the pubkey's colon is the name, colons included; it is never split further.",
+      "event": {
+        "id": "90399ec1ca155ca7b065f1bc599658ca95ce6edfeb1d753091159ca663fd2cc0",
+        "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+        "created_at": 1763700000,
+        "kind": 30078,
+        "tags": [
+          ["d","nswp:governance:user-allow:v1:37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home:garden"],
+          ["v","1"],
+          ["scope","user-allow"],
+          ["subject","37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home:garden"],
+          ["client","bitgate"],
+          ["p","01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab"]
+        ],
+        "content": "",
+        "sig": "12b1ccab3496e35947e4fd88d30fd2787faa9b27a88be11ba983be8df957dc103b226694fae22ad8e810a20b37c1d74439d36b62cd137d53e3d6f023b33bbb15"
+      },
+      "expect": {
+        "ok": true,
+        "scope": "user-allow",
+        "subject": "37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home:garden",
+        "signer": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+        "entries": ["01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab"],
+        "skipped": 0
+      }
+    },
+    {
+      "name": "name-with-a-space",
+      "note": "Spaces are part of the name.",
+      "event": {
+        "id": "398cefc2b2ca25e13a767e15ac47292dba8d79896abf6ea34c720204cde627b1",
+        "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+        "created_at": 1763700000,
+        "kind": 30078,
+        "tags": [
+          ["d","nswp:governance:user-allow:v1:37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:my home"],
+          ["v","1"],
+          ["scope","user-allow"],
+          ["subject","37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:my home"],
+          ["client","bitgate"],
+          ["p","01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab"]
+        ],
+        "content": "",
+        "sig": "5566ff28ed988814e1cc1b51979e5e69110b1f434bb9d77e8290128ee2734a014c5168c734da82c3e4e4bb3bc32f2ebb80911d6f663bb2c8bd3d271975947ae3"
+      },
+      "expect": {
+        "ok": true,
+        "scope": "user-allow",
+        "subject": "37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:my home",
+        "signer": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+        "entries": ["01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab"],
+        "skipped": 0
+      }
+    },
+    {
+      "name": "no-client-tag",
+      "note": "The client tag is never required.",
+      "event": {
+        "id": "788ca077ce84010035c9357d501a7beb58e4be7b6b6d311593c9732098fd0dd2",
+        "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+        "created_at": 1763700000,
+        "kind": 30078,
+        "tags": [
+          ["d","nswp:governance:user-allow:v1:37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home"],
+          ["v","1"],
+          ["scope","user-allow"],
+          ["subject","37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home"],
+          ["p","01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab"]
+        ],
+        "content": "",
+        "sig": "73b88b2f0ac220024ab69e2c91f326e0eecb734bfedd4e2aac5ae1f5584c667e8fdd2b8a9e1e6fd7229caac98c590c6352d0de0f27505be3adb79c512696db95"
+      },
+      "expect": {
+        "ok": true,
+        "scope": "user-allow",
+        "subject": "37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home",
+        "signer": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+        "entries": ["01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab"],
+        "skipped": 0
+      }
+    },
+    {
+      "name": "another-client-tag",
+      "note": "What the client tag says never matters.",
+      "event": {
+        "id": "e024d00309c907063f8d06416b3ed1080c205b4cc0465f1a758c380f177e56d4",
+        "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+        "created_at": 1763700000,
+        "kind": 30078,
+        "tags": [
+          ["d","nswp:governance:user-allow:v1:37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home"],
+          ["v","1"],
+          ["scope","user-allow"],
+          ["subject","37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home"],
+          ["p","01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab"],
+          ["client","nswp"]
+        ],
+        "content": "",
+        "sig": "86deac0c000533e4aec86fe2367bed8929383d1f3f2197f274f2c687ca0f2d7fd10e5cb794dad5c9a66b939b348d16bb5ab589cf0729f3ac08d2d098bb3b9ac7"
+      },
+      "expect": {
+        "ok": true,
+        "scope": "user-allow",
+        "subject": "37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home",
+        "signer": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+        "entries": ["01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab"],
+        "skipped": 0
+      }
+    },
+    {
+      "name": "signed-by-a-given-key",
+      "note": "A reader given a set of signers accepts any of them: here the world's own key and an everyday key.",
+      "reader": {
+        "signers": ["79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798","f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9"]
+      },
+      "event": {
+        "id": "a618d618c7d2ea2492de5902f39ee0b3db11d1425db8209dbdae137d615c4459",
+        "pubkey": "f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9",
+        "created_at": 1763700000,
+        "kind": 30078,
+        "tags": [
+          ["d","nswp:governance:user-allow:v1:37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home"],
+          ["v","1"],
+          ["scope","user-allow"],
+          ["subject","37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home"],
+          ["client","bitgate"],
+          ["p","01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab"]
+        ],
+        "content": "",
+        "sig": "d47a6a2f391fabf841e8c47b7dac0eafa40f6f8bd373338abfb9e1c724ca26f6d76fce7d1b1c2d0bb3297a25a7cd8e280314292f41673dceadb8c69df587bedd"
+      },
+      "expect": {
+        "ok": true,
+        "scope": "user-allow",
+        "subject": "37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home",
+        "signer": "f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9",
+        "entries": ["01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab"],
+        "skipped": 0
+      }
+    },
+    {
+      "name": "dated-at-the-limit",
+      "note": "Dated exactly 600 seconds ahead of the reader's clock: read.",
+      "event": {
+        "id": "365e1acbb465fdeccd6e7a72199fbefde0db07eb20aff9a24d8054abc09da7c7",
+        "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+        "created_at": 1763701600,
+        "kind": 30078,
+        "tags": [
+          ["d","nswp:governance:user-allow:v1:37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home"],
+          ["v","1"],
+          ["scope","user-allow"],
+          ["subject","37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home"],
+          ["client","bitgate"],
+          ["p","01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab"]
+        ],
+        "content": "",
+        "sig": "c71f28f9836a2b3f2a9f0b846caea077d993ee0bd72c0f85683f795d63f8dd95e35510fd20f206ab96321bcfb163d81a2ef5dd0e6435fd7e45407dcdf4f7c793"
+      },
+      "expect": {
+        "ok": true,
+        "scope": "user-allow",
+        "subject": "37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home",
         "signer": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
         "entries": ["01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab"],
         "skipped": 0
@@ -2723,6 +2896,81 @@
       }
     },
     {
+      "name": "given-keys-replace-the-default",
+      "note": "A given set replaces the default rather than adding to it: the world's own key is not in this set.",
+      "reader": {
+        "signers": ["f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9"]
+      },
+      "event": {
+        "id": "d0e6a212f7da405f81a9b6e4e99bb54eb4c177b79f983bc17f05d99a5544b4bb",
+        "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+        "created_at": 1763700000,
+        "kind": 30078,
+        "tags": [
+          ["d","nswp:governance:user-allow:v1:37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home"],
+          ["v","1"],
+          ["scope","user-allow"],
+          ["subject","37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home"],
+          ["client","bitgate"],
+          ["p","01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab"]
+        ],
+        "content": "",
+        "sig": "234e0e4afe5584a79e46f006e8466956329bd7eb4f2a08021ea54fb4bf676286f59728021f257dc99a50616bb44184f173a179c9df7564d77c28f1d904d0fc74"
+      },
+      "expect": {
+        "ok": false,
+        "reason": "wrong_signer"
+      }
+    },
+    {
+      "name": "trailing-space-in-subject-tag",
+      "note": "The subject tag is compared with d character for character; no trimming.",
+      "event": {
+        "id": "7c5b7da692b4f5b5a6c61e10a1a88c9000f5970e3365a1e70cb2222a6217abfd",
+        "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+        "created_at": 1763700000,
+        "kind": 30078,
+        "tags": [
+          ["d","nswp:governance:user-allow:v1:37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home"],
+          ["v","1"],
+          ["scope","user-allow"],
+          ["client","bitgate"],
+          ["p","01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab"],
+          ["subject","37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home "]
+        ],
+        "content": "",
+        "sig": "4e268060c49139de6e04295ba9e55dc6c2d35843e6a1143025b9b1dff5a26ad6ec7edfd2bec24ebd58ac711bf11a8af7313d13fd067fb48e67f536336744f9ba"
+      },
+      "expect": {
+        "ok": false,
+        "reason": "tag_mismatch"
+      }
+    },
+    {
+      "name": "dated-too-far-ahead",
+      "note": "Dated more than 600 seconds ahead of the reader's clock: refused.",
+      "event": {
+        "id": "888b203c68a9b928d86eaed6a1158329c8e8208b7c1aa753f6608b3ce69bfb6e",
+        "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+        "created_at": 1763701601,
+        "kind": 30078,
+        "tags": [
+          ["d","nswp:governance:user-allow:v1:37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home"],
+          ["v","1"],
+          ["scope","user-allow"],
+          ["subject","37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home"],
+          ["client","bitgate"],
+          ["p","01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab"]
+        ],
+        "content": "",
+        "sig": "09aa6d62e37935e06fbc9a5acb8a8e698e6c60d478c8a11c078b4bcf491298ee261c67728c01a5a2e26b2ff2c0497b6db19d78338a9ff6b25dc4d98391986bdd"
+      },
+      "expect": {
+        "ok": false,
+        "reason": "from_the_future"
+      }
+    },
+    {
       "name": "content-not-empty",
       "note": "v1 content is empty. Hidden entries would be a new version, never read by a v1 reader.",
       "event": {
@@ -5101,6 +5349,160 @@
       "expect": {
         "ok": false,
         "reason": "not_found"
+      }
+    },
+    {
+      "name": "a-list-from-the-future-does-not-stand",
+      "note": "A list dated a year ahead is not a candidate, so it cannot pin itself; the current list stands.",
+      "query": {
+        "namespace": "nswp",
+        "scope": "user-allow",
+        "subject": "37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home"
+      },
+      "events": [
+        {
+          "id": "d0e6a212f7da405f81a9b6e4e99bb54eb4c177b79f983bc17f05d99a5544b4bb",
+          "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+          "created_at": 1763700000,
+          "kind": 30078,
+          "tags": [
+            ["d","nswp:governance:user-allow:v1:37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home"],
+            ["v","1"],
+            ["scope","user-allow"],
+            ["subject","37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home"],
+            ["client","bitgate"],
+            ["p","01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab"]
+          ],
+          "content": "",
+          "sig": "234e0e4afe5584a79e46f006e8466956329bd7eb4f2a08021ea54fb4bf676286f59728021f257dc99a50616bb44184f173a179c9df7564d77c28f1d904d0fc74"
+        },
+        {
+          "id": "ed263681945ef1351a0bfbe231c98f137347795c5b62c143926f4ebb59ef4fe5",
+          "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+          "created_at": 1795237000,
+          "kind": 30078,
+          "tags": [
+            ["d","nswp:governance:user-allow:v1:37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home"],
+            ["v","1"],
+            ["scope","user-allow"],
+            ["subject","37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home"],
+            ["client","bitgate"],
+            ["p","03ab03ab03ab03ab03ab03ab03ab03ab03ab03ab03ab03ab03ab03ab03ab03ab"]
+          ],
+          "content": "",
+          "sig": "23b9e3fcbc551329999f9dd5a890f5948b99214d34a70106555237f5d55b935c4814d382473f59423bdb4635dac15364a4f1263d0990339a824d40567cf40ff4"
+        }
+      ],
+      "expect": {
+        "ok": true,
+        "scope": "user-allow",
+        "subject": "37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home",
+        "signer": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+        "entries": ["01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab"],
+        "skipped": 0
+      }
+    },
+    {
+      "name": "newest-across-the-given-keys",
+      "note": "With several signers given, the newest list from any of them is the list.",
+      "query": {
+        "namespace": "nswp",
+        "scope": "user-allow",
+        "subject": "37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home",
+        "signers": ["79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798","f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9"]
+      },
+      "events": [
+        {
+          "id": "d0e6a212f7da405f81a9b6e4e99bb54eb4c177b79f983bc17f05d99a5544b4bb",
+          "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+          "created_at": 1763700000,
+          "kind": 30078,
+          "tags": [
+            ["d","nswp:governance:user-allow:v1:37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home"],
+            ["v","1"],
+            ["scope","user-allow"],
+            ["subject","37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home"],
+            ["client","bitgate"],
+            ["p","01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab"]
+          ],
+          "content": "",
+          "sig": "234e0e4afe5584a79e46f006e8466956329bd7eb4f2a08021ea54fb4bf676286f59728021f257dc99a50616bb44184f173a179c9df7564d77c28f1d904d0fc74"
+        },
+        {
+          "id": "50c50f6d4f063d6d3e7662aac6c4d145bff9900d575568d073bd073a76ccadf3",
+          "pubkey": "f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9",
+          "created_at": 1763700100,
+          "kind": 30078,
+          "tags": [
+            ["d","nswp:governance:user-allow:v1:37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home"],
+            ["v","1"],
+            ["scope","user-allow"],
+            ["subject","37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home"],
+            ["client","bitgate"],
+            ["p","03ab03ab03ab03ab03ab03ab03ab03ab03ab03ab03ab03ab03ab03ab03ab03ab"]
+          ],
+          "content": "",
+          "sig": "f87c3b08a0b9d55df2fe11da853e2f05fef8fc0bd7b054f2ebafc9c4c3235346e2a2f7d6606f7e392a92eaa847fc90b025e1b79eacd40173d718b699f8ff156d"
+        }
+      ],
+      "expect": {
+        "ok": true,
+        "scope": "user-allow",
+        "subject": "37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home",
+        "signer": "f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9",
+        "entries": ["03ab03ab03ab03ab03ab03ab03ab03ab03ab03ab03ab03ab03ab03ab03ab03ab"],
+        "skipped": 0
+      }
+    },
+    {
+      "name": "a-key-not-given-is-not-a-candidate",
+      "note": "The same newer list, read with the default signers: only the world's own key counts.",
+      "query": {
+        "namespace": "nswp",
+        "scope": "user-allow",
+        "subject": "37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home"
+      },
+      "events": [
+        {
+          "id": "d0e6a212f7da405f81a9b6e4e99bb54eb4c177b79f983bc17f05d99a5544b4bb",
+          "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+          "created_at": 1763700000,
+          "kind": 30078,
+          "tags": [
+            ["d","nswp:governance:user-allow:v1:37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home"],
+            ["v","1"],
+            ["scope","user-allow"],
+            ["subject","37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home"],
+            ["client","bitgate"],
+            ["p","01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab"]
+          ],
+          "content": "",
+          "sig": "234e0e4afe5584a79e46f006e8466956329bd7eb4f2a08021ea54fb4bf676286f59728021f257dc99a50616bb44184f173a179c9df7564d77c28f1d904d0fc74"
+        },
+        {
+          "id": "50c50f6d4f063d6d3e7662aac6c4d145bff9900d575568d073bd073a76ccadf3",
+          "pubkey": "f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9",
+          "created_at": 1763700100,
+          "kind": 30078,
+          "tags": [
+            ["d","nswp:governance:user-allow:v1:37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home"],
+            ["v","1"],
+            ["scope","user-allow"],
+            ["subject","37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home"],
+            ["client","bitgate"],
+            ["p","03ab03ab03ab03ab03ab03ab03ab03ab03ab03ab03ab03ab03ab03ab03ab03ab"]
+          ],
+          "content": "",
+          "sig": "f87c3b08a0b9d55df2fe11da853e2f05fef8fc0bd7b054f2ebafc9c4c3235346e2a2f7d6606f7e392a92eaa847fc90b025e1b79eacd40173d718b699f8ff156d"
+        }
+      ],
+      "expect": {
+        "ok": true,
+        "scope": "user-allow",
+        "subject": "37300:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:home",
+        "signer": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+        "entries": ["01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab01ab"],
+        "skipped": 0
       }
     },
     {
