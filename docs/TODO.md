@@ -294,6 +294,23 @@ adoption the obvious choice.
   Pinned by `tests/feed-ranking.test.js`; the README headless section points to
   it.
 
+## Per-world lists for NSWP (2026-11-21)
+
+Asked by the BitPortal orchestrator for NSWP `docs/backlog/private-worlds-by-invitation.md`.
+The design was agreed with it; the record is `docs/reports/2026-11-21-lists-answer.md`.
+
+- [x] Scoped lists: a world's own allow and block lists, signed by its owner.
+  Format in `docs/governance-lists.md`, vectors in `vectors/governance-lists/`.
+- [x] `event-allow` / `address-allow`: an allowlist can name worlds and listings.
+- [x] Application-wide lists: a disagreeing `scope` tag refuses the document,
+  and entries are read only in lowercase hex.
+- [ ] Hidden (encrypted) lists, which need a group key. That is a new version,
+  coming with NSWP's sealed kind.
+- [ ] Decide whether application-wide lists get an entry cap. Refusing a long
+  block list unblocks everyone on it.
+- [ ] Ask BitUnlock (through the orchestrator) to refuse listing names
+  containing `:governance:`.
+
 ## Requests from BitPortal / NSWP (2026-11-17)
 
 BitPortal is a proposed spatial-web directory built on the four blocks

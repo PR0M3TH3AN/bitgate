@@ -31,6 +31,7 @@ export {
   isCanonicalGovernanceEvent,
   decodeContribution,
   decodeAddressCoordinate,
+  isWireHex64,
   encodeAddressCoordinate,
   decodeRoles,
   decodePolicy,
@@ -103,3 +104,19 @@ export { ROLE_SET_KIND, resolveAuthorityRoster } from "./roster.js";
  * @typedef {import('./labels.js').Label} Label
  * @typedef {import('./labels.js').LabelMapping} LabelMapping
  */
+export {
+  MAX_SCOPED_LIST_ENTRIES,
+  MAX_SUBJECT_IDENTIFIER_BYTES,
+  SCOPED_LIST_REFUSALS,
+  SCOPED_LIST_SCOPES,
+  SCOPED_LIST_VERSION,
+  decodeScopedList,
+  encodeScopedList,
+  formatSubjectCoordinate,
+  isSubjectIdentifier,
+  parseScopedListIdentifier,
+  parseSubjectCoordinate,
+  resolveScopedList,
+  scopedListIdentifier,
+  scopedListToContribution,
+} from "./scopedLists.js";

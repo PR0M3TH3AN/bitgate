@@ -19,7 +19,7 @@ import { hasCapability, isProtectedActor } from "./authority.js";
 /**
  * @typedef {Object} Contribution
  * @property {string} actor - Pubkey of the contributing actor
- * @property {"user-allow"|"user-deny"|"event-deny"|"address-deny"|"trust-seed"} kind
+ * @property {"user-allow"|"user-deny"|"event-allow"|"event-deny"|"address-allow"|"address-deny"|"trust-seed"} kind
  * @property {GovernanceTarget[]} targets
  * @property {number} [createdAt] - Unix seconds; used for replaceable selection
  * @property {string} [source] - Opaque origin marker (e.g. a community list id)
@@ -31,6 +31,8 @@ import { hasCapability, isProtectedActor } from "./authority.js";
  * @property {Set<string>} userDeny - Target keys denied
  * @property {Set<string>} eventDeny
  * @property {Set<string>} addressDeny
+ * @property {Set<string>} [eventAllow] - Event keys explicitly allowed (absent in snapshots built before it existed)
+ * @property {Set<string>} [addressAllow] - Address keys explicitly allowed (absent in snapshots built before it existed)
  * @property {Set<string>} trustSeeds - Pubkeys seeding the trust graph
  * @property {Map<string, string[]>} contributors - Target key to contributing actor pubkeys
  * @property {Map<string, string[]>} communitySources - Target key to community list ids that denied it
@@ -40,7 +42,9 @@ import { hasCapability, isProtectedActor } from "./authority.js";
 const KIND_CAPABILITY = {
   "user-allow": "contribute-user-allow",
   "user-deny": "contribute-user-deny",
+  "event-allow": "contribute-event-allow",
   "event-deny": "contribute-event-deny",
+  "address-allow": "contribute-address-allow",
   "address-deny": "contribute-address-deny",
   "trust-seed": "contribute-trust-seed",
 };
@@ -49,7 +53,9 @@ const KIND_CAPABILITY = {
 const KIND_TARGET_TYPE = {
   "user-allow": "user",
   "user-deny": "user",
+  "event-allow": "event",
   "event-deny": "event",
+  "address-allow": "address",
   "address-deny": "address",
   "trust-seed": "user",
 };
@@ -64,6 +70,8 @@ export function createEmptyAdminState() {
     userDeny: new Set(),
     eventDeny: new Set(),
     addressDeny: new Set(),
+    eventAllow: new Set(),
+    addressAllow: new Set(),
     trustSeeds: new Set(),
     contributors: new Map(),
     communitySources: new Map(),
@@ -128,8 +136,14 @@ export function reduceAdminState(contributions, authority) {
         case "user-deny":
           state.userDeny.add(key);
           break;
+        case "event-allow":
+          /** @type {Set<string>} */ (state.eventAllow).add(key);
+          break;
         case "event-deny":
           state.eventDeny.add(key);
+          break;
+        case "address-allow":
+          /** @type {Set<string>} */ (state.addressAllow).add(key);
           break;
         case "address-deny":
           state.addressDeny.add(key);
@@ -239,18 +253,46 @@ export function isDenied(target, state) {
 }
 
 /**
+ * Whether a target is on an allow list.
+ *
+ * A user is allowed by `userAllow`; an event or address is allowed by its own
+ * allow set. The evaluator also counts an allowed author for events and
+ * addresses — this checks only the target itself. Snapshots built before the
+ * event and address allow sets existed simply lack them, which reads as empty.
+ *
+ * @param {GovernanceTarget} target
+ * @param {AdminState} state
+ * @returns {boolean}
+ */
+export function isAllowed(target, state) {
+  const key = getTargetKey(target);
+  switch (target.type) {
+    case "user":
+      return state.userAllow.has(key);
+    case "event":
+      return state.eventAllow?.has(key) ?? false;
+    case "address":
+      return state.addressAllow?.has(key) ?? false;
+    default:
+      return false;
+  }
+}
+
+/**
  * Serialize administrative state into a plain, ordered object.
  *
  * Sets are sorted so that fingerprints and fixtures are stable across runs.
  *
  * @param {AdminState} state
- * @returns {{ userAllow: string[], userDeny: string[], eventDeny: string[], addressDeny: string[], trustSeeds: string[] }}
+ * @returns {{ userAllow: string[], userDeny: string[], eventAllow: string[], eventDeny: string[], addressAllow: string[], addressDeny: string[], trustSeeds: string[] }}
  */
 export function serializeAdminState(state) {
   return {
     userAllow: Array.from(state.userAllow).sort(),
     userDeny: Array.from(state.userDeny).sort(),
+    eventAllow: Array.from(state.eventAllow ?? []).sort(),
     eventDeny: Array.from(state.eventDeny).sort(),
+    addressAllow: Array.from(state.addressAllow ?? []).sort(),
     addressDeny: Array.from(state.addressDeny).sort(),
     trustSeeds: Array.from(state.trustSeeds).sort(),
   };
