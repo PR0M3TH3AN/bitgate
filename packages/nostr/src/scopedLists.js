@@ -295,7 +295,7 @@ function isEventShape(event) {
  * @property {string} namespace
  * @property {"user-allow"|"user-deny"} scope
  * @property {AddressTarget} subject
- * @property {string} signer - One of the keys the reader was given (by default the subject's own)
+ * @property {string} signer - One of the subject's root keys (by default the subject's own key)
  * @property {string} eventId
  * @property {number} createdAt
  * @property {string[]} entries - Distinct pubkeys, sorted
@@ -308,28 +308,35 @@ function isEventShape(event) {
  * @property {string} reason - One of {@link SCOPED_LIST_REFUSALS}, or "not_found" from {@link resolveScopedList}
  */
 
+/** Most keys a reader may be given as a subject's root. */
+export const MAX_ROOT_KEYS = 4;
+
 /**
- * The keys a reader accepts as signers of a subject's lists.
+ * The keys a reader accepts as signers of a subject's lists: its root.
  *
- * By default only the subject's own key — the key that announced the world.
- * A reader may be given another set instead (for a world announced by a
- * deploy key, the keys its manifest names, so the owner can change the list
- * from their everyday key). The given set replaces the default; it does not
- * add to it. Who may be given is the reader's decision, not the event's.
+ * By default the root is the subject's own key — the key that announced the
+ * world. A reader may be given a root instead: one key, or up to
+ * {@link MAX_ROOT_KEYS} (for a world announced by a deploy key, the keys its
+ * manifest names, so the owner can change the list from their everyday key).
+ * A given root replaces the default; it does not add to it. Where the root
+ * comes from is the reader's decision, never the event's.
  *
  * @param {AddressTarget} subject
- * @param {string[]} [signers]
+ * @param {string|string[]} [root]
  * @returns {string[]}
- * @throws {TypeError} When a given signer is not 64 lowercase hex, or the set is empty
+ * @throws {TypeError} When a given root is empty, too long, or not 64 lowercase hex
  */
-function acceptedSigners(subject, signers) {
-  if (signers === undefined) {
+function rootKeys(subject, root) {
+  if (root === undefined) {
     return [subject.pubkey];
   }
-  if (!Array.isArray(signers) || signers.length === 0 || !signers.every(isWireHex64)) {
-    throw new TypeError("signers must be a non-empty array of 64-character lowercase hex pubkeys");
+  const keys = typeof root === "string" ? [root] : root;
+  if (!Array.isArray(keys) || keys.length === 0 || keys.length > MAX_ROOT_KEYS || !keys.every(isWireHex64)) {
+    throw new TypeError(
+      `root must be one 64-character lowercase hex pubkey, or a list of 1 to ${MAX_ROOT_KEYS} of them`,
+    );
   }
-  return Array.from(new Set(signers));
+  return Array.from(new Set(keys));
 }
 
 /**
@@ -364,14 +371,14 @@ function clock(now) {
  * @param {(event: NostrEvent) => boolean} options.verify - NIP-01 id and
  *   signature check, e.g. `verifyEvent` from `@bitgate/verify`. Required:
  *   there is no unverified mode. Anything but `true` is a failed check.
- * @param {string[]} [options.signers] - Keys accepted as signers; defaults to
- *   the subject's own key
+ * @param {string|string[]} [options.root] - The subject's root: the key, or
+ *   up to four keys, accepted as signers. Defaults to the subject's own key
  * @param {number} [options.now] - Reader's clock in unix seconds; defaults to
  *   the system clock. A list dated more than {@link MAX_FUTURE_SECONDS} ahead
  *   is refused.
  * @returns {ScopedList|ScopedListRefusal}
  */
-export function decodeScopedList(event, { verify, signers, now } = /** @type {any} */ ({})) {
+export function decodeScopedList(event, { verify, root, now } = /** @type {any} */ ({})) {
   if (typeof verify !== "function") {
     return { ok: false, reason: "no_verifier" };
   }
@@ -407,7 +414,7 @@ export function decodeScopedList(event, { verify, signers, now } = /** @type {an
     return { ok: false, reason: "tag_mismatch" };
   }
 
-  if (!acceptedSigners(parsed.subject, signers).includes(e.pubkey)) {
+  if (!rootKeys(parsed.subject, root).includes(e.pubkey)) {
     return { ok: false, reason: "wrong_signer" };
   }
   if (e.content !== "") {
@@ -456,17 +463,26 @@ export function decodeScopedList(event, { verify, signers, now } = /** @type {an
 }
 
 /**
+ * @typedef {Object} ResolvedNote
+ * @property {string[]} futureDated - Ids of events that would have been
+ *   candidates but are dated more than {@link MAX_FUTURE_SECONDS} ahead of the
+ *   reader's clock, sorted. Dropped before choosing, and reported so the reader
+ *   can say it saw them.
+ */
+
+/**
  * Pick and read the current scoped list from whatever relays returned.
  *
- * Candidates are the events that could be the list: kind 30078, signed by
- * one of the accepted signers, with exactly the expected `d`, dated no more
- * than {@link MAX_FUTURE_SECONDS} ahead, and with a valid signature. So
- * nobody can suppress the list with a newer event that lacks a signer's
- * signature, and a list from a fast clock does not stand until its time
- * comes. Across all accepted signers the newest candidate wins (ties to the
- * smallest id, as for every replaceable event), and then it is read in full.
- * If that newest one is refused, the list is unreadable: an older copy is not
- * used in its place, because it was replaced.
+ * Candidates are the events that could be the list: kind 30078, signed by a
+ * root key, with exactly the expected `d`, and a valid signature — so nobody
+ * can suppress the list with a newer event that lacks a root key's signature.
+ * A candidate dated more than {@link MAX_FUTURE_SECONDS} ahead of the reader's
+ * clock is dropped before choosing (not refused as the newest), so a fast
+ * clock can neither pin a list nor make it unreadable; such events are listed
+ * in `futureDated`. Across all root keys the newest remaining candidate wins
+ * (ties to the smallest id, as for every replaceable event), and then it is
+ * read in full. If that newest one is refused, the list is unreadable: an
+ * older copy is not used in its place, because it was replaced.
  *
  * @param {unknown[]} events
  * @param {Object} query
@@ -474,65 +490,80 @@ export function decodeScopedList(event, { verify, signers, now } = /** @type {an
  * @param {"user-allow"|"user-deny"} query.scope
  * @param {AddressTarget|string} query.subject
  * @param {(event: NostrEvent) => boolean} query.verify
- * @param {string[]} [query.signers] - Keys accepted as signers; defaults to the subject's own key
+ * @param {string|string[]} [query.root] - The subject's root: one key or up to
+ *   four; defaults to the subject's own key
  * @param {number} [query.now] - Reader's clock in unix seconds; defaults to the system clock
- * @returns {ScopedList|ScopedListRefusal}
+ * @returns {(ScopedList|ScopedListRefusal) & ResolvedNote}
  */
-export function resolveScopedList(events, { namespace, scope, subject, verify, signers, now }) {
+export function resolveScopedList(events, { namespace, scope, subject, verify, root, now }) {
   if (typeof verify !== "function") {
-    return { ok: false, reason: "no_verifier" };
+    return { ok: false, reason: "no_verifier", futureDated: [] };
   }
   const at = clock(now);
   const d = scopedListIdentifier(namespace, scope, subject);
   const parsed = parseScopedListIdentifier(d);
   if (!parsed.ok) {
-    return parsed;
+    return { ...parsed, futureDated: [] };
   }
-  const accepted = acceptedSigners(parsed.subject, signers);
+  const keys = rootKeys(parsed.subject, root);
 
-  const candidates = (Array.isArray(events) ? events : []).filter((event) => {
+  /** @type {NostrEvent[]} */
+  const candidates = [];
+  /** @type {Set<string>} */
+  const futureDated = new Set();
+  for (const event of Array.isArray(events) ? events : []) {
     if (!isEventShape(event)) {
-      return false;
+      continue;
     }
     const e = /** @type {NostrEvent} */ (event);
-    if (e.kind !== CANONICAL_KIND || !accepted.includes(e.pubkey) || e.created_at > at + MAX_FUTURE_SECONDS) {
-      return false;
+    if (e.kind !== CANONICAL_KIND || !keys.includes(e.pubkey)) {
+      continue;
     }
     const ds = tagValues(e, "d");
     if (ds.length !== 1 || ds[0] !== d) {
-      return false;
+      continue;
     }
+    let verified = false;
     try {
-      return verify(e) === true;
+      verified = verify(e) === true;
     } catch {
-      return false;
+      verified = false;
     }
-  });
-
-  const latest = selectLatest(/** @type {NostrEvent[]} */ (candidates));
-  if (!latest) {
-    return { ok: false, reason: "not_found" };
+    if (!verified) {
+      continue;
+    }
+    if (e.created_at > at + MAX_FUTURE_SECONDS) {
+      futureDated.add(e.id);
+      continue;
+    }
+    candidates.push(e);
   }
-  return decodeScopedList(latest, { verify, signers: accepted, now: at });
+
+  const note = { futureDated: Array.from(futureDated).sort() };
+  const latest = selectLatest(candidates);
+  if (!latest) {
+    return { ok: false, reason: "not_found", ...note };
+  }
+  return { ...decodeScopedList(latest, { verify, root: keys, now: at }), ...note };
 }
 
 /**
  * The authority to evaluate one subject's lists against.
  *
- * The accepted signers are the subject's governors: the first is the root,
+ * The root keys are the subject's governors: the first is the engine's root,
  * every one may allow and block, and none of them can be blocked from their
- * own subject. Pass the same signers the lists were read with.
+ * own subject. Pass the same root the lists were read with.
  *
  * @param {AddressTarget|string} subject
- * @param {string[]} [signers] - Defaults to the subject's own key
+ * @param {string|string[]} [root] - Defaults to the subject's own key
  * @returns {import('@bitgate/core').AuthorityState}
  */
-export function scopedListAuthority(subject, signers) {
+export function scopedListAuthority(subject, root) {
   const target = typeof subject === "string" ? parseSubjectCoordinate(subject) : subject;
   if (!target || !parseSubjectCoordinate(formatSubjectCoordinate(target))) {
     throw new TypeError(`Invalid scoped-list subject: ${JSON.stringify(subject)}`);
   }
-  const keys = acceptedSigners(target, signers);
+  const keys = rootKeys(target, root);
   return createAuthorityState({
     root: keys[0],
     actors: Object.fromEntries(keys.map((key) => [key, ["super_admin"]])),
@@ -544,7 +575,7 @@ export function scopedListAuthority(subject, signers) {
  * Turn a read scoped list into an engine contribution.
  *
  * The contribution's actor is the list's signer. Evaluate it against
- * {@link scopedListAuthority} for the same subject and signers, one snapshot
+ * {@link scopedListAuthority} for the same subject and root, one snapshot
  * per subject: a scoped list must never be merged into an application-wide
  * snapshot, where it would apply everywhere.
  *

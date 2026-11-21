@@ -106,6 +106,7 @@ export { ROLE_SET_KIND, resolveAuthorityRoster } from "./roster.js";
  */
 export {
   MAX_FUTURE_SECONDS,
+  MAX_ROOT_KEYS,
   MAX_SCOPED_LIST_ENTRIES,
   MAX_SUBJECT_IDENTIFIER_BYTES,
   SCOPED_LIST_REFUSALS,
