@@ -105,6 +105,7 @@ export { ROLE_SET_KIND, resolveAuthorityRoster } from "./roster.js";
  * @typedef {import('./labels.js').LabelMapping} LabelMapping
  */
 export {
+  MAX_FUTURE_SECONDS,
   MAX_SCOPED_LIST_ENTRIES,
   MAX_SUBJECT_IDENTIFIER_BYTES,
   SCOPED_LIST_REFUSALS,
@@ -117,6 +118,7 @@ export {
   parseScopedListIdentifier,
   parseSubjectCoordinate,
   resolveScopedList,
+  scopedListAuthority,
   scopedListIdentifier,
   scopedListToContribution,
 } from "./scopedLists.js";

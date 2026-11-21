@@ -16,6 +16,8 @@
 // one client and keep them out on another. Anything outside the grammar is
 // refused whole, with a stable reason code, rather than read in part.
 
+import { createAuthorityState } from "@bitgate/core";
+
 import { CANONICAL_KIND, isWireHex64 } from "./canonical.js";
 import { getTags, selectLatest } from "./replaceable.js";
 
@@ -50,8 +52,18 @@ export const SCOPED_LIST_REFUSALS = Object.freeze([
   "wrong_signer",
   "content_not_empty",
   "too_many_entries",
+  "from_the_future",
   "bad_signature",
 ]);
+
+/**
+ * How far ahead of the reader's clock a list may be dated, in seconds.
+ *
+ * The newest list wins and a reader never goes back to an older one, so a
+ * list signed with a clock a year fast would otherwise pin itself in place
+ * for a year. Ten minutes covers ordinary clock drift.
+ */
+export const MAX_FUTURE_SECONDS = 600;
 
 const NAMESPACE = /^[a-z0-9][a-z0-9._-]{0,63}$/;
 const KIND = /^(0|[1-9][0-9]{0,4})$/;
@@ -283,7 +295,7 @@ function isEventShape(event) {
  * @property {string} namespace
  * @property {"user-allow"|"user-deny"} scope
  * @property {AddressTarget} subject
- * @property {string} signer - Equal to `subject.pubkey`
+ * @property {string} signer - One of the keys the reader was given (by default the subject's own)
  * @property {string} eventId
  * @property {number} createdAt
  * @property {string[]} entries - Distinct pubkeys, sorted
@@ -297,6 +309,45 @@ function isEventShape(event) {
  */
 
 /**
+ * The keys a reader accepts as signers of a subject's lists.
+ *
+ * By default only the subject's own key — the key that announced the world.
+ * A reader may be given another set instead (for a world announced by a
+ * deploy key, the keys its manifest names, so the owner can change the list
+ * from their everyday key). The given set replaces the default; it does not
+ * add to it. Who may be given is the reader's decision, not the event's.
+ *
+ * @param {AddressTarget} subject
+ * @param {string[]} [signers]
+ * @returns {string[]}
+ * @throws {TypeError} When a given signer is not 64 lowercase hex, or the set is empty
+ */
+function acceptedSigners(subject, signers) {
+  if (signers === undefined) {
+    return [subject.pubkey];
+  }
+  if (!Array.isArray(signers) || signers.length === 0 || !signers.every(isWireHex64)) {
+    throw new TypeError("signers must be a non-empty array of 64-character lowercase hex pubkeys");
+  }
+  return Array.from(new Set(signers));
+}
+
+/**
+ * The reader's clock, in unix seconds.
+ * @param {number} [now]
+ * @returns {number}
+ */
+function clock(now) {
+  if (now === undefined) {
+    return Math.floor(Date.now() / 1000);
+  }
+  if (!Number.isInteger(now)) {
+    throw new TypeError("now must be an integer number of unix seconds");
+  }
+  return now;
+}
+
+/**
  * Read one scoped-list event.
  *
  * Checks run in the order of {@link SCOPED_LIST_REFUSALS} and the first that
@@ -305,19 +356,26 @@ function isEventShape(event) {
  *
  * A malformed `p` tag (not 64 lowercase hex) is skipped and counted, so one
  * bad entry never discards the owner's whole list; everything else outside
- * the grammar refuses the event.
+ * the grammar refuses the event. The `client` tag, like every tag outside the
+ * format, is ignored: what it says, or its absence, never refuses a list.
  *
  * @param {unknown} event
  * @param {Object} options
  * @param {(event: NostrEvent) => boolean} options.verify - NIP-01 id and
  *   signature check, e.g. `verifyEvent` from `@bitgate/verify`. Required:
  *   there is no unverified mode. Anything but `true` is a failed check.
+ * @param {string[]} [options.signers] - Keys accepted as signers; defaults to
+ *   the subject's own key
+ * @param {number} [options.now] - Reader's clock in unix seconds; defaults to
+ *   the system clock. A list dated more than {@link MAX_FUTURE_SECONDS} ahead
+ *   is refused.
  * @returns {ScopedList|ScopedListRefusal}
  */
-export function decodeScopedList(event, { verify } = /** @type {any} */ ({})) {
+export function decodeScopedList(event, { verify, signers, now } = /** @type {any} */ ({})) {
   if (typeof verify !== "function") {
     return { ok: false, reason: "no_verifier" };
   }
+  const at = clock(now);
   if (!isEventShape(event)) {
     return { ok: false, reason: "not_an_event" };
   }
@@ -349,7 +407,7 @@ export function decodeScopedList(event, { verify } = /** @type {any} */ ({})) {
     return { ok: false, reason: "tag_mismatch" };
   }
 
-  if (e.pubkey !== parsed.subject.pubkey) {
+  if (!acceptedSigners(parsed.subject, signers).includes(e.pubkey)) {
     return { ok: false, reason: "wrong_signer" };
   }
   if (e.content !== "") {
@@ -359,6 +417,9 @@ export function decodeScopedList(event, { verify } = /** @type {any} */ ({})) {
   const values = tagValues(e, "p");
   if (values.length > MAX_SCOPED_LIST_ENTRIES) {
     return { ok: false, reason: "too_many_entries" };
+  }
+  if (e.created_at > at + MAX_FUTURE_SECONDS) {
+    return { ok: false, reason: "from_the_future" };
   }
 
   let verified = false;
@@ -397,14 +458,15 @@ export function decodeScopedList(event, { verify } = /** @type {any} */ ({})) {
 /**
  * Pick and read the current scoped list from whatever relays returned.
  *
- * Only events that could be the owner's list are candidates: kind 30078,
- * signed by the subject's own pubkey, with exactly the expected `d`, and a
- * valid signature — so nobody else can suppress the list by publishing a
- * newer event under the owner's key without the owner's signature. The
- * newest candidate wins (ties to the smallest id, as for every replaceable
- * event), and then it is read in full. If that newest one is refused, the
- * list is unreadable: an older copy is not used in its place, because the
- * owner replaced it.
+ * Candidates are the events that could be the list: kind 30078, signed by
+ * one of the accepted signers, with exactly the expected `d`, dated no more
+ * than {@link MAX_FUTURE_SECONDS} ahead, and with a valid signature. So
+ * nobody can suppress the list with a newer event that lacks a signer's
+ * signature, and a list from a fast clock does not stand until its time
+ * comes. Across all accepted signers the newest candidate wins (ties to the
+ * smallest id, as for every replaceable event), and then it is read in full.
+ * If that newest one is refused, the list is unreadable: an older copy is not
+ * used in its place, because it was replaced.
  *
  * @param {unknown[]} events
  * @param {Object} query
@@ -412,25 +474,28 @@ export function decodeScopedList(event, { verify } = /** @type {any} */ ({})) {
  * @param {"user-allow"|"user-deny"} query.scope
  * @param {AddressTarget|string} query.subject
  * @param {(event: NostrEvent) => boolean} query.verify
+ * @param {string[]} [query.signers] - Keys accepted as signers; defaults to the subject's own key
+ * @param {number} [query.now] - Reader's clock in unix seconds; defaults to the system clock
  * @returns {ScopedList|ScopedListRefusal}
  */
-export function resolveScopedList(events, { namespace, scope, subject, verify }) {
+export function resolveScopedList(events, { namespace, scope, subject, verify, signers, now }) {
   if (typeof verify !== "function") {
     return { ok: false, reason: "no_verifier" };
   }
+  const at = clock(now);
   const d = scopedListIdentifier(namespace, scope, subject);
   const parsed = parseScopedListIdentifier(d);
   if (!parsed.ok) {
     return parsed;
   }
-  const owner = parsed.subject.pubkey;
+  const accepted = acceptedSigners(parsed.subject, signers);
 
   const candidates = (Array.isArray(events) ? events : []).filter((event) => {
     if (!isEventShape(event)) {
       return false;
     }
     const e = /** @type {NostrEvent} */ (event);
-    if (e.kind !== CANONICAL_KIND || e.pubkey !== owner) {
+    if (e.kind !== CANONICAL_KIND || !accepted.includes(e.pubkey) || e.created_at > at + MAX_FUTURE_SECONDS) {
       return false;
     }
     const ds = tagValues(e, "d");
@@ -448,16 +513,40 @@ export function resolveScopedList(events, { namespace, scope, subject, verify })
   if (!latest) {
     return { ok: false, reason: "not_found" };
   }
-  return decodeScopedList(latest, { verify });
+  return decodeScopedList(latest, { verify, signers: accepted, now: at });
+}
+
+/**
+ * The authority to evaluate one subject's lists against.
+ *
+ * The accepted signers are the subject's governors: the first is the root,
+ * every one may allow and block, and none of them can be blocked from their
+ * own subject. Pass the same signers the lists were read with.
+ *
+ * @param {AddressTarget|string} subject
+ * @param {string[]} [signers] - Defaults to the subject's own key
+ * @returns {import('@bitgate/core').AuthorityState}
+ */
+export function scopedListAuthority(subject, signers) {
+  const target = typeof subject === "string" ? parseSubjectCoordinate(subject) : subject;
+  if (!target || !parseSubjectCoordinate(formatSubjectCoordinate(target))) {
+    throw new TypeError(`Invalid scoped-list subject: ${JSON.stringify(subject)}`);
+  }
+  const keys = acceptedSigners(target, signers);
+  return createAuthorityState({
+    root: keys[0],
+    actors: Object.fromEntries(keys.map((key) => [key, ["super_admin"]])),
+    protectedActors: keys,
+  });
 }
 
 /**
  * Turn a read scoped list into an engine contribution.
  *
- * The contribution's actor is the subject's owner. Evaluate it against an
- * authority whose root is that same owner (`createAuthorityState({ root })`),
- * one snapshot per subject: a scoped list must never be merged into an
- * application-wide snapshot, where it would apply everywhere.
+ * The contribution's actor is the list's signer. Evaluate it against
+ * {@link scopedListAuthority} for the same subject and signers, one snapshot
+ * per subject: a scoped list must never be merged into an application-wide
+ * snapshot, where it would apply everywhere.
  *
  * @param {ScopedList} list
  * @returns {Contribution}

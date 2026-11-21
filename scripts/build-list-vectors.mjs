@@ -19,7 +19,7 @@ import { fileURLToPath } from "node:url";
 import { schnorr } from "@noble/curves/secp256k1";
 
 import { computeEventId } from "../packages/verify/src/index.js";
-import { MAX_SCOPED_LIST_ENTRIES } from "../packages/nostr/src/scopedLists.js";
+import { MAX_FUTURE_SECONDS, MAX_SCOPED_LIST_ENTRIES } from "../packages/nostr/src/scopedLists.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 export const VECTORS_PATH = join(ROOT, "vectors", "governance-lists", "scoped-lists.json");
@@ -30,8 +30,12 @@ const AUX = new Uint8Array(32);
 
 const OWNER_SK = secret(1);
 const IMPOSTOR_SK = secret(2);
+const KEEPER_SK = secret(3);
 const OWNER = hex(schnorr.getPublicKey(OWNER_SK));
 const IMPOSTOR = hex(schnorr.getPublicKey(IMPOSTOR_SK));
+// A key a reader may be given as a signer, e.g. an owner's everyday key for a
+// world announced by a deploy key.
+const KEEPER = hex(schnorr.getPublicKey(KEEPER_SK));
 
 // Guests need no secret keys: they are only named in lists.
 const guest = (n) => `${n.toString(16).padStart(2, "0")}ab`.repeat(16);
@@ -42,6 +46,8 @@ const CAROL = guest(3);
 const NAMESPACE = "nswp";
 const HOME = `37300:${OWNER}:home`;
 const CREATED_AT = 1_763_700_000;
+// Every case is read at this clock unless it says otherwise.
+const NOW = CREATED_AT + 1000;
 
 function sign(template, sk = OWNER_SK) {
   const event = {
@@ -73,14 +79,15 @@ function listTags({ scope = "user-allow", subject = HOME, d, entries = [], extra
 
 const many = (count) => Array.from({ length: count }, (_, i) => (i + 1).toString(16).padStart(64, "0"));
 
-function ok(scope, subject, entries, skipped = 0) {
-  return { ok: true, scope, subject, signer: subject.split(":")[1], entries: [...new Set(entries)].sort(), skipped };
+function ok(scope, subject, entries, skipped = 0, signer = subject.split(":")[1]) {
+  return { ok: true, scope, subject, signer, entries: [...new Set(entries)].sort(), skipped };
 }
 const refused = (reason) => ({ ok: false, reason });
 
 export function buildVectors() {
   const decode = [];
-  const add = (name, note, event, expect) => decode.push({ name, note, event, expect });
+  /** @param {{ signers?: string[], now?: number }} [reader] - What the reader was given, when not the defaults */
+  const add = (name, note, event, expect, reader) => decode.push({ name, note, ...(reader ? { reader } : {}), event, expect });
 
   // ---- Read ----
   add("allow-list", "An owner's guest list for one world.",
@@ -95,6 +102,22 @@ export function buildVectors() {
     sign({ tags: listTags({ subject: odd, entries: [ALICE] }) }), ok("user-allow", odd, [ALICE]));
   add("other-kinds-of-subject", "The subject may be any addressable thing, not only kind 37300.",
     sign({ tags: listTags({ subject: `30078:${OWNER}:sku-1`, entries: [ALICE] }) }), ok("user-allow", `30078:${OWNER}:sku-1`, [ALICE]));
+  const colon = `37300:${OWNER}:home:garden`;
+  add("name-with-a-colon", "Everything after the pubkey's colon is the name, colons included; it is never split further.",
+    sign({ tags: listTags({ subject: colon, entries: [ALICE] }) }), ok("user-allow", colon, [ALICE]));
+  const spaced = `37300:${OWNER}:my home`;
+  add("name-with-a-space", "Spaces are part of the name.",
+    sign({ tags: listTags({ subject: spaced, entries: [ALICE] }) }), ok("user-allow", spaced, [ALICE]));
+  add("no-client-tag", "The client tag is never required.",
+    sign({ tags: listTags({ drop: ["client"], entries: [ALICE] }) }), ok("user-allow", HOME, [ALICE]));
+  add("another-client-tag", "What the client tag says never matters.",
+    sign({ tags: [...listTags({ drop: ["client"], entries: [ALICE] }), ["client", "nswp"]] }), ok("user-allow", HOME, [ALICE]));
+  add("signed-by-a-given-key",
+    "A reader given a set of signers accepts any of them: here the world's own key and an everyday key.",
+    sign({ tags: listTags({ entries: [ALICE] }) }, KEEPER_SK), ok("user-allow", HOME, [ALICE], 0, KEEPER),
+    { signers: [OWNER, KEEPER] });
+  add("dated-at-the-limit", `Dated exactly ${MAX_FUTURE_SECONDS} seconds ahead of the reader's clock: read.`,
+    sign({ created_at: NOW + MAX_FUTURE_SECONDS, tags: listTags({ entries: [ALICE] }) }), ok("user-allow", HOME, [ALICE]));
   add("malformed-entries-skipped",
     "A p tag whose value is not 64 lowercase hex is skipped and counted; the rest of the list stands.",
     sign({ tags: listTags({ entries: [ALICE, ALICE.toUpperCase(), "npub1notonthewire", "abc"] }) }),
@@ -149,6 +172,13 @@ export function buildVectors() {
     sign({ tags: [...listTags({ entries: [ALICE] }), ["scope", "user-allow"]] }), refused("tag_mismatch"));
   add("signed-by-someone-else", "Only the subject's own pubkey may sign its lists.",
     sign({ tags: listTags({ entries: [IMPOSTOR] }) }, IMPOSTOR_SK), refused("wrong_signer"));
+  add("given-keys-replace-the-default",
+    "A given set replaces the default rather than adding to it: the world's own key is not in this set.",
+    sign({ tags: listTags({ entries: [ALICE] }) }), refused("wrong_signer"), { signers: [KEEPER] });
+  add("trailing-space-in-subject-tag", "The subject tag is compared with d character for character; no trimming.",
+    sign({ tags: [...listTags({ drop: ["subject"], entries: [ALICE] }), ["subject", `${HOME} `]] }), refused("tag_mismatch"));
+  add("dated-too-far-ahead", `Dated more than ${MAX_FUTURE_SECONDS} seconds ahead of the reader's clock: refused.`,
+    sign({ created_at: NOW + MAX_FUTURE_SECONDS + 1, tags: listTags({ entries: [ALICE] }) }), refused("from_the_future"));
   add("content-not-empty", "v1 content is empty. Hidden entries would be a new version, never read by a v1 reader.",
     sign({ content: "encrypted-looking", tags: listTags({ entries: [ALICE] }) }), refused("content_not_empty"));
   add("over-the-cap", `More than ${MAX_SCOPED_LIST_ENTRIES} p tags refuses the event; the first ${MAX_SCOPED_LIST_ENTRIES} are not read.`,
@@ -173,6 +203,9 @@ export function buildVectors() {
   const impostorNewer = sign({ created_at: CREATED_AT + 400, tags: listTags({ entries: [IMPOSTOR] }) }, IMPOSTOR_SK);
   const otherWorld = sign({ created_at: CREATED_AT + 400, tags: listTags({ subject: `37300:${OWNER}:other`, entries: [CAROL] }) });
 
+  const fromTheFuture = sign({ created_at: NOW + 365 * 24 * 60 * 60, tags: listTags({ entries: [CAROL] }) });
+  const keeperNewer = sign({ created_at: CREATED_AT + 100, tags: listTags({ entries: [CAROL] }) }, KEEPER_SK);
+
   const resolve = [
     { name: "newest-wins", note: "The newest valid copy is the list.",
       query, events: [older, newer], expect: ok("user-allow", HOME, [BOB]) },
@@ -188,15 +221,28 @@ export function buildVectors() {
       query, events: [older, refusedNewest], expect: refused("content_not_empty") },
     { name: "other-world-not-found", note: "A list for another world does not answer for this one.",
       query, events: [otherWorld], expect: refused("not_found") },
+    { name: "a-list-from-the-future-does-not-stand",
+      note: "A list dated a year ahead is not a candidate, so it cannot pin itself; the current list stands.",
+      query, events: [older, fromTheFuture], expect: ok("user-allow", HOME, [ALICE]) },
+    { name: "newest-across-the-given-keys",
+      note: "With several signers given, the newest list from any of them is the list.",
+      query: { ...query, signers: [OWNER, KEEPER] }, events: [older, keeperNewer],
+      expect: ok("user-allow", HOME, [CAROL], 0, KEEPER) },
+    { name: "a-key-not-given-is-not-a-candidate",
+      note: "The same newer list, read with the default signers: only the world's own key counts.",
+      query, events: [older, keeperNewer], expect: ok("user-allow", HOME, [ALICE]) },
     { name: "nothing-returned", note: "No events: not found. A reader says so; it is not an empty list.",
       query, events: [], expect: refused("not_found") },
   ];
 
   return {
     description:
-      "Scoped allow and block lists (docs/governance-lists.md). Each `decode` case is one event and what a reader must make of it; each `resolve` case is what relays returned and which list is current. Secret keys 1 and 2 are public test keys.",
+      "Scoped allow and block lists (docs/governance-lists.md). Each `decode` case is one event and what a reader must make of it; each `resolve` case is what relays returned and which list is current. Secret keys 1, 2 and 3 are public test keys.",
     format: "bitgate-scoped-lists-vectors/1",
-    keys: { owner: OWNER, impostor: IMPOSTOR, guests: { alice: ALICE, bob: BOB, carol: CAROL } },
+    now: NOW,
+    reader:
+      "Each case is read with the reader's clock at `now` and, unless the case gives `reader.signers`, with the subject's own key as the only accepted signer.",
+    keys: { owner: OWNER, impostor: IMPOSTOR, keeper: KEEPER, guests: { alice: ALICE, bob: BOB, carol: CAROL } },
     decode,
     resolve,
   };
