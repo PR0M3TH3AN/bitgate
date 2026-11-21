@@ -39,6 +39,7 @@ export {
   reduceAdminState,
   protectActors,
   mergeCommunitySource,
+  isAllowed,
   isDenied,
   serializeAdminState,
 } from "./adminState.js";

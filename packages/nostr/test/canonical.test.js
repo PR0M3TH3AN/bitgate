@@ -152,7 +152,8 @@ describe("decodeContribution", () => {
     ).toBeNull();
   });
 
-  it("prefers an explicit scope tag over the identifier", () => {
+  it("refuses a scope tag that disagrees with the identifier", () => {
+    // Two readers must never disagree about whether a list allows or denies.
     const contribution = decodeContribution(
       event({
         tags: [
@@ -162,7 +163,51 @@ describe("decodeContribution", () => {
         ],
       }),
     );
-    expect(contribution?.kind).toBe("user-allow");
+    expect(contribution).toBeNull();
+  });
+
+  it("accepts a scope tag that agrees, and no scope tag at all", () => {
+    for (const tags of [
+      [["d", canonicalIdentifier("app", "user-deny")], ["scope", "user-deny"], ["p", CREATOR]],
+      [["d", canonicalIdentifier("app", "user-deny")], ["p", CREATOR]],
+    ]) {
+      expect(decodeContribution(event({ tags }))?.kind).toBe("user-deny");
+    }
+  });
+
+  it("reads entries only in lowercase hex, the wire form", () => {
+    const contribution = decodeContribution(
+      event({
+        tags: [
+          ["d", canonicalIdentifier("app", "user-deny")],
+          ["p", CREATOR],
+          ["p", CREATOR.toUpperCase()],
+          ["p", "npub1notreadfromtheswire"],
+        ],
+      }),
+    );
+    expect(contribution?.targets).toEqual([{ type: "user", pubkey: CREATOR }]);
+  });
+
+  it("decodes event and address allow lists", () => {
+    const events = decodeContribution(
+      event({ tags: [["d", canonicalIdentifier("app", "event-allow")], ["e", "ab".repeat(32)]] }),
+    );
+    expect(events).toMatchObject({ kind: "event-allow", targets: [{ type: "event", id: "ab".repeat(32) }] });
+
+    const addresses = decodeContribution(
+      event({
+        tags: [
+          ["d", canonicalIdentifier("app", "address-allow")],
+          ["a", `37300:${CREATOR}:home`],
+          ["a", `37300:${CREATOR.toUpperCase()}:other`],
+        ],
+      }),
+    );
+    expect(addresses).toMatchObject({
+      kind: "address-allow",
+      targets: [{ type: "address", kind: "37300", pubkey: CREATOR, identifier: "home" }],
+    });
   });
 });
 

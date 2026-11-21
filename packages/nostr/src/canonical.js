@@ -6,7 +6,7 @@
 
 import { normalizeAddress } from "@bitgate/core";
 
-import { normalizeEventIdInput, normalizePubkeyInput } from "./nip19.js";
+import { normalizePubkeyInput } from "./nip19.js";
 import { getTagValue, getTags } from "./replaceable.js";
 
 /**
@@ -25,7 +25,9 @@ export const CANONICAL_VERSION = "1";
 const SCOPE_TO_KIND = {
   "user-allow": "user-allow",
   "user-deny": "user-deny",
+  "event-allow": "event-allow",
   "event-deny": "event-deny",
+  "address-allow": "address-allow",
   "address-deny": "address-deny",
   "trust-seed": "trust-seed",
 };
@@ -94,7 +96,14 @@ export function decodeContribution(event) {
   }
 
   const parsed = parseIdentifier(getTagValue(event, "d"));
-  const scope = getTagValue(event, "scope") || parsed?.scope || "";
+  // The `d` names the list; a `scope` tag, when present, must say the same.
+  // Letting one override the other meant two readers could disagree about
+  // whether a document allows or denies, which is the one thing they must not.
+  const scopeTag = getTagValue(event, "scope");
+  if (scopeTag && scopeTag !== parsed?.scope) {
+    return null;
+  }
+  const scope = parsed?.scope ?? "";
   const kind = SCOPE_TO_KIND[scope];
   if (!kind) {
     return null;
@@ -108,25 +117,26 @@ export function decodeContribution(event) {
   /** @type {import('@bitgate/core').GovernanceTarget[]} */
   const targets = [];
 
-  if (kind === "event-deny") {
+  // Entries are lowercase hex on the wire, as NIP-01 writes them. npub and
+  // note forms are for people typing into screens, not for events: a second
+  // implementation should not need a bech32 decoder to read a list the same way.
+  if (kind === "event-deny" || kind === "event-allow") {
     for (const tag of getTags(event, "e")) {
-      const id = normalizeEventIdInput(tag[1]);
-      if (id) {
-        targets.push({ type: "event", id });
+      if (isWireHex64(tag[1])) {
+        targets.push({ type: "event", id: tag[1] });
       }
     }
-  } else if (kind === "address-deny") {
+  } else if (kind === "address-deny" || kind === "address-allow") {
     for (const tag of getTags(event, "a")) {
-      const target = decodeAddressCoordinate(tag[1]);
+      const target = decodeAddressCoordinate(tag[1], { strict: true });
       if (target) {
         targets.push(target);
       }
     }
   } else {
     for (const tag of getTags(event, "p")) {
-      const pubkey = normalizePubkeyInput(tag[1]);
-      if (pubkey) {
-        targets.push({ type: "user", pubkey });
+      if (isWireHex64(tag[1])) {
+        targets.push({ type: "user", pubkey: tag[1] });
       }
     }
   }
@@ -143,11 +153,25 @@ export function decodeContribution(event) {
 }
 
 /**
+ * Whether a value is 64 lowercase hex characters, the only form a key or an
+ * event id takes inside an event.
+ * @param {unknown} value
+ * @returns {value is string}
+ */
+export function isWireHex64(value) {
+  return typeof value === "string" && /^[0-9a-f]{64}$/.test(value);
+}
+
+/**
  * Decode an `a` coordinate (`kind:pubkey:d`) into an address target.
  * @param {string} coordinate
+ * @param {Object} [options]
+ * @param {boolean} [options.strict] - Require the pubkey as lowercase hex (the
+ *   wire form); otherwise an npub or uppercase hex is accepted, for input typed
+ *   by a person
  * @returns {import('@bitgate/core').AddressTarget|null}
  */
-export function decodeAddressCoordinate(coordinate) {
+export function decodeAddressCoordinate(coordinate, { strict = false } = {}) {
   if (typeof coordinate !== "string") {
     return null;
   }
@@ -164,6 +188,9 @@ export function decodeAddressCoordinate(coordinate) {
   const identifier = coordinate.slice(second + 1);
 
   if (!/^\d+$/.test(kind) || !identifier) {
+    return null;
+  }
+  if (strict && !isWireHex64(pubkey)) {
     return null;
   }
 

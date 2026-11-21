@@ -10,7 +10,7 @@
 import { getTargetKey } from "./identifiers.js";
 import { isValidTarget } from "./targets.js";
 import { isProtectedActor } from "./authority.js";
-import { isDenied } from "./adminState.js";
+import { isAllowed, isDenied } from "./adminState.js";
 import { createEmptyEvidence, freezeEvidence, redactEvidence } from "./evidence.js";
 import { createReason, dedupeReasons } from "./reasons.js";
 import {
@@ -368,9 +368,12 @@ export function evaluateTarget(target, snapshot, context = { surface: "default" 
   // 7. Allowlist policy. Access control is separate from trust: being allowed
   //    to publish grants no trust, and missing the allowlist is not a moral
   //    judgement, so it is only enforced where the profile asks for it.
+  //    An event or address passes on its own allow entry or on its author's;
+  //    either way an allow never lifts a denial applied above.
+  const authorAllowed = authors.some((pubkey) => snapshot.admin.userAllow.has(`user:${pubkey}`));
+  const allowed = authorAllowed || (target.type !== "user" && isAllowed(target, snapshot.admin));
   if (profile.requireAllowlist && !isProtected) {
-    const allowed = authors.some((pubkey) => snapshot.admin.userAllow.has(`user:${pubkey}`));
-    evidence.userAllowed = allowed;
+    evidence.userAllowed = authorAllowed;
     if (!allowed) {
       applyEffects(
         decision,
@@ -379,7 +382,7 @@ export function evaluateTarget(target, snapshot, context = { surface: "default" 
       );
     }
   } else {
-    evidence.userAllowed = authors.some((pubkey) => snapshot.admin.userAllow.has(`user:${pubkey}`));
+    evidence.userAllowed = authorAllowed;
   }
 
   // 9-11. Trust signals. Aggregated after administrative state so that denied
@@ -602,6 +605,8 @@ export function createSnapshot(parts = {}) {
       userDeny: new Set(),
       eventDeny: new Set(),
       addressDeny: new Set(),
+      eventAllow: new Set(),
+      addressAllow: new Set(),
       trustSeeds: new Set(),
       contributors: new Map(),
       communitySources: new Map(),

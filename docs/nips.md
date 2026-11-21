@@ -16,7 +16,7 @@ this table for anything load-bearing.
 | **NIP-44** | — | Decryption of the viewer's own private mute entries, delegated to the signer |
 | **NIP-56** | 1984 | Reports. The report type is read from the 3rd tag position, with fallbacks for clients that place it elsewhere. |
 | **NIP-65** | 10002 | Outbox model: each contact's mute list is fetched from *their* write relays |
-| **NIP-78** | 30078 | Canonical governance documents — roles, policy, and contribution lists — under namespaced `d` identifiers |
+| **NIP-78** | 30078 | Canonical governance documents — roles, policy, and contribution lists — under namespaced `d` identifiers, plus scoped lists signed by the thing they are about. Wire format: [governance-lists.md](governance-lists.md) |
 
 ## Deliberate choices
 

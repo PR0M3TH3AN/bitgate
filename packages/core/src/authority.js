@@ -14,6 +14,8 @@ import { normalizePubkey } from "./identifiers.js";
  *   | "manage-policy"
  *   | "manage-community-sources"
  *   | "contribute-user-allow"
+ *   | "contribute-event-allow"
+ *   | "contribute-address-allow"
  *   | "contribute-user-deny"
  *   | "contribute-event-deny"
  *   | "contribute-address-deny"
@@ -27,6 +29,8 @@ export const GOVERNANCE_CAPABILITIES = Object.freeze([
   "manage-policy",
   "manage-community-sources",
   "contribute-user-allow",
+  "contribute-event-allow",
+  "contribute-address-allow",
   "contribute-user-deny",
   "contribute-event-deny",
   "contribute-address-deny",
@@ -53,6 +57,8 @@ export const DEFAULT_ROLE_CAPABILITIES = Object.freeze({
     "manage-policy",
     "manage-community-sources",
     "contribute-user-allow",
+    "contribute-event-allow",
+    "contribute-address-allow",
     "contribute-user-deny",
     "contribute-event-deny",
     "contribute-address-deny",

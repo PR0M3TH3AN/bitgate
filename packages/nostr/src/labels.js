@@ -161,13 +161,20 @@ export function labelsToContributions(labels, mapping = {}) {
     }
 
     // A label points at mixed target types; each maps to the contribution kind
-    // that fits it. Allow is only meaningful for users, matching the allowlist
-    // model, so non-user allow targets are dropped.
+    // that fits it. Allow applies to all three: a person, one event, or one
+    // addressable thing (a world, a listing).
     for (const target of label.targets) {
       /** @type {Contribution["kind"]|null} */
       let kind = null;
       if (isAllow) {
-        kind = target.type === "user" ? "user-allow" : null;
+        kind =
+          target.type === "user"
+            ? "user-allow"
+            : target.type === "event"
+              ? "event-allow"
+              : target.type === "address"
+                ? "address-allow"
+                : null;
       } else if (target.type === "user") {
         kind = "user-deny";
       } else if (target.type === "event") {
@@ -249,7 +256,7 @@ export function encodeLabel({ value, namespace, targets, content = "", relayHint
  * @returns {{ kind: number, content: string, tags: string[][] }}
  */
 export function contributionToLabel(contribution, { namespace, denyValue = "deny", allowValue = "allow", content = "" }) {
-  const value = contribution.kind === "user-allow" ? allowValue : denyValue;
+  const value = contribution.kind.endsWith("-allow") ? allowValue : denyValue;
   return encodeLabel({
     value,
     namespace,

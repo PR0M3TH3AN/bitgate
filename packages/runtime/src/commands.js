@@ -65,7 +65,9 @@ function failure(code, message) {
 const KIND_CAPABILITY = {
   "user-allow": "contribute-user-allow",
   "user-deny": "contribute-user-deny",
+  "event-allow": "contribute-event-allow",
   "event-deny": "contribute-event-deny",
+  "address-allow": "contribute-address-allow",
   "address-deny": "contribute-address-deny",
   "trust-seed": "contribute-trust-seed",
 };

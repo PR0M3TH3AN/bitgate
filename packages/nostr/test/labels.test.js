@@ -144,10 +144,11 @@ describe("labelsToContributions", () => {
     expect(contributions.every((c) => c.kind.endsWith("-deny"))).toBe(true);
   });
 
-  it("maps allow only for users", () => {
+  it("maps allow onto each target type", () => {
+    const address = `37300:${USER}:home`;
     const allowLabels = decodeLabels(
       event({
-        tags: [["L", "ns"], ["l", "allow", "ns"], ["p", USER], ["e", EVENT_ID]],
+        tags: [["L", "ns"], ["l", "allow", "ns"], ["p", USER], ["e", EVENT_ID], ["a", address]],
       }),
     );
     const contributions = labelsToContributions(allowLabels, {
@@ -156,6 +157,11 @@ describe("labelsToContributions", () => {
     });
     expect(contributions).toEqual([
       expect.objectContaining({ kind: "user-allow", targets: [{ type: "user", pubkey: USER }] }),
+      expect.objectContaining({ kind: "event-allow", targets: [{ type: "event", id: EVENT_ID }] }),
+      expect.objectContaining({
+        kind: "address-allow",
+        targets: [{ type: "address", kind: "37300", pubkey: USER, identifier: "home" }],
+      }),
     ]);
   });
 
