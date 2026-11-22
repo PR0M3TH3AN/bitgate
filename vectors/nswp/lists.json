@@ -1,0 +1,1241 @@
+{
+  "description": "Lists of worlds (protocol/08-lists.md): NIP-51 curation sets. `worlds` is what a reader must take from the list, in order; where it is an object, the count and the last world kept. `errors` and `warnings` are sorted issue codes; `signatureValid` is null when the vector is unsigned.",
+  "testKeys": {
+    "note": "TEST-ONLY keys derived from public strings: sha256(utf8(label)). Anyone can sign as them. Signatures use 32 zero bytes of BIP-340 aux randomness so they are reproducible.",
+    "key1": {
+      "label": "nswp test vector key 1",
+      "secretKey": "a2b21391e4eb08443bfc5f24d7e778410f717b0509e82999e71a2bee98ad4912",
+      "pubkey": "01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6"
+    },
+    "key2": {
+      "label": "nswp test vector key 2",
+      "secretKey": "5bc5ca1924bd664c612999947060bd3785d1e568e3b0fde563b73fea0a4b9959",
+      "pubkey": "9f291ef1d9b69e3f1bec4935f0fc53b2e471830509adcf8128076406bc5b6bd6"
+    },
+    "session": {
+      "label": "nswp test vector session key",
+      "secretKey": "2046112f77ef7e117c03898e53aec40c7d33e8aa5a164efe66d7b7672c4db4c9",
+      "pubkey": "23a35533eaea86ba656ca56746e877f082945ca174e2ec13e52ad1815840461f"
+    }
+  },
+  "vectors": [
+    {
+      "name": "valid",
+      "description": "A signed list of two worlds.",
+      "event": {
+        "kind": 30004,
+        "created_at": 1794430800,
+        "tags": [
+          [
+            "d",
+            "quiet-places"
+          ],
+          [
+            "title",
+            "Quiet places"
+          ],
+          [
+            "description",
+            "Worlds worth sitting down in."
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:example-museum"
+          ],
+          [
+            "a",
+            "37300:9f291ef1d9b69e3f1bec4935f0fc53b2e471830509adcf8128076406bc5b6bd6:grove"
+          ],
+          [
+            "alt",
+            "A list of spatial worlds: Quiet places"
+          ]
+        ],
+        "content": "",
+        "pubkey": "01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6",
+        "id": "444a0de38910b3da44c735e38bc6335ffc3e6a5375282595397c687b4d7b3831",
+        "sig": "862ebaf1d414e1c2f1822fa089968dcd958f3b6393b0ac9fa480471e5a8ebddadde0564605d20f6b9e3629be6cb44672930d0af9a248225faa82d7654d7b5fc9"
+      },
+      "expect": {
+        "valid": true,
+        "signatureValid": true,
+        "errors": [],
+        "warnings": [],
+        "title": "Quiet places",
+        "worlds": [
+          "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:example-museum",
+          "37300:9f291ef1d9b69e3f1bec4935f0fc53b2e471830509adcf8128076406bc5b6bd6:grove"
+        ]
+      }
+    },
+    {
+      "name": "empty",
+      "description": "A list with no worlds is a list. It shows nothing.",
+      "event": {
+        "kind": 30004,
+        "created_at": 1794430800,
+        "tags": [
+          [
+            "d",
+            "quiet-places"
+          ],
+          [
+            "title",
+            "Quiet places"
+          ],
+          [
+            "description",
+            "Worlds worth sitting down in."
+          ],
+          [
+            "alt",
+            "A list of spatial worlds: Quiet places"
+          ]
+        ],
+        "content": ""
+      },
+      "expect": {
+        "valid": true,
+        "signatureValid": null,
+        "errors": [],
+        "warnings": [],
+        "title": "Quiet places",
+        "worlds": []
+      }
+    },
+    {
+      "name": "no_title_uses_d",
+      "description": "Without a title, the list goes by its d.",
+      "event": {
+        "kind": 30004,
+        "created_at": 1794430800,
+        "tags": [
+          [
+            "d",
+            "quiet-places"
+          ],
+          [
+            "description",
+            "Worlds worth sitting down in."
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:example-museum"
+          ],
+          [
+            "a",
+            "37300:9f291ef1d9b69e3f1bec4935f0fc53b2e471830509adcf8128076406bc5b6bd6:grove"
+          ],
+          [
+            "alt",
+            "A list of spatial worlds: Quiet places"
+          ]
+        ],
+        "content": ""
+      },
+      "expect": {
+        "valid": true,
+        "signatureValid": null,
+        "errors": [],
+        "warnings": [],
+        "title": "quiet-places",
+        "worlds": [
+          "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:example-museum",
+          "37300:9f291ef1d9b69e3f1bec4935f0fc53b2e471830509adcf8128076406bc5b6bd6:grove"
+        ]
+      }
+    },
+    {
+      "name": "other_things_are_passed_over",
+      "description": "A curation set can hold articles, notes and anything else. A reader keeps the worlds, in order, and says nothing about the rest.",
+      "event": {
+        "kind": 30004,
+        "created_at": 1794430800,
+        "tags": [
+          [
+            "d",
+            "quiet-places"
+          ],
+          [
+            "title",
+            "Quiet places"
+          ],
+          [
+            "description",
+            "Worlds worth sitting down in."
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:example-museum"
+          ],
+          [
+            "a",
+            "37300:9f291ef1d9b69e3f1bec4935f0fc53b2e471830509adcf8128076406bc5b6bd6:grove"
+          ],
+          [
+            "alt",
+            "A list of spatial worlds: Quiet places"
+          ],
+          [
+            "a",
+            "30023:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:an-article"
+          ],
+          [
+            "e",
+            "0000000000000000000000000000000000000000000000000000000000000000"
+          ],
+          [
+            "a",
+            "not a coordinate"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:"
+          ],
+          [
+            "a",
+            "37300:9f291ef1d9b69e3f1bec4935f0fc53b2e471830509adcf8128076406bc5b6bd6:arcade",
+            "wss://relay.example"
+          ]
+        ],
+        "content": ""
+      },
+      "expect": {
+        "valid": true,
+        "signatureValid": null,
+        "errors": [],
+        "warnings": [],
+        "title": "Quiet places",
+        "worlds": [
+          "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:example-museum",
+          "37300:9f291ef1d9b69e3f1bec4935f0fc53b2e471830509adcf8128076406bc5b6bd6:grove",
+          "37300:9f291ef1d9b69e3f1bec4935f0fc53b2e471830509adcf8128076406bc5b6bd6:arcade"
+        ]
+      }
+    },
+    {
+      "name": "a_world_counts_once",
+      "description": "A world named twice keeps its first place.",
+      "event": {
+        "kind": 30004,
+        "created_at": 1794430800,
+        "tags": [
+          [
+            "d",
+            "quiet-places"
+          ],
+          [
+            "title",
+            "Quiet places"
+          ],
+          [
+            "description",
+            "Worlds worth sitting down in."
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:example-museum"
+          ],
+          [
+            "a",
+            "37300:9f291ef1d9b69e3f1bec4935f0fc53b2e471830509adcf8128076406bc5b6bd6:grove"
+          ],
+          [
+            "alt",
+            "A list of spatial worlds: Quiet places"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:example-museum"
+          ]
+        ],
+        "content": ""
+      },
+      "expect": {
+        "valid": true,
+        "signatureValid": null,
+        "errors": [],
+        "warnings": [],
+        "title": "Quiet places",
+        "worlds": [
+          "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:example-museum",
+          "37300:9f291ef1d9b69e3f1bec4935f0fc53b2e471830509adcf8128076406bc5b6bd6:grove"
+        ]
+      }
+    },
+    {
+      "name": "too_many_worlds",
+      "description": "A reader stops at 200 worlds and says so.",
+      "event": {
+        "kind": 30004,
+        "created_at": 1794430800,
+        "tags": [
+          [
+            "d",
+            "quiet-places"
+          ],
+          [
+            "title",
+            "Quiet places"
+          ],
+          [
+            "description",
+            "Worlds worth sitting down in."
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w0"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w1"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w2"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w3"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w4"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w5"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w6"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w7"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w8"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w9"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w10"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w11"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w12"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w13"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w14"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w15"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w16"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w17"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w18"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w19"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w20"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w21"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w22"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w23"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w24"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w25"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w26"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w27"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w28"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w29"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w30"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w31"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w32"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w33"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w34"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w35"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w36"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w37"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w38"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w39"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w40"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w41"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w42"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w43"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w44"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w45"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w46"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w47"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w48"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w49"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w50"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w51"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w52"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w53"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w54"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w55"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w56"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w57"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w58"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w59"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w60"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w61"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w62"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w63"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w64"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w65"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w66"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w67"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w68"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w69"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w70"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w71"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w72"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w73"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w74"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w75"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w76"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w77"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w78"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w79"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w80"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w81"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w82"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w83"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w84"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w85"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w86"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w87"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w88"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w89"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w90"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w91"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w92"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w93"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w94"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w95"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w96"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w97"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w98"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w99"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w100"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w101"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w102"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w103"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w104"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w105"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w106"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w107"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w108"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w109"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w110"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w111"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w112"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w113"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w114"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w115"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w116"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w117"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w118"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w119"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w120"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w121"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w122"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w123"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w124"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w125"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w126"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w127"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w128"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w129"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w130"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w131"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w132"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w133"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w134"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w135"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w136"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w137"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w138"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w139"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w140"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w141"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w142"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w143"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w144"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w145"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w146"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w147"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w148"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w149"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w150"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w151"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w152"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w153"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w154"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w155"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w156"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w157"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w158"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w159"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w160"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w161"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w162"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w163"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w164"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w165"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w166"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w167"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w168"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w169"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w170"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w171"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w172"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w173"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w174"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w175"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w176"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w177"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w178"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w179"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w180"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w181"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w182"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w183"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w184"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w185"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w186"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w187"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w188"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w189"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w190"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w191"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w192"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w193"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w194"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w195"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w196"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w197"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w198"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w199"
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w200"
+          ],
+          [
+            "alt",
+            "A list of spatial worlds: Quiet places"
+          ]
+        ],
+        "content": ""
+      },
+      "expect": {
+        "valid": true,
+        "signatureValid": null,
+        "errors": [],
+        "warnings": [
+          "too_many_worlds"
+        ],
+        "title": "Quiet places",
+        "worlds": {
+          "count": 200,
+          "last": "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:w199"
+        }
+      }
+    },
+    {
+      "name": "long_title_is_cut",
+      "description": "A title past 200 characters is cut, not refused.",
+      "event": {
+        "kind": 30004,
+        "created_at": 1794430800,
+        "tags": [
+          [
+            "d",
+            "quiet-places"
+          ],
+          [
+            "title",
+            "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT"
+          ],
+          [
+            "description",
+            "Worlds worth sitting down in."
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:example-museum"
+          ],
+          [
+            "a",
+            "37300:9f291ef1d9b69e3f1bec4935f0fc53b2e471830509adcf8128076406bc5b6bd6:grove"
+          ],
+          [
+            "alt",
+            "A list of spatial worlds: Quiet places"
+          ]
+        ],
+        "content": ""
+      },
+      "expect": {
+        "valid": true,
+        "signatureValid": null,
+        "errors": [],
+        "warnings": [
+          "value_too_long"
+        ],
+        "title": "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+        "worlds": [
+          "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:example-museum",
+          "37300:9f291ef1d9b69e3f1bec4935f0fc53b2e471830509adcf8128076406bc5b6bd6:grove"
+        ]
+      }
+    },
+    {
+      "name": "missing_d",
+      "description": "No d: the list has no name to follow it by.",
+      "event": {
+        "kind": 30004,
+        "created_at": 1794430800,
+        "tags": [
+          [
+            "title",
+            "Quiet places"
+          ],
+          [
+            "description",
+            "Worlds worth sitting down in."
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:example-museum"
+          ],
+          [
+            "a",
+            "37300:9f291ef1d9b69e3f1bec4935f0fc53b2e471830509adcf8128076406bc5b6bd6:grove"
+          ],
+          [
+            "alt",
+            "A list of spatial worlds: Quiet places"
+          ]
+        ],
+        "content": ""
+      },
+      "expect": {
+        "valid": false,
+        "signatureValid": null,
+        "errors": [
+          "missing_tag"
+        ],
+        "warnings": []
+      }
+    },
+    {
+      "name": "wrong_kind",
+      "description": "A follow set (kind 30000) is not a list of worlds.",
+      "event": {
+        "kind": 30000,
+        "created_at": 1794430800,
+        "tags": [
+          [
+            "d",
+            "quiet-places"
+          ],
+          [
+            "title",
+            "Quiet places"
+          ],
+          [
+            "description",
+            "Worlds worth sitting down in."
+          ],
+          [
+            "a",
+            "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:example-museum"
+          ],
+          [
+            "a",
+            "37300:9f291ef1d9b69e3f1bec4935f0fc53b2e471830509adcf8128076406bc5b6bd6:grove"
+          ],
+          [
+            "alt",
+            "A list of spatial worlds: Quiet places"
+          ]
+        ],
+        "content": ""
+      },
+      "expect": {
+        "valid": false,
+        "signatureValid": null,
+        "errors": [
+          "wrong_kind"
+        ],
+        "warnings": []
+      }
+    }
+  ]
+}
