@@ -3,13 +3,21 @@
 // The extraction must not regress to per-item store lookups or per-card
 // subscriptions. These assertions are structural rather than wall-clock: they
 // check that no network call happens, that invalidation is targeted, and that
-// teardown leaves nothing running. A timing assertion is included but kept
-// deliberately loose, because a CI runner's clock is not a benchmark.
+// teardown leaves nothing running. There is no timing assertion: a busy
+// machine's clock is not a benchmark.
 
 import { describe, expect, it, vi } from "vitest";
 
 import { createPolicyDefinition } from "@bitgate/core";
 import { createBitGate, createMemoryTransport } from "@bitgate/runtime";
+
+// A generous, explicit timeout. These tests check work done (no network
+// calls, bounded subscriptions, one materialization per batch, targeted
+// invalidation), not speed. Under vitest's default 5 s they failed whenever the
+// machine was busy (loads of 15 to 33 on 2026-11-21), which is a false failure:
+// it says nothing about the code. Every assertion is unchanged; a real
+// regression still fails, and one that makes the suite hang still times out.
+const TIMEOUT_MS = 120_000;
 
 const AUTHOR_COUNT = 500;
 const TARGET_COUNT = 5_000;
@@ -121,7 +129,7 @@ function buildLargeRuntime() {
   return { runtime, transport, targets, MODERATORS };
 }
 
-describe("fixture shape", () => {
+describe("fixture shape", { timeout: TIMEOUT_MS }, () => {
   it("matches the size the migration plan specifies", () => {
     const { runtime, targets } = buildLargeRuntime();
 
@@ -145,7 +153,7 @@ describe("fixture shape", () => {
   });
 });
 
-describe("large feed evaluation", () => {
+describe("large feed evaluation", { timeout: TIMEOUT_MS }, () => {
   it("evaluates 5,000 targets without touching the network", () => {
     const { runtime, transport, targets } = buildLargeRuntime();
     const listSpy = vi.spyOn(transport, "list");
@@ -255,7 +263,7 @@ describe("large feed evaluation", () => {
   });
 });
 
-describe("incremental invalidation", () => {
+describe("incremental invalidation", { timeout: TIMEOUT_MS }, () => {
   it("updating one report invalidates only that target", () => {
     const { runtime, targets } = buildLargeRuntime();
     const slice = targets.slice(0, 100);
@@ -329,7 +337,7 @@ describe("incremental invalidation", () => {
   });
 });
 
-describe("teardown", () => {
+describe("teardown", { timeout: TIMEOUT_MS }, () => {
   it("leaves no subscriptions or cached decisions", () => {
     const { runtime, targets } = buildLargeRuntime();
     runtime.setActiveTargets(targets.slice(0, 400));
