@@ -131,19 +131,21 @@ if (decision.visibility.effect === "hide") return null;
 ### Headless, straight from NIP-32 labels
 
 If you don't want the runtime's transport orchestration either — you already
-have relay events in hand and just want the engine — the whole path is four
+have relay events in hand and just want the engine — the whole path is a few
 pure functions. **NIP-32 label events (kind 1985) are the canonical, signed
-decision format**; you don't invent one:
+decision format**; you don't invent one. Every signature is checked on the way
+in; the readers throw without a signature check, so there is no unverified mode:
 
 ```js
 import { createSnapshot, evaluateTarget, reduceAdminState, createAuthorityState } from "@bitgate/core";
-import { decodeLabels, labelsToContributions } from "@bitgate/nostr";
+import { readLabelContributions } from "@bitgate/nostr";
+import { verifyEvent } from "@bitgate/verify";       // or your own NIP-01 check
 
 const authority = createAuthorityState({ root: ROOT, actors: honoredModerators }); // moderator set as data
-const contributions = labelsToContributions(
-  labelEvents.flatMap(decodeLabels),                 // kind-1985 events off your relays
-  { namespace: "org.bitblocks.plugins", denyValues: ["deny"], allowValues: ["allow"] },
-);
+const { contributions, dropped } = readLabelContributions(labelEvents, { // kind-1985 events off your relays
+  verify: verifyEvent,                                // a forged label is dropped, and counted
+  namespace: "org.bitblocks.plugins", denyValues: ["deny"], allowValues: ["allow"],
+});
 const snapshot = createSnapshot({ authority, admin: reduceAdminState(contributions, authority) });
 const decision = evaluateTarget(target, snapshot, { policy, surface: "registry" });
 
@@ -152,13 +154,14 @@ if (!decision.transaction || decision.transaction.effect === "allow") install();
 
 Don't hand-build `honoredModerators`. "Who is a moderator" is data that should
 change without a redeploy, so let the root publish it as a signed kind-30000 set
-and resolve it at runtime with `resolveAuthorityRoster` — it honors only
-root-signed sets (and, with `signer`, one-role-delegates-another chains), and
-its output spreads straight into `createAuthorityState`:
+and resolve it at runtime with `resolveVerifiedRoster` — it honors only
+root-signed sets (and, with `signer`, one-role-delegates-another chains), checks
+every signature first, and its output spreads straight into `createAuthorityState`:
 
 ```js
-import { resolveAuthorityRoster } from "@bitgate/nostr";
-const authority = createAuthorityState(resolveAuthorityRoster(roleSetEvents, {
+import { resolveVerifiedRoster } from "@bitgate/nostr";
+const authority = createAuthorityState(resolveVerifiedRoster(roleSetEvents, {
+  verify: verifyEvent,
   root: ROOT,
   rosters: [
     { identifier: "bitgate:moderators", role: "moderator" },                 // root names moderators
@@ -175,8 +178,10 @@ is a runnable end-to-end walkthrough (`node examples/headless-quickstart.mjs`);
 
 No bundler? `npm run build:standalone` produces `packages/standalone/dist/bitgate.js`
 — the engine and the Nostr codecs above in one self-contained, dependency-free
-ESM file. Self-host it and `import { evaluateTarget, decodeLabels } from "./bitgate.js"`;
-everything in this section works from that single file.
+ESM file. Self-host it and `import { evaluateTarget, readLabelContributions } from "./bitgate.js"`;
+everything in this section works from that single file. It carries no crypto, so
+pass the signature check you already have (`verifyEvent` from nostr-tools, or
+your own) as `verify`.
 
 The soft dimension, `ranking`, feeds an ordering rather than a gate:
 `decision.ranking` is `{ effect: "normal" | "downrank", weight }`, which an app
