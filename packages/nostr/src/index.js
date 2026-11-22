@@ -132,3 +132,13 @@ export {
   readCurationSet,
   resolveCurationSet,
 } from "./curationSets.js";
+export {
+  NAMED_DECISIONS,
+  NAMED_LISTS,
+  NAMED_LIST_ROLES,
+  contributionsForDecision,
+  encodeNamedList,
+  namedListIdentifier,
+  namedListOf,
+  readNamedList,
+} from "./namedLists.js";
