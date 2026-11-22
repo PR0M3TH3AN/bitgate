@@ -308,6 +308,8 @@ The design was agreed with it; the record is `docs/reports/2026-11-21-lists-answ
   NSWP's own vectors (`vectors/nswp/`).
 - [x] Named-lists vocabulary (sellers, payees, listings, people) with decisions, as
   vectors. The names are provisional until given.
+- [x] A required signature check on the application-wide headless path
+  (`readLabelContributions`, `readContributionLists`, `resolveVerifiedRoster`).
 - [ ] Hidden (encrypted) lists, which need a group key. That is a new version,
   coming with NSWP's sealed kind.
 - [ ] Decide whether application-wide lists get an entry cap. Refusing a long

@@ -7,6 +7,18 @@ public API changes with it.
 
 ## [Unreleased]
 
+### Added — a required signature check on the headless path
+
+- **`readLabelContributions`, `readContributionLists`, `resolveVerifiedRoster`
+  and `keepVerified`** (`@bitgate/nostr`). Each takes `verify` and throws
+  without it; events that fail are dropped and counted.
+- The application-wide headless path now fails closed, as the runtime and
+  widget already did.
+- The README's headless section and `examples/headless-quickstart.mjs` use
+  them. The example now signs its labels with public test keys and shows a
+  forged label being dropped.
+- The structure-only codecs are unchanged.
+
 ### Added — the named-lists vocabulary
 
 - **One curator, several lists:** `sellers`, `payees`, `listings-allowed`,

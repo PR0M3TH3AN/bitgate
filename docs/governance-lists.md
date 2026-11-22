@@ -364,6 +364,26 @@ are NSWP-08 curation sets, read as they are (above).
 only one of is given before it is used, the five namespaces are proposed by
 BitGate and count once the orchestrator records them as given.
 
+## Checking signatures on the headless path
+
+Every reader that decides something takes a `verify` function and refuses to
+run without one: `decodeScopedList`, `resolveScopedList`, `readCurationSet`,
+`resolveCurationSet` and `readNamedList`, and, for the application-wide
+formats, `readLabelContributions` (NIP-32), `readContributionLists` (kind
+30078) and `resolveVerifiedRoster` (kind-30000 role sets). Each of the last
+three throws a `TypeError` without a verifier, and reports how many events it
+dropped (`dropped.unverified`). Only signed copies are candidates for
+replacement, so no unsigned event can replace a list.
+
+`verify` is a NIP-01 check that returns `true`: `verifyEvent` from
+`@bitgate/verify`, or the one an application already ships. Anything else
+counts as a failed check, including a promise. The standalone `bitgate.js`
+carries no crypto, so it takes the application's own check.
+
+The structure-only codecs (`decodeLabels`, `labelsToContributions`,
+`decodeContribution`, `resolveAuthorityRoster`, `parseCurationSet`) are
+unchanged, for callers that verify upstream, as the runtime does.
+
 ## Names taken
 
 Per the fleet's rule that anything there is only one of is given before it is

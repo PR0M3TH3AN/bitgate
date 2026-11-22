@@ -2,7 +2,7 @@
  * BitGate, headless — the whole round-trip in one file, no DOM, no widget.
  *
  *   moderators publish signed NIP-32 label events (kind 1985)   <- the wire format
- *        -> decode them on the client
+ *        -> check every signature, drop what fails               <- required, no unverified mode
  *        -> map labels to governance contributions
  *        -> reduce to admin state under an honored moderator set  <- moderator set as data
  *        -> evaluate a target against a policy
@@ -16,6 +16,8 @@
  *
  *   node examples/headless-quickstart.mjs
  */
+import { schnorr } from "@noble/curves/secp256k1";
+
 import {
   createAuthorityState,
   createEventTarget,
@@ -24,64 +26,67 @@ import {
   evaluateTarget,
   reduceAdminState,
 } from "@bitgate/core";
-import { decodeLabels, encodeLabel, labelsToContributions } from "@bitgate/nostr";
+import { encodeLabel, readLabelContributions } from "@bitgate/nostr";
+import { computeEventId, verifyEvent } from "@bitgate/verify";
 
-// --- identities (64-hex, as on the wire) -----------------------------------
-const ROOT = "a1".repeat(32);
-const MOD_A = "b2".repeat(32);
-const MOD_B = "c3".repeat(32);
+// --- identities ---------------------------------------------------------------
+// Secret keys 1, 2 and 3 are public TEST keys, known to everyone, so this file
+// can really sign. In production each moderator signs with their own signer
+// (BitLogin, a NIP-07 extension); no secret key ever sits in your app.
+const hex = (bytes) => Buffer.from(bytes).toString("hex");
+const testKey = (n) => n.toString(16).padStart(64, "0");
+const ROOT = hex(schnorr.getPublicKey(testKey(1)));
+const MOD_A_KEY = testKey(2);
+const MOD_B_KEY = testKey(3);
+const MOD_A = hex(schnorr.getPublicKey(MOD_A_KEY));
+const MOD_B = hex(schnorr.getPublicKey(MOD_B_KEY));
 const CLEAN_PLUGIN = "d4".repeat(32); // a well-behaved plugin release (event id)
 const MALWARE_PLUGIN = "e5".repeat(32); // ships a keylogger
 const NOW = 1_750_000_000;
 const NAMESPACE = "org.bitblocks.plugins";
 
-// --- 1. A moderator publishes a signed NIP-32 label denying the bad plugin ---
-// encodeLabel returns the event TEMPLATE; in production your signer fills in
-// pubkey/id/sig. Here we simulate a signed event by attaching the labeller.
-function signedLabelEvent(labellerPubkey, template) {
-  return { ...template, pubkey: labellerPubkey, created_at: NOW, id: "0".repeat(64), sig: "" };
+// --- 1. Moderators publish signed NIP-32 labels denying the bad plugin ---------
+// encodeLabel returns the event TEMPLATE; the moderator's signer fills in
+// pubkey, id and sig.
+function sign(secretKey, template) {
+  const event = { ...template, pubkey: hex(schnorr.getPublicKey(secretKey)), created_at: NOW };
+  const id = computeEventId(event);
+  return { ...event, id, sig: hex(schnorr.sign(id, secretKey, new Uint8Array(32))) };
 }
+const denyMalware = (content) =>
+  encodeLabel({ value: "deny", namespace: NAMESPACE, targets: [createEventTarget(MALWARE_PLUGIN)], content });
 
 const relayEvents = [
-  signedLabelEvent(
-    MOD_A,
-    encodeLabel({
-      value: "deny",
-      namespace: NAMESPACE,
-      targets: [createEventTarget(MALWARE_PLUGIN)],
-      content: "ships an undisclosed keylogger",
-    }),
-  ),
-  // MOD_B independently agrees — labels compose; one honored labeller is enough
-  // here, but real deployments want more than one before a deny sticks.
-  signedLabelEvent(
-    MOD_B,
-    encodeLabel({
-      value: "deny",
-      namespace: NAMESPACE,
-      targets: [createEventTarget(MALWARE_PLUGIN)],
-      content: "confirmed: exfiltrates clipboard",
-    }),
-  ),
+  sign(MOD_A_KEY, denyMalware("ships an undisclosed keylogger")),
+  // MOD_B independently agrees: labels compose.
+  sign(MOD_B_KEY, denyMalware("confirmed: exfiltrates clipboard")),
+  // A relay hands over a label claiming MOD_A's key that MOD_A never signed —
+  // it would deny the clean plugin. Its signature does not match, so it is dropped.
+  {
+    ...sign(MOD_A_KEY, denyMalware("")),
+    tags: [["L", NAMESPACE], ["l", "deny", NAMESPACE], ["e", CLEAN_PLUGIN]],
+  },
 ];
 
 // --- 2. The honored moderator set, resolved as data (not hard-coded UI) ------
-// In production you resolve this from a signed, root-controlled Nostr set and
-// pass the pubkeys here — adding a moderator needs no redeploy.
+// In production resolve it with resolveVerifiedRoster from the root's signed
+// kind-30000 set — adding a moderator needs no redeploy.
 const authority = createAuthorityState({
   root: ROOT,
   actors: { [MOD_A]: ["moderator"], [MOD_B]: ["moderator"] },
 });
 
-// --- 3. Decode labels -> contributions -> admin state ------------------------
-const labels = relayEvents.flatMap((event) => decodeLabels(event));
-const contributions = labelsToContributions(labels, {
+// --- 3. Verify -> labels -> contributions -> admin state ----------------------
+// readLabelContributions checks every signature (verifyEvent here, or your own
+// NIP-01 check) and throws without one: there is no unverified mode.
+const { contributions, dropped } = readLabelContributions(relayEvents, {
+  verify: verifyEvent,
   namespace: NAMESPACE,
   denyValues: ["deny"],
   allowValues: ["allow"],
 });
 // reduceAdminState only honors contributions from actors the authority permits,
-// so an unauthorized "labeller" publishing a deny changes nothing.
+// so an unauthorized "labeller" publishing a deny changes nothing either.
 const admin = reduceAdminState(contributions, authority);
 const snapshot = createSnapshot({ authority, admin });
 
@@ -120,6 +125,7 @@ function report(name, eventId) {
 }
 
 console.log("Plugin registry decisions (headless, from NIP-32 labels over relays):\n");
+console.log(`  dropped ${dropped.unverified} label that failed its signature check\n`);
 report("clean plugin", CLEAN_PLUGIN);
 report("malware plugin", MALWARE_PLUGIN);
 console.log(`
