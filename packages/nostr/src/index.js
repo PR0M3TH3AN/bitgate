@@ -135,11 +135,13 @@ export {
 export {
   NAMED_DECISIONS,
   NAMED_LISTS,
+  LISTING_COORDINATE,
   NAMED_LIST_ROLES,
   contributionsForDecision,
   encodeNamedList,
   namedListIdentifier,
   namedListOf,
+  parseListingCoordinate,
   readNamedList,
 } from "./namedLists.js";
 export {

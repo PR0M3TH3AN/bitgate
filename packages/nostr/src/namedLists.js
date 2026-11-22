@@ -105,6 +105,28 @@ export function namedListIdentifier(name) {
   return canonicalIdentifier(definition.namespace, definition.scope);
 }
 
+/**
+ * A listing's coordinate, exactly as BitUnlock states it
+ * (`src/protocol/product-coordinate.ts`) and the NSWP kit's `cleanListing`
+ * reads it: `30078:<64 lowercase hex>:<name>`, the name 1 to 256 characters
+ * (JavaScript string length) on one line, not starting with a colon. Spaces,
+ * and colons after the first character, are allowed. A listing is known only
+ * by this coordinate, never by an event id, so a block survives the seller
+ * republishing it.
+ */
+export const LISTING_COORDINATE = /^30078:([0-9a-f]{64}):([^:\r\n][^\r\n]{0,255})$/;
+
+/**
+ * Parse a listing coordinate by {@link LISTING_COORDINATE}. The name is kept
+ * exactly: no trimming, unlike the general coordinate reader.
+ * @param {unknown} value
+ * @returns {import('@bitgate/core').AddressTarget|null}
+ */
+export function parseListingCoordinate(value) {
+  const match = typeof value === "string" ? LISTING_COORDINATE.exec(value) : null;
+  return match ? { type: "address", kind: "30078", pubkey: match[1], identifier: match[2] } : null;
+}
+
 /** @type {Map<string, string>} */
 const NAME_BY_D = new Map(Object.keys(NAMED_LISTS).map((name) => [namedListIdentifier(name), name]));
 
@@ -142,7 +164,10 @@ export function encodeNamedList(name, targets) {
  * @param {unknown} event
  * @param {Object} options
  * @param {(event: NostrEvent) => boolean} options.verify - Required; anything but `true` fails
- * @returns {{ ok: true, name: string, contribution: Contribution }
+ * Entries that do not fit are skipped and counted: a person must be 64
+ * lowercase hex (`p`), a listing must fit {@link LISTING_COORDINATE} (`a`).
+ *
+ * @returns {{ ok: true, name: string, contribution: Contribution, skipped: number }
  *   | { ok: false, reason: "no_verifier" | "not_a_named_list" | "invalid" | "bad_signature" }}
  */
 export function readNamedList(event, { verify } = /** @type {any} */ ({})) {
@@ -166,7 +191,26 @@ export function readNamedList(event, { verify } = /** @type {any} */ ({})) {
   if (!verified) {
     return { ok: false, reason: "bad_signature" };
   }
-  return { ok: true, name, contribution };
+  const definition = NAMED_LISTS[name];
+  const isListingList = definition.scope === "address-allow" || definition.scope === "address-deny";
+  const tagName = isListingList ? "a" : "p";
+  const values = getTags(/** @type {NostrEvent} */ (event), tagName).map((tag) => tag[1]);
+  /** @type {Map<string, GovernanceTarget>} */
+  const targets = new Map();
+  let skipped = 0;
+  for (const value of values) {
+    const target = isListingList
+      ? parseListingCoordinate(value)
+      : typeof value === "string" && /^[0-9a-f]{64}$/.test(value)
+        ? /** @type {GovernanceTarget} */ ({ type: "user", pubkey: value })
+        : null;
+    if (target) {
+      targets.set(String(value), target);
+    } else {
+      skipped += 1;
+    }
+  }
+  return { ok: true, name, contribution: { ...contribution, targets: Array.from(targets.values()) }, skipped };
 }
 
 /**

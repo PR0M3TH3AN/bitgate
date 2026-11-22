@@ -7,6 +7,19 @@ public API changes with it.
 
 ## [Unreleased]
 
+### Changed — named lists read listings by BitUnlock's rule
+
+- Listing entries in `listings-allowed` and `listings-blocked` are read from
+  their `a` tags with BitUnlock's own coordinate rule, exactly:
+  `30078:<64 lowercase hex>:<name>`, the name 1 to 256 characters on one line,
+  not starting with a colon.
+- Names are not trimmed. The general coordinate reader trims, which would have
+  made a name with a trailing space a different listing from BitUnlock's.
+- Entries that don't fit are skipped and counted (`skipped`).
+- New exports: `parseListingCoordinate`, `LISTING_COORDINATE`.
+- The spec says that switching on `may-sell-listing-curated` is the owner's
+  word.
+
 ### Added — a required signature check on the headless path
 
 - **`readLabelContributions`, `readContributionLists`, `resolveVerifiedRoster`
