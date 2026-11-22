@@ -38,7 +38,12 @@ const ALICE = person(1);
 const BOB = person(2);
 const CAROL = person(3);
 const DAVE = person(4);
-const listing = (seller, name) => `30078:${seller}:${name}`;
+const listing = (/** @type {string} */ seller, /** @type {string} */ name) => `30078:${seller}:${name}`;
+/** A template with tags added as written, valid or not. */
+const withRawTags = (/** @type {{ kind: number, content: string, tags: string[][] }} */ template, /** @type {string[][]} */ tags) => ({
+  ...template,
+  tags: [...template.tags, ...tags],
+});
 const CREATED_AT = 1_763_700_000;
 
 function sign(template, sk) {
@@ -61,7 +66,19 @@ export function buildNamedVectors() {
     payees: sign(encodeNamedList("payees", users(ALICE, CAROL)), CURATOR_SK),
     peopleBlocked: sign(encodeNamedList("people-blocked", users(BOB)), CURATOR_SK),
     listingsAllowed: sign(encodeNamedList("listings-allowed", [address(listing(ALICE, "song-1"))]), CURATOR_SK),
-    listingsBlocked: sign(encodeNamedList("listings-blocked", [address(listing(ALICE, "song-2"))]), CURATOR_SK),
+    listingsBlocked: sign(withRawTags(encodeNamedList("listings-blocked", [address(listing(ALICE, "song-2"))]), [
+      // Kept: BitUnlock's rule allows colons after the first character, and spaces.
+      ["a", listing(ALICE, "song:remix")],
+      ["a", listing(ALICE, "my song ")],
+      ["a", listing(ALICE, "x".repeat(256))],
+      // Skipped, each counted: a leading colon, 257 characters, two lines,
+      // another kind, an uppercase key.
+      ["a", listing(ALICE, ":song")],
+      ["a", listing(ALICE, "x".repeat(257))],
+      ["a", listing(ALICE, "two\nlines")],
+      ["a", `30023:${ALICE}:an-article`],
+      ["a", listing(ALICE.toUpperCase(), "song-9")],
+    ]), CURATOR_SK),
     strangerSellers: sign(encodeNamedList("sellers", users(DAVE)), STRANGER_SK),
     notNamed: sign({ kind: 30078, content: "", tags: [["d", "bitunlock:governance:user-allow:v1"], ["p", DAVE]] }, CURATOR_SK),
   };
@@ -73,12 +90,17 @@ export function buildNamedVectors() {
     { name: "payees", event: "payees", expect: { ok: true, list: "payees", scope: "user-allow", entries: [ALICE, CAROL].sort() } },
     { name: "people-blocked", event: "peopleBlocked", expect: { ok: true, list: "people-blocked", scope: "user-deny", entries: [BOB] } },
     { name: "listings-allowed", event: "listingsAllowed", expect: { ok: true, list: "listings-allowed", scope: "address-allow", entries: [listing(ALICE, "song-1")] } },
-    { name: "listings-blocked", event: "listingsBlocked", expect: { ok: true, list: "listings-blocked", scope: "address-deny", entries: [listing(ALICE, "song-2")] } },
+    { name: "listings-blocked", note: "Entries are read by BitUnlock's listing rule exactly; anything else is skipped and counted.",
+      event: "listingsBlocked", expect: { ok: true, list: "listings-blocked", scope: "address-deny",
+        entries: [listing(ALICE, "song-2"), listing(ALICE, "song:remix"), listing(ALICE, "my song "), listing(ALICE, "x".repeat(256))].sort(), skipped: 5 } },
     { name: "a-stranger-can-publish-a-named-list", note: "It reads; it just counts for nothing without the capability (see decisions).",
       event: "strangerSellers", expect: { ok: true, list: "sellers", scope: "user-allow", entries: [DAVE] } },
     { name: "not-in-the-vocabulary", note: "An application-wide list whose d is not a named list's.",
       event: "notNamed", expect: { ok: false, reason: "not_a_named_list" } },
   ];
+  for (const testCase of read) {
+    if (testCase.expect.ok && !("skipped" in testCase.expect)) /** @type {any} */ (testCase.expect).skipped = 0;
+  }
   read.push({ name: "tampered", note: "A key added, and the date moved, after signing.", event: "tamperedPayees", expect: { ok: false, reason: "bad_signature" } });
 
   const ask = (decision, target, transaction, note) => ({ decision, target, expect: { transaction }, ...(note ? { note } : {}) });
@@ -96,6 +118,9 @@ export function buildNamedVectors() {
     ask("may-sell-listing", listing(ALICE, "song-2"), "deny", "On the blocked-listings list."),
     ask("may-sell-listing", listing(BOB, "song-3"), "deny", "Its seller is blocked."),
     ask("may-sell-listing", listing(CAROL, "song-4"), "allow", "Not curated: anything not blocked may be sold."),
+    ask("may-sell-listing", listing(ALICE, "song:remix"), "deny", "A colon inside the name is part of the name."),
+    ask("may-sell-listing", listing(ALICE, "my song "), "deny", "The name is compared exactly, trailing space included."),
+    ask("may-sell-listing", listing(ALICE, "my song"), "allow", "A different listing: no trimming."),
     ask("may-sell-listing-curated", listing(ALICE, "song-1"), "allow"),
     ask("may-sell-listing-curated", listing(CAROL, "song-4"), "deny", "Curated: only listed listings."),
     ask("may-sell-listing-curated", listing(ALICE, "song-2"), "deny"),

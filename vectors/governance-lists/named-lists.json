@@ -91,7 +91,7 @@
       "sig": "fd367432e15793ec4d886d8f4d72e6dd77acb7f0e21a5cbab99af635f339328b6c776e818e39bbb72b90bf13d287914e5a9ef3446a5202c48efab6d5fcf4940d"
     },
     "listingsBlocked": {
-      "id": "dd868b74c36d375275e562e2725034f723a67e5d60d9fcb9147c5009e3eeff74",
+      "id": "7485d198a266abdf7e9edde5cab8d7016b5377373b5d981424dcc4cd97ab1083",
       "pubkey": "c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5",
       "created_at": 1763700000,
       "kind": 30078,
@@ -100,10 +100,18 @@
         ["v","1"],
         ["client","bitgate"],
         ["scope","address-deny"],
-        ["a","30078:01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd:song-2"]
+        ["a","30078:01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd:song-2"],
+        ["a","30078:01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd:song:remix"],
+        ["a","30078:01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd:my song "],
+        ["a","30078:01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"],
+        ["a","30078:01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd::song"],
+        ["a","30078:01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"],
+        ["a","30078:01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd:two\nlines"],
+        ["a","30023:01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd:an-article"],
+        ["a","30078:01CD01CD01CD01CD01CD01CD01CD01CD01CD01CD01CD01CD01CD01CD01CD01CD:song-9"]
       ],
       "content": "",
-      "sig": "16043f05f179aeab25c22ab9347367a29769a2754894487fa4c1118947f8ac76db773926d0df4698f770e75a7303f719530074eb3140e4828c43e06bd0607b5b"
+      "sig": "abb6429ed57b11331b8012eefa11e8f5e7662105993f0a8fa246d559ae08a5f62c12b917b97eff03d3e4c1dbf9e3cde6dab334d7dade6f57d4ac60ec77b25e89"
     },
     "strangerSellers": {
       "id": "c9e39dbe77d1f57722e0b8153346d8eecce6ccb72f546ad1293ff5312998dd5d",
@@ -158,7 +166,8 @@
         "ok": true,
         "list": "sellers",
         "scope": "user-allow",
-        "entries": ["01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd","02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd"]
+        "entries": ["01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd","02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd"],
+        "skipped": 0
       }
     },
     {
@@ -168,7 +177,8 @@
         "ok": true,
         "list": "payees",
         "scope": "user-allow",
-        "entries": ["01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd","03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd"]
+        "entries": ["01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd","03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd"],
+        "skipped": 0
       }
     },
     {
@@ -178,7 +188,8 @@
         "ok": true,
         "list": "people-blocked",
         "scope": "user-deny",
-        "entries": ["02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd"]
+        "entries": ["02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd"],
+        "skipped": 0
       }
     },
     {
@@ -188,17 +199,20 @@
         "ok": true,
         "list": "listings-allowed",
         "scope": "address-allow",
-        "entries": ["30078:01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd:song-1"]
+        "entries": ["30078:01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd:song-1"],
+        "skipped": 0
       }
     },
     {
       "name": "listings-blocked",
+      "note": "Entries are read by BitUnlock's listing rule exactly; anything else is skipped and counted.",
       "event": "listingsBlocked",
       "expect": {
         "ok": true,
         "list": "listings-blocked",
         "scope": "address-deny",
-        "entries": ["30078:01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd:song-2"]
+        "entries": ["30078:01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd:my song ","30078:01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd:song-2","30078:01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd:song:remix","30078:01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"],
+        "skipped": 5
       }
     },
     {
@@ -209,7 +223,8 @@
         "ok": true,
         "list": "sellers",
         "scope": "user-allow",
-        "entries": ["04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd"]
+        "entries": ["04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd"],
+        "skipped": 0
       }
     },
     {
@@ -331,6 +346,30 @@
         "transaction": "allow"
       },
       "note": "Not curated: anything not blocked may be sold."
+    },
+    {
+      "decision": "may-sell-listing",
+      "target": "30078:01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd:song:remix",
+      "expect": {
+        "transaction": "deny"
+      },
+      "note": "A colon inside the name is part of the name."
+    },
+    {
+      "decision": "may-sell-listing",
+      "target": "30078:01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd:my song ",
+      "expect": {
+        "transaction": "deny"
+      },
+      "note": "The name is compared exactly, trailing space included."
+    },
+    {
+      "decision": "may-sell-listing",
+      "target": "30078:01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd:my song",
+      "expect": {
+        "transaction": "allow"
+      },
+      "note": "A different listing: no trimming."
     },
     {
       "decision": "may-sell-listing-curated",

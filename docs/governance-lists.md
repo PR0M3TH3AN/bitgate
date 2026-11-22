@@ -331,8 +331,26 @@ This section is the vocabulary. Readers in other projects are held to
 | `listings-blocked` | `bitunlock.listings:governance:address-deny:v1` | this listing may not be sold |
 | `people-blocked` | `bitunlock.people:governance:user-deny:v1` | this person may neither sell nor be paid |
 
-Entries are `p` tags (people) or `a` tags (listings, `30078:<seller>:<name>`),
-in the application-wide format above.
+Entries are `p` tags (people) or `a` tags (listings), in the
+application-wide format above, with two rules shared with BitUnlock so that the
+two always agree:
+
+- **A person is 64 lowercase hex characters,** as BitUnlock stores keys.
+- **A listing is its coordinate and nothing else:** never an event id, so a
+  block survives the seller republishing the listing as a new event. The
+  coordinate follows BitUnlock's one rule (`src/protocol/product-coordinate.ts`;
+  the kit's `cleanListing` is the same):
+
+  ```
+  ^30078:[0-9a-f]{64}:[^:\r\n][^\r\n]{0,255}$
+  ```
+
+  The name is 1 to 256 characters (JavaScript string length) on one line, and
+  does not start with a colon. Spaces, and colons after the first character,
+  are allowed. Names are compared exactly, with no trimming
+  (`parseListingCoordinate`, `LISTING_COORDINATE`).
+- **An entry that doesn't fit is skipped and counted** (`skipped`). The rest of
+  the list stands.
 
 **Which lists each decision reads.** Every answer is the **transaction**
 dimension:
@@ -342,12 +360,17 @@ dimension:
 | `may-sell` | `sellers`, `people-blocked` | denied |
 | `may-be-paid` | `payees`, `people-blocked` | denied |
 | `may-sell-listing` | `listings-blocked`, `people-blocked` (through the listing's seller) | allowed unless blocked |
-| `may-sell-listing-curated` | `listings-allowed`, `listings-blocked`, `people-blocked` | denied |
+| `may-sell-listing-curated` | `listings-allowed`, `listings-blocked`, `people-blocked` | denied (see below) |
 
 - **Blocked beats allowed** in every decision.
 - **The root is never gated.**
 - **Payable is not the same as able to sell:** a key on `payees` alone may be
   paid but not sell.
+- **`may-sell-listing-curated` is the owner's word to switch on.** BitUnlock
+  has no counterpart today: any listing from an allowed seller may be sold.
+  Comparing it in shadow is fine, but enforcing it is stricter than today and
+  would stop existing listings. Switching it on is decided by the owner at the
+  time, not by any session.
 
 **Who counts.** The root's role document (`<deployment>:governance:roles:v1`,
 signed by the root) names each curator with the role `list-curator`. That role

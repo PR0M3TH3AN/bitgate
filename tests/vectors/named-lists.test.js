@@ -12,9 +12,9 @@ import {
   NAMED_LISTS,
   NAMED_LIST_ROLES,
   contributionsForDecision,
-  decodeAddressCoordinate,
   decodeRoles,
   namedListIdentifier,
+  parseListingCoordinate,
   readNamedList,
 } from "@bitgate/nostr";
 import { verifyEvent } from "@bitgate/verify";
@@ -51,7 +51,8 @@ function decide(decision, target) {
   const admin = reduceAdminState(contributionsForDecision(decision, /** @type {any} */ (lists)), authority);
   const snapshot = createSnapshot({ authority, admin });
   const isListing = decision.startsWith("may-sell-listing");
-  const subject = isListing ? decodeAddressCoordinate(target) : { type: "user", pubkey: target };
+  const subject = isListing ? parseListingCoordinate(target) : { type: "user", pubkey: target };
+  if (!subject) throw new Error(`not a listing coordinate: ${target}`);
   const context = isListing
     ? { surface: "checkout", policy: LISTING_POLICY, policyProfile: decision.endsWith("curated") ? "curated" : "open", now: 0 }
     : { surface: "default", policy: ALLOWLIST_POLICY, now: 0 };
@@ -80,6 +81,7 @@ describe("named-list vectors", () => {
             entries: result.contribution.targets
               .map((/** @type {any} */ t) => (t.type === "user" ? t.pubkey : `${t.kind}:${t.pubkey}:${t.identifier}`))
               .sort(),
+            skipped: result.skipped,
           }
         : { ok: false, reason: result.reason };
       expect(seen).toEqual(testCase.expect);
@@ -109,5 +111,27 @@ describe("the vocabulary", () => {
     expect([...NAMED_LIST_ROLES["list-curator"]].sort()).toEqual(
       ["contribute-address-allow", "contribute-address-deny", "contribute-user-allow", "contribute-user-deny"],
     );
+  });
+});
+
+describe("listing coordinates", () => {
+  it("follow BitUnlock's rule exactly", () => {
+    const seller = vectors.keys.people.alice;
+    for (const name of ["a", "song:remix", "my song ", " leading space", "x".repeat(256), "tab\tinside"]) {
+      expect(parseListingCoordinate(`30078:${seller}:${name}`)).toEqual({ type: "address", kind: "30078", pubkey: seller, identifier: name });
+    }
+    for (const value of [
+      `30078:${seller}:`,
+      `30078:${seller}::song`,
+      `30078:${seller}:${"x".repeat(257)}`,
+      `30078:${seller}:two\nlines`,
+      `30078:${seller}:carriage\rreturn`,
+      `30023:${seller}:song`,
+      `30078:${seller.toUpperCase()}:song`,
+      `030078:${seller}:song`,
+      null,
+    ]) {
+      expect(parseListingCoordinate(value), String(value)).toBeNull();
+    }
   });
 });
