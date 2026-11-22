@@ -143,6 +143,7 @@ export {
   namedListOf,
   parseListingCoordinate,
   readNamedList,
+  resolveNamedLists,
 } from "./namedLists.js";
 export {
   keepVerified,

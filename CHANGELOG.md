@@ -7,6 +7,17 @@ public API changes with it.
 
 ## [Unreleased]
 
+### Added — `resolveNamedLists`: verify, then choose
+
+- Reads every named list from whatever relays returned. Signatures are
+  checked **before** choosing, then the newest passing copy per signer and `d`
+  is kept.
+- A tampered copy that keeps the genuine id and claims to be newer cannot
+  push out the genuine list, and a replaced copy no longer counts. This came
+  from a note by BitUnlock's session after building its shadow part.
+- The named-list vectors gain a replaced `sellers` copy. The spec and
+  `docs/shadow-comparison.md` state the rule.
+
 ### Changed — curation sets: copies dated in the future are left out
 
 - `resolveCurationSet` now follows NSWP-08's rule (NSWP 7c71118):

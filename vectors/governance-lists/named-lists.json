@@ -1,5 +1,5 @@
 {
-  "description": "The named-lists vocabulary (docs/governance-lists.md, \"Named lists\"). `events` are everything relays returned. A reader reads each with a signature check, builds the authority from the root's role document (root = keys.root, roles from NAMED_LIST_ROLES), and answers each decision from the lists the vocabulary names for it; the answer is the transaction dimension. Secret keys 1, 2 and 3 are public test keys.",
+  "description": "The named-lists vocabulary (docs/governance-lists.md, \"Named lists\"). `events` are everything relays returned. A reader checks every signature FIRST, then keeps the newest passing copy per signer and d (a forged copy may keep the genuine id and claim to be newer), builds the authority from the root's role document (root = keys.root, roles from NAMED_LIST_ROLES), and answers each decision from the lists the vocabulary names for it; the answer is the transaction dimension. Secret keys 1, 2 and 3 are public test keys.",
   "format": "bitgate-named-lists-vectors/1",
   "keys": {
     "root": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
@@ -43,6 +43,22 @@
       ],
       "content": "",
       "sig": "8001ae22a497096d921ac74e6bd488e22addd6ab3ad2a268c252b1c88d95a3eebc3882c49d409e1a7517fcd13c2d10bbdc54f6b834a7841d9520084711e38a98"
+    },
+    "sellersReplaced": {
+      "id": "8e7a608e63467166759701bb6dcb674f88376c229eabecb88a037c23cc658594",
+      "pubkey": "c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5",
+      "created_at": 1763699940,
+      "kind": 30078,
+      "tags": [
+        ["d","bitunlock.sellers:governance:user-allow:v1"],
+        ["v","1"],
+        ["client","bitgate"],
+        ["scope","user-allow"],
+        ["p","01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd"],
+        ["p","04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd"]
+      ],
+      "content": "",
+      "sig": "777fb77d501546b24e0cb0be619ec836c83393195bb363d19df45be441347dde27d7eb61793230b7187c53ad67d05fe055555c8a1c3793314b86ff2999637d89"
     },
     "payees": {
       "id": "d3eeb2bebb6c25a78867390c159d802c70511b0ef4ae01cb5ee5dcd91bcf5a74",
@@ -237,6 +253,18 @@
       }
     },
     {
+      "name": "a-replaced-copy-still-reads",
+      "note": "Read on its own it is a valid list; choosing among copies (decisions) is what retires it.",
+      "event": "sellersReplaced",
+      "expect": {
+        "ok": true,
+        "list": "sellers",
+        "scope": "user-allow",
+        "entries": ["01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd","04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd"],
+        "skipped": 0
+      }
+    },
+    {
       "name": "tampered",
       "note": "A key added, and the date moved, after signing.",
       "event": "tamperedPayees",
@@ -276,7 +304,7 @@
       "expect": {
         "transaction": "deny"
       },
-      "note": "Listed only by a key with no capability."
+      "note": "Listed by a key with no capability, and in a copy of the curator's list that has since been replaced."
     },
     {
       "decision": "may-sell",

@@ -19,7 +19,7 @@
 import { DEFAULT_ROLE_CAPABILITIES } from "@bitgate/core";
 
 import { canonicalIdentifier, decodeContribution, encodeContribution, CANONICAL_KIND } from "./canonical.js";
-import { getTags } from "./replaceable.js";
+import { getTags, selectReplaceable } from "./replaceable.js";
 
 /**
  * @typedef {import('./replaceable.js').NostrEvent} NostrEvent
@@ -211,6 +211,59 @@ export function readNamedList(event, { verify } = /** @type {any} */ ({})) {
     }
   }
   return { ok: true, name, contribution: { ...contribution, targets: Array.from(targets.values()) }, skipped };
+}
+
+/**
+ * Read every named list from whatever relays returned, choosing the current
+ * copy of each.
+ *
+ * Each list is a replaceable event per signer and `d`, so relays can return
+ * several copies, and a forged one can claim to be the newest: a copy
+ * tampered with after signing keeps the genuine id and can carry a later
+ * `created_at`. So signatures are checked **before** choosing: only copies
+ * that pass are candidates, and the newest of those per signer and `d` is the
+ * list (ties to the smallest id). Choosing first and checking afterwards
+ * would let a forged newer copy push the genuine list out. A replaced copy no
+ * longer counts.
+ *
+ * @param {unknown[]} events
+ * @param {Object} options
+ * @param {(event: NostrEvent) => boolean} options.verify - Required; anything but `true` fails
+ * @returns {{ lists: Array<{ name: string, contribution: Contribution, skipped: number }>, dropped: { unverified: number } }}
+ * @throws {TypeError} Without a verifier
+ */
+export function resolveNamedLists(events, { verify } = /** @type {any} */ ({})) {
+  if (typeof verify !== "function") {
+    throw new TypeError("resolveNamedLists needs a signature check: pass { verify }. There is no unverified mode.");
+  }
+  /** @type {NostrEvent[]} */
+  const candidates = [];
+  let unverified = 0;
+  for (const event of Array.isArray(events) ? events : []) {
+    if (!namedListOf(event)) {
+      continue;
+    }
+    let ok = false;
+    try {
+      ok = verify(/** @type {NostrEvent} */ (event)) === true;
+    } catch {
+      ok = false;
+    }
+    if (ok) {
+      candidates.push(/** @type {NostrEvent} */ (event));
+    } else {
+      unverified += 1;
+    }
+  }
+  /** @type {Array<{ name: string, contribution: Contribution, skipped: number }>} */
+  const lists = [];
+  for (const event of selectReplaceable(candidates).values()) {
+    const read = readNamedList(event, { verify });
+    if (read.ok) {
+      lists.push({ name: read.name, contribution: read.contribution, skipped: read.skipped });
+    }
+  }
+  return { lists, dropped: { unverified } };
 }
 
 /**

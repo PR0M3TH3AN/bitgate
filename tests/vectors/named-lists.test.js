@@ -16,6 +16,7 @@ import {
   namedListIdentifier,
   parseListingCoordinate,
   readNamedList,
+  resolveNamedLists,
 } from "@bitgate/nostr";
 import { verifyEvent } from "@bitgate/verify";
 
@@ -40,9 +41,7 @@ const LISTING_POLICY = createPolicyDefinition({
 });
 
 function decide(decision, target) {
-  const lists = Object.values(vectors.events)
-    .map((event) => readNamedList(event, { verify: verifyEvent }))
-    .filter((result) => result.ok);
+  const { lists } = resolveNamedLists(Object.values(vectors.events), { verify: verifyEvent });
   const roles = decodeRoles(vectors.events.roles);
   if (!roles || !verifyEvent(vectors.events.roles) || roles.root !== vectors.keys.root) {
     throw new Error("the root's role document should read");
@@ -133,5 +132,28 @@ describe("listing coordinates", () => {
     ]) {
       expect(parseListingCoordinate(value), String(value)).toBeNull();
     }
+  });
+});
+
+describe("choosing the current copy", () => {
+  it("checks signatures before choosing, so a forged newer copy cannot push out the genuine one", () => {
+    const { lists, dropped } = resolveNamedLists(Object.values(vectors.events), { verify: verifyEvent });
+    expect(dropped.unverified).toBe(1);
+    const payees = lists.filter((list) => list.name === "payees");
+    expect(payees).toHaveLength(1);
+    expect(payees[0].contribution.targets.map((/** @type {any} */ t) => t.pubkey).sort()).toEqual(
+      [vectors.keys.people.alice, vectors.keys.people.carol].sort(),
+    );
+  });
+
+  it("keeps only the newest genuine copy per signer and d", () => {
+    const { lists } = resolveNamedLists(Object.values(vectors.events), { verify: verifyEvent });
+    const curatorSellers = lists.filter((list) => list.name === "sellers" && list.contribution.actor === vectors.keys.curator);
+    expect(curatorSellers).toHaveLength(1);
+    expect(curatorSellers[0].contribution.targets.map((/** @type {any} */ t) => t.pubkey)).not.toContain(vectors.keys.people.dave);
+  });
+
+  it("refuses to run without a signature check", () => {
+    expect(() => resolveNamedLists([], /** @type {any} */ ({}))).toThrow(TypeError);
   });
 });
