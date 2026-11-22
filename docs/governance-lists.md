@@ -267,13 +267,24 @@ and is held to NSWP's vectors, copied unchanged and pinned by hash in
 is its curator's word and nobody else's. Refusals: `no_verifier`, `invalid`
 (with NSWP's error codes, including `not_signed`) and `bad_signature`.
 
-**The current copy** (`resolveCurationSet({ pubkey, d })`): the list's
-coordinate `30004:<pubkey>:<d>` fixes the key. Candidates are kind-30004
-events signed by that key, with that `d`, carrying a valid signature. The
-newest wins (ties go to the smallest id). With no candidate the result is
-`not_found`, and a client that already holds a copy keeps it, as NSWP-08
-says. NSWP-08 says nothing about future-dated copies, so neither does this
-reader.
+**The current copy** (`resolveCurationSet({ coordinate, now })`, or
+`{ pubkey, d, now }`) is chosen exactly as NSWP-08 chooses it (NSWP's
+`resolveList`):
+
+- The list's coordinate `30004:<pubkey>:<d>` fixes the key.
+- Candidates are kind-30004 events signed by that key, with **exactly one**
+  `d` tag equal to the list's, and a valid signature. Each id counts once.
+- **A copy dated more than 600 seconds after the reader's `now` is left out
+  before choosing**, and named in `futureDated`, so a copy signed with a fast
+  clock cannot stand over every honest newer one. Exactly 600 seconds ahead
+  is still chosen.
+- The newest of the rest wins; a tie goes to the smallest id.
+- If the newest can't be read, there is no list, and an older copy never
+  stands in for it.
+- With no candidate the result is `not_found`. A client that already holds a
+  copy keeps it, as NSWP-08 says.
+
+This is held to NSWP's own `choosing` vectors in `vectors/nswp/lists.json`.
 
 **As an allowlist:** `curationSetToContribution(list)` gives an
 `address-allow` contribution, or `address-deny` if asked, with the curator as

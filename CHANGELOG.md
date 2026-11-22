@@ -7,6 +7,19 @@ public API changes with it.
 
 ## [Unreleased]
 
+### Changed — curation sets: copies dated in the future are left out
+
+- `resolveCurationSet` now follows NSWP-08's rule (NSWP 7c71118):
+  - a copy dated more than 600 s after the reader's `now` is left out before
+    choosing, and named in `futureDated`;
+  - a candidate needs exactly one `d` tag equal to the list's;
+  - each id counts once.
+- It takes `coordinate` as well as `{ pubkey, d }`, and results carry the
+  chosen `id`.
+- `vectors/nswp/lists.json` is re-copied at 7c71118, with its new `choosing`
+  section, and re-pinned by hash. BitGate's own curation-set vectors gain a
+  two-`d` case.
+
 ### Changed — the typecheck reads sources
 
 - `npm run lint`, `check:types` and `typecheck` now use `tsconfig.check.json`

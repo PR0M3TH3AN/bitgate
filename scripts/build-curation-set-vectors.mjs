@@ -81,6 +81,7 @@ export function buildCurationVectors() {
   const otherCurator = sign({ created_at: CREATED_AT + 120, entries: [ARCADE] }, OTHER_SK);
   const forged = { ...sign({ created_at: CREATED_AT + 180, entries: [ARCADE] }), sig: older.sig };
   const otherList = sign({ d: "bitportal-starter", created_at: CREATED_AT + 240, entries: [ARCADE] });
+  const twoDs = sign({ created_at: CREATED_AT + 300, entries: [ARCADE], extra: [["d", "another"]] });
   const resolve = [
     { name: "newest-copy-from-the-same-key", note: "A newer copy replaces an older one when the same key signed it.",
       query, events: [older, newer], expect: ok({ curator: HOST, d: "bitportal", title: "bitportal", worlds: [GROVE, MUSEUM], warnings: [] }) },
@@ -88,6 +89,8 @@ export function buildCurationVectors() {
       query, events: [older, otherCurator], expect: ok({ curator: HOST, d: "bitportal", title: "bitportal", worlds: [GROVE], warnings: [] }) },
     { name: "forged-newer-is-not-a-candidate", note: "A newer copy under the host's key without the host's signature changes nothing.",
       query, events: [older, forged], expect: ok({ curator: HOST, d: "bitportal", title: "bitportal", worlds: [GROVE], warnings: [] }) },
+    { name: "two-d-tags-is-not-a-candidate", note: "A copy must carry exactly one d, equal to the list's; a newer copy with two is passed over.",
+      query, events: [older, twoDs], expect: ok({ curator: HOST, d: "bitportal", title: "bitportal", worlds: [GROVE], warnings: [] }) },
     { name: "another-d-is-not-found", note: "The host's other list does not answer for this one.",
       query, events: [otherList], expect: refused("not_found") },
   ];
