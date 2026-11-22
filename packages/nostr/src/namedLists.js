@@ -9,9 +9,9 @@
 // and which lists each decision reads. Readers in other projects are held to
 // vectors/governance-lists/named-lists.json, not to this code.
 //
-// The names are proposed by BitGate and provisional until the fleet's
-// orchestrator records them as given; changing one here is a one-line change
-// plus regenerated vectors.
+// The names were given by the fleet's orchestrator on 2026-11-21 (NSWP
+// docs/fleet.md, "Names given"). They are now an agreement between projects:
+// change one only after asking there, then regenerate the vectors.
 //
 // Worlds are not here: a host's list of worlds and a curator's starter set
 // are NSWP-08 curation sets (curationSets.js), read as they are.

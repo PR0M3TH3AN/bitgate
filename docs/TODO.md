@@ -307,7 +307,7 @@ The design was agreed with it; the record is `docs/reports/2026-11-21-lists-answ
 - [x] Curation sets (kind 30004, NSWP-08) read as `address-allow` input, held to
   NSWP's own vectors (`vectors/nswp/`).
 - [x] Named-lists vocabulary (sellers, payees, listings, people) with decisions, as
-  vectors. The names are provisional until given.
+  vectors. The names were given by the orchestrator on 2026-11-21.
 - [x] A required signature check on the application-wide headless path
   (`readLabelContributions`, `readContributionLists`, `resolveVerifiedRoster`).
 - [ ] Hidden (encrypted) lists, which need a group key. That is a new version,
