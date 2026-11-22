@@ -32,8 +32,7 @@ public API changes with it.
   `contributionsForDecision`, `namedListIdentifier` and `encodeNamedList`.
 - **Vectors:** `vectors/governance-lists/named-lists.json` gives the events,
   their reading and every decision's answer.
-- The names are provisional until the fleet's orchestrator records them as
-  given.
+- The names were given by the fleet's orchestrator on 2026-11-21.
 
 ### Added — curation sets (kind 30004, NSWP-08) as input
 

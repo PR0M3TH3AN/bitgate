@@ -360,9 +360,9 @@ a copy that fails it is dropped.
 **Worlds are not here.** A host's list of worlds and a curator's starter set
 are NSWP-08 curation sets, read as they are (above).
 
-**The names are provisional.** Under the fleet's rule that anything there is
-only one of is given before it is used, the five namespaces are proposed by
-BitGate and count once the orchestrator records them as given.
+**The names are given.** The four namespaces and the `list-curator` role were
+given by the fleet's orchestrator on 2026-11-21 (NSWP `docs/fleet.md`, "Names
+given"). Change one only after asking there.
 
 ## Checking signatures on the headless path
 
@@ -391,6 +391,6 @@ used:
 - The `subject` tag inside kind-30078 governance documents was given by the
   BitPortal orchestrator on 2026-11-21, with the go-ahead for this format.
 - No new kind number is used.
-- The named lists' five namespaces (`bitunlock.sellers`, `bitunlock.payees`,
-  `bitunlock.listings`, `bitunlock.people`) and the `list-curator` role are
-  proposed, not yet given.
+- The named lists' four namespaces (`bitunlock.sellers`, `bitunlock.payees`,
+  `bitunlock.listings`, `bitunlock.people`) and the `list-curator` role were
+  given by the orchestrator on 2026-11-21.
