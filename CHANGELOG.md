@@ -7,6 +7,22 @@ public API changes with it.
 
 ## [Unreleased]
 
+### Added — the named-lists vocabulary
+
+- **One curator, several lists:** `sellers`, `payees`, `listings-allowed`,
+  `listings-blocked` and `people-blocked`, each under a namespace of its own,
+  so they replace independently.
+- **The decisions each list feeds:** `may-sell`, `may-be-paid`,
+  `may-sell-listing` and `may-sell-listing-curated`, each answered on the
+  transaction dimension, with blocked beating allowed.
+- **The `list-curator` role** (`NAMED_LIST_ROLES`): list powers only.
+- **API:** `readNamedList` (a signature check is required),
+  `contributionsForDecision`, `namedListIdentifier` and `encodeNamedList`.
+- **Vectors:** `vectors/governance-lists/named-lists.json` gives the events,
+  their reading and every decision's answer.
+- The names are provisional until the fleet's orchestrator records them as
+  given.
+
 ### Added — curation sets (kind 30004, NSWP-08) as input
 
 - **`parseCurationSet`, `readCurationSet`, `resolveCurationSet` and

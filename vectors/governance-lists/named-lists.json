@@ -1,0 +1,358 @@
+{
+  "description": "The named-lists vocabulary (docs/governance-lists.md, \"Named lists\"). `events` are everything relays returned. A reader reads each with a signature check, builds the authority from the root's role document (root = keys.root, roles from NAMED_LIST_ROLES), and answers each decision from the lists the vocabulary names for it; the answer is the transaction dimension. Secret keys 1, 2 and 3 are public test keys.",
+  "format": "bitgate-named-lists-vectors/1",
+  "keys": {
+    "root": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+    "curator": "c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5",
+    "stranger": "f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9",
+    "people": {
+      "alice": "01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd",
+      "bob": "02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd",
+      "carol": "03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd",
+      "dave": "04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd"
+    }
+  },
+  "events": {
+    "roles": {
+      "id": "42cc727692d07731b241fc6beab256f61b7b7fb973517b538e9a24e3978eb08d",
+      "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+      "created_at": 1763700000,
+      "kind": 30078,
+      "tags": [
+        ["d","bitunlock:governance:roles:v1"],
+        ["v","1"],
+        ["client","bitgate"],
+        ["scope","roles"],
+        ["p","c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5","list-curator"]
+      ],
+      "content": "",
+      "sig": "556db8bec46cf5db40e99f3b780444cda108f82953f2ce427d674b7fb5aa89f3e76f996207fb77727f186b89f486308250e8f53f445425a8f1089cc411082b1f"
+    },
+    "sellers": {
+      "id": "6f86f991b90054e632765d9ef4282497aba12dbffb67be14017090bfed240fa5",
+      "pubkey": "c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5",
+      "created_at": 1763700000,
+      "kind": 30078,
+      "tags": [
+        ["d","bitunlock.sellers:governance:user-allow:v1"],
+        ["v","1"],
+        ["client","bitgate"],
+        ["scope","user-allow"],
+        ["p","01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd"],
+        ["p","02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd"]
+      ],
+      "content": "",
+      "sig": "8001ae22a497096d921ac74e6bd488e22addd6ab3ad2a268c252b1c88d95a3eebc3882c49d409e1a7517fcd13c2d10bbdc54f6b834a7841d9520084711e38a98"
+    },
+    "payees": {
+      "id": "d3eeb2bebb6c25a78867390c159d802c70511b0ef4ae01cb5ee5dcd91bcf5a74",
+      "pubkey": "c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5",
+      "created_at": 1763700000,
+      "kind": 30078,
+      "tags": [
+        ["d","bitunlock.payees:governance:user-allow:v1"],
+        ["v","1"],
+        ["client","bitgate"],
+        ["scope","user-allow"],
+        ["p","01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd"],
+        ["p","03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd"]
+      ],
+      "content": "",
+      "sig": "f3700c6e86431cb18c6def523c02bd871573bf46aa8f9a31a18aa657bacbbd6a5bb12428caac44d2dbe193384fb5ec2f19df71ac689aa6f193902a69ed7f21c8"
+    },
+    "peopleBlocked": {
+      "id": "e8201f0d1e5af54e848613a484ebb328375b6edf79ad8674a6a39a56520fe671",
+      "pubkey": "c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5",
+      "created_at": 1763700000,
+      "kind": 30078,
+      "tags": [
+        ["d","bitunlock.people:governance:user-deny:v1"],
+        ["v","1"],
+        ["client","bitgate"],
+        ["scope","user-deny"],
+        ["p","02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd"]
+      ],
+      "content": "",
+      "sig": "810bb44c8ead27ea95f9a82e07aa68a270a94c308d5febd52cff8795c1c1b22fb601042b9bea1f3cdd82f1324126aefc9f75d8d793d09c0827d98f28c0d7924e"
+    },
+    "listingsAllowed": {
+      "id": "dc5990a59fc6155da49a239a6f7a5563792d9492512e80390562d9f5a82c0bf6",
+      "pubkey": "c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5",
+      "created_at": 1763700000,
+      "kind": 30078,
+      "tags": [
+        ["d","bitunlock.listings:governance:address-allow:v1"],
+        ["v","1"],
+        ["client","bitgate"],
+        ["scope","address-allow"],
+        ["a","30078:01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd:song-1"]
+      ],
+      "content": "",
+      "sig": "fd367432e15793ec4d886d8f4d72e6dd77acb7f0e21a5cbab99af635f339328b6c776e818e39bbb72b90bf13d287914e5a9ef3446a5202c48efab6d5fcf4940d"
+    },
+    "listingsBlocked": {
+      "id": "dd868b74c36d375275e562e2725034f723a67e5d60d9fcb9147c5009e3eeff74",
+      "pubkey": "c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5",
+      "created_at": 1763700000,
+      "kind": 30078,
+      "tags": [
+        ["d","bitunlock.listings:governance:address-deny:v1"],
+        ["v","1"],
+        ["client","bitgate"],
+        ["scope","address-deny"],
+        ["a","30078:01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd:song-2"]
+      ],
+      "content": "",
+      "sig": "16043f05f179aeab25c22ab9347367a29769a2754894487fa4c1118947f8ac76db773926d0df4698f770e75a7303f719530074eb3140e4828c43e06bd0607b5b"
+    },
+    "strangerSellers": {
+      "id": "c9e39dbe77d1f57722e0b8153346d8eecce6ccb72f546ad1293ff5312998dd5d",
+      "pubkey": "f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9",
+      "created_at": 1763700000,
+      "kind": 30078,
+      "tags": [
+        ["d","bitunlock.sellers:governance:user-allow:v1"],
+        ["v","1"],
+        ["client","bitgate"],
+        ["scope","user-allow"],
+        ["p","04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd"]
+      ],
+      "content": "",
+      "sig": "55fce279b45a42d3d50ed289d0ea2f5e7b4a4197618cbe763cee6496a77e52b3070f76208c72a7c08d07464b40a2f3426ef3904b2fbc6f0fe62e021f744231d5"
+    },
+    "notNamed": {
+      "id": "9b81974774e12d3dae5fa4d6072dca480271df6187fd7dea26bf6dbf4100d528",
+      "pubkey": "c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5",
+      "created_at": 1763700000,
+      "kind": 30078,
+      "tags": [
+        ["d","bitunlock:governance:user-allow:v1"],
+        ["p","04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd"]
+      ],
+      "content": "",
+      "sig": "b2078fad52f23de3156fac321b77176c6c878ca39ffad556667b5122749227a6d63e30152ff3bbb21ea192bc7cf4601e3918c1c371b54efba6fa24e2c9bbd923"
+    },
+    "tamperedPayees": {
+      "id": "d3eeb2bebb6c25a78867390c159d802c70511b0ef4ae01cb5ee5dcd91bcf5a74",
+      "pubkey": "c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5",
+      "created_at": 1763700060,
+      "kind": 30078,
+      "tags": [
+        ["d","bitunlock.payees:governance:user-allow:v1"],
+        ["v","1"],
+        ["client","bitgate"],
+        ["scope","user-allow"],
+        ["p","01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd"],
+        ["p","03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd"],
+        ["p","04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd"]
+      ],
+      "content": "",
+      "sig": "f3700c6e86431cb18c6def523c02bd871573bf46aa8f9a31a18aa657bacbbd6a5bb12428caac44d2dbe193384fb5ec2f19df71ac689aa6f193902a69ed7f21c8"
+    }
+  },
+  "read": [
+    {
+      "name": "sellers",
+      "event": "sellers",
+      "expect": {
+        "ok": true,
+        "list": "sellers",
+        "scope": "user-allow",
+        "entries": ["01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd","02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd"]
+      }
+    },
+    {
+      "name": "payees",
+      "event": "payees",
+      "expect": {
+        "ok": true,
+        "list": "payees",
+        "scope": "user-allow",
+        "entries": ["01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd","03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd"]
+      }
+    },
+    {
+      "name": "people-blocked",
+      "event": "peopleBlocked",
+      "expect": {
+        "ok": true,
+        "list": "people-blocked",
+        "scope": "user-deny",
+        "entries": ["02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd"]
+      }
+    },
+    {
+      "name": "listings-allowed",
+      "event": "listingsAllowed",
+      "expect": {
+        "ok": true,
+        "list": "listings-allowed",
+        "scope": "address-allow",
+        "entries": ["30078:01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd:song-1"]
+      }
+    },
+    {
+      "name": "listings-blocked",
+      "event": "listingsBlocked",
+      "expect": {
+        "ok": true,
+        "list": "listings-blocked",
+        "scope": "address-deny",
+        "entries": ["30078:01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd:song-2"]
+      }
+    },
+    {
+      "name": "a-stranger-can-publish-a-named-list",
+      "note": "It reads; it just counts for nothing without the capability (see decisions).",
+      "event": "strangerSellers",
+      "expect": {
+        "ok": true,
+        "list": "sellers",
+        "scope": "user-allow",
+        "entries": ["04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd"]
+      }
+    },
+    {
+      "name": "not-in-the-vocabulary",
+      "note": "An application-wide list whose d is not a named list's.",
+      "event": "notNamed",
+      "expect": {
+        "ok": false,
+        "reason": "not_a_named_list"
+      }
+    },
+    {
+      "name": "tampered",
+      "note": "A key added, and the date moved, after signing.",
+      "event": "tamperedPayees",
+      "expect": {
+        "ok": false,
+        "reason": "bad_signature"
+      }
+    }
+  ],
+  "decisions": [
+    {
+      "decision": "may-sell",
+      "target": "01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd",
+      "expect": {
+        "transaction": "allow"
+      }
+    },
+    {
+      "decision": "may-sell",
+      "target": "02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd",
+      "expect": {
+        "transaction": "deny"
+      },
+      "note": "On the sellers list and blocked: blocked wins."
+    },
+    {
+      "decision": "may-sell",
+      "target": "03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd",
+      "expect": {
+        "transaction": "deny"
+      },
+      "note": "Payable is not the same as able to sell."
+    },
+    {
+      "decision": "may-sell",
+      "target": "04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd",
+      "expect": {
+        "transaction": "deny"
+      },
+      "note": "Listed only by a key with no capability."
+    },
+    {
+      "decision": "may-sell",
+      "target": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+      "expect": {
+        "transaction": "allow"
+      },
+      "note": "The root is never gated."
+    },
+    {
+      "decision": "may-be-paid",
+      "target": "01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd",
+      "expect": {
+        "transaction": "allow"
+      }
+    },
+    {
+      "decision": "may-be-paid",
+      "target": "03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd",
+      "expect": {
+        "transaction": "allow"
+      }
+    },
+    {
+      "decision": "may-be-paid",
+      "target": "02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd",
+      "expect": {
+        "transaction": "deny"
+      },
+      "note": "Blocked, and not on the payees list."
+    },
+    {
+      "decision": "may-be-paid",
+      "target": "04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd04cd",
+      "expect": {
+        "transaction": "deny"
+      },
+      "note": "Named only in a copy that fails its signature check."
+    },
+    {
+      "decision": "may-sell-listing",
+      "target": "30078:01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd:song-1",
+      "expect": {
+        "transaction": "allow"
+      }
+    },
+    {
+      "decision": "may-sell-listing",
+      "target": "30078:01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd:song-2",
+      "expect": {
+        "transaction": "deny"
+      },
+      "note": "On the blocked-listings list."
+    },
+    {
+      "decision": "may-sell-listing",
+      "target": "30078:02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd02cd:song-3",
+      "expect": {
+        "transaction": "deny"
+      },
+      "note": "Its seller is blocked."
+    },
+    {
+      "decision": "may-sell-listing",
+      "target": "30078:03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd:song-4",
+      "expect": {
+        "transaction": "allow"
+      },
+      "note": "Not curated: anything not blocked may be sold."
+    },
+    {
+      "decision": "may-sell-listing-curated",
+      "target": "30078:01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd:song-1",
+      "expect": {
+        "transaction": "allow"
+      }
+    },
+    {
+      "decision": "may-sell-listing-curated",
+      "target": "30078:03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd03cd:song-4",
+      "expect": {
+        "transaction": "deny"
+      },
+      "note": "Curated: only listed listings."
+    },
+    {
+      "decision": "may-sell-listing-curated",
+      "target": "30078:01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd01cd:song-2",
+      "expect": {
+        "transaction": "deny"
+      }
+    }
+  ]
+}
