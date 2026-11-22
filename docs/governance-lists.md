@@ -391,6 +391,18 @@ holds `contribute-user-allow`, `contribute-user-deny`,
 curator's or the root's counts. Every list is read with a signature check, and
 a copy that fails it is dropped.
 
+**Choosing the current copy** (`resolveNamedLists`):
+- Each named list is a replaceable event per signer and `d`, so relays can
+  return several copies.
+- **Signatures are checked before choosing.** A copy tampered with after
+  signing keeps the genuine id and can claim a later `created_at`. A reader
+  that picked the newest copy first and checked it afterwards would let that
+  forgery push the genuine list out.
+- Only copies that pass are candidates. The newest per signer and `d` is the
+  list (ties go to the smallest id), and a replaced copy no longer counts.
+- The vectors hold both rules: a tampered, newer `payees` copy, and a
+  replaced `sellers` copy.
+
 **Worlds are not here.** A host's list of worlds and a curator's starter set
 are NSWP-08 curation sets, read as they are (above).
 

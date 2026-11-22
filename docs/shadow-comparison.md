@@ -31,9 +31,11 @@ session checks them against its own code before building.
    answer throws, the error is caught and logged as `bitgate: "unavailable"`,
    and the request goes on untouched.
 2. **Never call a service or a relay in a request.** Lists are fetched in the
-   background, read with a signature check (`readNamedList`,
-   `readCurationSet`; BitGate's readers refuse to run without one), and kept
-   locally. A request reads only that local copy. No local copy, or one older
+   background, read with a signature check (`resolveNamedLists`,
+   `resolveCurationSet`; BitGate's readers refuse to run without one), and
+   kept locally. **Signatures are checked before the newest copy of a list is
+   chosen,** never after: a forged copy can keep the genuine id and claim to be
+   newer. A replaced copy no longer counts. A request reads only that local copy. No local copy, or one older
    than its freshness limit, means `bitgate: "unavailable"`, never a guess.
 3. **Log the answer, never the subject.** No key (hex or npub), listing
    coordinate or name, world coordinate or name, tenant id, quote or order id,

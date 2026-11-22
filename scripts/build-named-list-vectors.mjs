@@ -46,8 +46,8 @@ const withRawTags = (/** @type {{ kind: number, content: string, tags: string[][
 });
 const CREATED_AT = 1_763_700_000;
 
-function sign(template, sk) {
-  const event = { pubkey: hex(schnorr.getPublicKey(sk)), created_at: CREATED_AT, kind: template.kind, tags: template.tags, content: template.content };
+function sign(template, sk, createdAt = CREATED_AT) {
+  const event = { pubkey: hex(schnorr.getPublicKey(sk)), created_at: createdAt, kind: template.kind, tags: template.tags, content: template.content };
   const id = computeEventId(event);
   return { id, ...event, sig: hex(schnorr.sign(id, sk, AUX)) };
 }
@@ -63,6 +63,8 @@ export function buildNamedVectors() {
   const events = {
     roles: sign(encodeRoles({ actors: { [CURATOR]: ["list-curator"] } }, "bitunlock"), ROOT_SK),
     sellers: sign(encodeNamedList("sellers", users(ALICE, BOB)), CURATOR_SK),
+    // An older genuine copy of the same list, since replaced: it no longer counts.
+    sellersReplaced: sign(encodeNamedList("sellers", users(ALICE, DAVE)), CURATOR_SK, CREATED_AT - 60),
     payees: sign(encodeNamedList("payees", users(ALICE, CAROL)), CURATOR_SK),
     peopleBlocked: sign(encodeNamedList("people-blocked", users(BOB)), CURATOR_SK),
     listingsAllowed: sign(encodeNamedList("listings-allowed", [address(listing(ALICE, "song-1"))]), CURATOR_SK),
@@ -101,6 +103,8 @@ export function buildNamedVectors() {
   for (const testCase of read) {
     if (testCase.expect.ok && !("skipped" in testCase.expect)) /** @type {any} */ (testCase.expect).skipped = 0;
   }
+  read.push({ name: "a-replaced-copy-still-reads", note: "Read on its own it is a valid list; choosing among copies (decisions) is what retires it.",
+    event: "sellersReplaced", expect: { ok: true, list: "sellers", scope: "user-allow", entries: [ALICE, DAVE].sort(), skipped: 0 } });
   read.push({ name: "tampered", note: "A key added, and the date moved, after signing.", event: "tamperedPayees", expect: { ok: false, reason: "bad_signature" } });
 
   const ask = (decision, target, transaction, note) => ({ decision, target, expect: { transaction }, ...(note ? { note } : {}) });
@@ -108,7 +112,7 @@ export function buildNamedVectors() {
     ask("may-sell", ALICE, "allow"),
     ask("may-sell", BOB, "deny", "On the sellers list and blocked: blocked wins."),
     ask("may-sell", CAROL, "deny", "Payable is not the same as able to sell."),
-    ask("may-sell", DAVE, "deny", "Listed only by a key with no capability."),
+    ask("may-sell", DAVE, "deny", "Listed by a key with no capability, and in a copy of the curator's list that has since been replaced."),
     ask("may-sell", ROOT, "allow", "The root is never gated."),
     ask("may-be-paid", ALICE, "allow"),
     ask("may-be-paid", CAROL, "allow"),
@@ -128,7 +132,7 @@ export function buildNamedVectors() {
 
   return {
     description:
-      "The named-lists vocabulary (docs/governance-lists.md, \"Named lists\"). `events` are everything relays returned. A reader reads each with a signature check, builds the authority from the root's role document (root = keys.root, roles from NAMED_LIST_ROLES), and answers each decision from the lists the vocabulary names for it; the answer is the transaction dimension. Secret keys 1, 2 and 3 are public test keys.",
+      "The named-lists vocabulary (docs/governance-lists.md, \"Named lists\"). `events` are everything relays returned. A reader checks every signature FIRST, then keeps the newest passing copy per signer and d (a forged copy may keep the genuine id and claim to be newer), builds the authority from the root's role document (root = keys.root, roles from NAMED_LIST_ROLES), and answers each decision from the lists the vocabulary names for it; the answer is the transaction dimension. Secret keys 1, 2 and 3 are public test keys.",
     format: "bitgate-named-lists-vectors/1",
     keys: { root: ROOT, curator: CURATOR, stranger: STRANGER, people: { alice: ALICE, bob: BOB, carol: CAROL, dave: DAVE } },
     events,
