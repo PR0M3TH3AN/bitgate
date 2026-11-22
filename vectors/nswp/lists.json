@@ -1239,7 +1239,7 @@
     }
   ],
   "choosing": {
-    "description": "Choosing a list from the copies relays gave for its coordinate: those of kind 30004 signed by its key, with exactly its d and a good signature. A copy dated more than 600 seconds after `now` is left out before choosing and named in `futureDated`; the newest of the rest is `chosen` (its id), a tie going to the smallest id; null for none.",
+    "description": "Choosing a list from the copies relays gave for its coordinate: those of kind 30004 signed by its key, with exactly one d tag, its d, and a good signature. A copy dated more than 600 seconds after `now` is left out before choosing and named in `futureDated`; the newest of the rest is `chosen` (its id), a tie going to the smallest id; null for none.",
     "vectors": [
       {
         "name": "exactly_600_seconds_ahead_is_read",
@@ -1708,6 +1708,91 @@
             "pubkey": "01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6",
             "id": "22b906707737b417c92972caabd11a9b61b8552741aef1470ca6563a90ab4fca",
             "sig": "c675d319cf581c4f1a930b3098d0ce34388bb91222639c9bcf628d5ade9cfb20ac0a6a9dcf1b90590b4bb4c121cf07f884eb7c7e0a2cae483c38deb09b5feb3f"
+          }
+        ],
+        "expect": {
+          "chosen": "322cc2fd31b9040e93cc9f0754ad277f1fc45ac7a8bf0c4968e5de74a8232037",
+          "title": "Quiet places, yesterday",
+          "futureDated": []
+        }
+      },
+      {
+        "name": "two_d_tags_are_passed_over",
+        "description": "A newer, signed copy with two d tags (the first of them the list's) is passed over: a copy must have exactly one. The older copy stands.",
+        "coordinate": "30004:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:quiet-places",
+        "now": 1794517200,
+        "events": [
+          {
+            "kind": 30004,
+            "created_at": 1794430800,
+            "tags": [
+              [
+                "d",
+                "quiet-places"
+              ],
+              [
+                "title",
+                "Quiet places, yesterday"
+              ],
+              [
+                "description",
+                "Worlds worth sitting down in."
+              ],
+              [
+                "a",
+                "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:example-museum"
+              ],
+              [
+                "a",
+                "37300:9f291ef1d9b69e3f1bec4935f0fc53b2e471830509adcf8128076406bc5b6bd6:grove"
+              ],
+              [
+                "alt",
+                "A list of spatial worlds: Quiet places, yesterday"
+              ]
+            ],
+            "content": "",
+            "pubkey": "01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6",
+            "id": "322cc2fd31b9040e93cc9f0754ad277f1fc45ac7a8bf0c4968e5de74a8232037",
+            "sig": "1667fa12703301eaba5efd9f42a98769311bed7784546c7b99a3820faa2431e1125f058e6aea1e125015ce6ba63b7f6cd47e75c0e2ae5137fe28933da3822925"
+          },
+          {
+            "kind": 30004,
+            "created_at": 1794517195,
+            "tags": [
+              [
+                "d",
+                "quiet-places"
+              ],
+              [
+                "d",
+                "loud-places"
+              ],
+              [
+                "title",
+                "Quiet places, under two names"
+              ],
+              [
+                "description",
+                "Worlds worth sitting down in."
+              ],
+              [
+                "a",
+                "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:example-museum"
+              ],
+              [
+                "a",
+                "37300:9f291ef1d9b69e3f1bec4935f0fc53b2e471830509adcf8128076406bc5b6bd6:grove"
+              ],
+              [
+                "alt",
+                "A list of spatial worlds: Quiet places, under two names"
+              ]
+            ],
+            "content": "",
+            "pubkey": "01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6",
+            "id": "96571f1f2b01270e4c09f69b3130a79b195231885f37267c3c1671716fb054a8",
+            "sig": "ca11dc58dbed560a11a1f518bf6cd73c9704c60d59f1d5e75779c0733e27d8e6c85ad5cff315374d26020b38ea59dc9ee985ea98915d6a1380a1cb7a74aff739"
           }
         ],
         "expect": {
