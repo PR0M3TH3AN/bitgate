@@ -153,9 +153,15 @@ copy.
   - it computes both answers for every world;
   - it writes a report to the operator's machine.
 
-  It runs first against the stand-in relay with test keys. A read-only run
-  against public relays reads public events and publishes nothing; whether to
-  run it is the orchestrator's call.
+  It runs first against the stand-in relay with test keys.
+
+  **A read-only run against public relays is agreed** (the orchestrator,
+  2026-11-22, as design). It reads only public events: BitPortal's published
+  `d=bitportal` curation set and starter set, through BitGate's 30004 reader,
+  and any governance lists that exist. It publishes nothing and uses no key.
+  It runs from the operator's machine as a script, and writes its log lines
+  only to its own output. BitPortal's room already reads the same relays, so
+  nothing new is exposed.
 - **Expected:** full agreement, since both read the same signed list. A
   disagreement is a reader difference, which is exactly what the shadow is for:
   the `d` rule, future-dated copies, a world's name with a colon.
