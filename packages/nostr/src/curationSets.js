@@ -29,13 +29,16 @@ export const NSWP_WORLD_KIND = 37300;
 
 /**
  * Ceilings, as NSWP-08 sets them. Lengths are JavaScript string lengths
- * (UTF-16 code units), as NSWP's own reader measures them.
+ * (UTF-16 code units), as NSWP's own reader measures them. `ahead`: how far
+ * ahead of the reader's clock, in seconds, a copy may be dated and still be
+ * chosen.
  */
 export const CURATION_SET_LIMITS = Object.freeze({
   entries: 200,
   titleChars: 200,
   descriptionChars: 1000,
   dChars: 128,
+  ahead: 600,
 });
 
 const HEX64 = /^[0-9a-f]{64}$/;
@@ -85,6 +88,7 @@ function isSignedShape(event) {
     Number.isInteger(event.created_at) &&
     typeof event.content === "string" &&
     Array.isArray(event.tags) &&
+    event.tags.every((/** @type {unknown} */ tag) => Array.isArray(tag) && tag.every((part) => typeof part === "string")) &&
     HEX64.test(event.id ?? "") &&
     HEX64.test(event.pubkey ?? "") &&
     /^[0-9a-f]{128}$/.test(event.sig ?? "")
@@ -210,7 +214,7 @@ export function parseCurationSet(input, { requireSigned = false, addressKind = N
 }
 
 /**
- * @typedef {{ ok: true, list: CurationSet & { pubkey: string, coordinate: string }, warnings: string[] }} CurationSetRead
+ * @typedef {{ ok: true, id: string, list: CurationSet & { pubkey: string, coordinate: string }, warnings: string[] }} CurationSetRead
  * @typedef {{ ok: false, reason: "no_verifier" | "invalid" | "bad_signature" | "not_found", errors?: string[] }} CurationSetRefusal
  */
 
@@ -244,56 +248,96 @@ export function readCurationSet(event, { verify, addressKind } = /** @type {any}
   }
   return {
     ok: true,
+    id: /** @type {NostrEvent} */ (event).id,
     list: /** @type {CurationSet & { pubkey: string, coordinate: string }} */ (parsed.list),
     warnings: parsed.warnings,
   };
 }
 
 /**
- * Pick and read the current copy of a followed list: the coordinate
- * `30004:<pubkey>:<d>` fixes the key.
+ * Pick and read the current copy of a followed list, exactly as NSWP-08
+ * chooses it (NSWP `resolveList`, `protocol/08-lists.md`).
  *
- * Candidates are kind-30004 events signed by that key, whose first `d` is
- * exactly `d`, with a valid signature. The newest wins (ties to the smallest
- * id), so a newer copy replaces an older one only when the same key signed it
- * and it is later, as NSWP-08 says. With no candidate the result is
- * `not_found`; a client that already holds a copy keeps it ("when relays are
- * silent, the last copy the client saw stands").
+ * The list's coordinate `30004:<pubkey>:<d>` fixes the key. Candidates are
+ * kind-30004 events signed by that key, with exactly one `d` tag equal to
+ * `d`, and a valid signature, each id counted once. A candidate dated more
+ * than {@link CURATION_SET_LIMITS}.ahead (600) seconds after `now` is left
+ * out before choosing and named in `futureDated`, so a copy signed with a
+ * clock a year fast cannot stand over every honest newer one. Exactly 600
+ * seconds ahead is still chosen. The newest of the rest wins (ties to the
+ * smallest id), and is read in full; if it cannot be read there is no list,
+ * and an older copy never stands in for it. With no candidate the result is
+ * `not_found`; a client that already holds a copy keeps it, as NSWP-08 says.
  *
  * @param {unknown[]} events
  * @param {Object} query
- * @param {string} query.pubkey - The curator's key (64 lowercase hex)
- * @param {string} query.d
+ * @param {string} [query.coordinate] - `30004:<pubkey>:<d>`; or give `pubkey` and `d`
+ * @param {string} [query.pubkey] - The curator's key (64 lowercase hex)
+ * @param {string} [query.d]
  * @param {(event: NostrEvent) => boolean} query.verify
+ * @param {number} [query.now] - Reader's clock in unix seconds; defaults to the system clock
  * @param {number} [query.addressKind]
- * @returns {CurationSetRead|CurationSetRefusal}
+ * @returns {(CurationSetRead|CurationSetRefusal) & { futureDated: string[] }}
  */
-export function resolveCurationSet(events, { pubkey, d, verify, addressKind }) {
+export function resolveCurationSet(events, { coordinate, pubkey, d, verify, now, addressKind }) {
   if (typeof verify !== "function") {
-    return { ok: false, reason: "no_verifier" };
+    return { ok: false, reason: "no_verifier", futureDated: [] };
+  }
+  if (coordinate !== undefined) {
+    const match = typeof coordinate === "string" ? /^(\d+):([0-9a-f]{64}):(.*)$/s.exec(coordinate) : null;
+    if (!match || Number(match[1]) !== CURATION_SET_KIND) {
+      throw new TypeError(`Not a list coordinate (30004:<pubkey>:<d>): ${JSON.stringify(coordinate)}`);
+    }
+    pubkey = match[2];
+    d = match[3];
   }
   if (typeof pubkey !== "string" || !HEX64.test(pubkey) || typeof d !== "string") {
-    throw new TypeError("resolveCurationSet needs the curator's pubkey (64 lowercase hex) and the list's d");
+    throw new TypeError("resolveCurationSet needs the list's coordinate, or the curator's pubkey (64 lowercase hex) and d");
   }
-  const candidates = (Array.isArray(events) ? events : []).filter((event) => {
+  if (now !== undefined && !Number.isInteger(now)) {
+    throw new TypeError("now must be an integer number of unix seconds");
+  }
+  const at = now ?? Math.floor(Date.now() / 1000);
+
+  /** @type {NostrEvent[]} */
+  const candidates = [];
+  /** @type {string[]} */
+  const futureDated = [];
+  const seen = new Set();
+  for (const event of Array.isArray(events) ? events : []) {
     if (!isSignedShape(event)) {
-      return false;
+      continue;
     }
     const e = /** @type {NostrEvent} */ (event);
-    if (e.kind !== CURATION_SET_KIND || e.pubkey !== pubkey || firstValue(e.tags, "d") !== d) {
-      return false;
+    if (e.kind !== CURATION_SET_KIND || e.pubkey !== pubkey || seen.has(e.id)) {
+      continue;
     }
+    const ds = e.tags.filter((tag) => tag[0] === "d");
+    if (ds.length !== 1 || ds[0][1] !== d) {
+      continue;
+    }
+    let signed = false;
     try {
-      return verify(e) === true;
+      signed = verify(e) === true;
     } catch {
-      return false;
+      signed = false;
     }
-  });
-  const latest = selectLatest(/** @type {NostrEvent[]} */ (candidates));
-  if (!latest) {
-    return { ok: false, reason: "not_found" };
+    if (!signed) {
+      continue;
+    }
+    seen.add(e.id);
+    if (e.created_at > at + CURATION_SET_LIMITS.ahead) {
+      futureDated.push(e.id);
+    } else {
+      candidates.push(e);
+    }
   }
-  return readCurationSet(latest, { verify, addressKind });
+
+  const latest = selectLatest(candidates);
+  if (!latest) {
+    return { ok: false, reason: "not_found", futureDated };
+  }
+  return { ...readCurationSet(latest, { verify, addressKind }), futureDated };
 }
 
 /**

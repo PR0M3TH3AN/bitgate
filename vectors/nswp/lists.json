@@ -1237,5 +1237,566 @@
         "warnings": []
       }
     }
-  ]
+  ],
+  "choosing": {
+    "description": "Choosing a list from the copies relays gave for its coordinate: those of kind 30004 signed by its key, with exactly its d and a good signature. A copy dated more than 600 seconds after `now` is left out before choosing and named in `futureDated`; the newest of the rest is `chosen` (its id), a tie going to the smallest id; null for none.",
+    "vectors": [
+      {
+        "name": "exactly_600_seconds_ahead_is_read",
+        "description": "A copy dated exactly 600 seconds ahead of the reader's clock is chosen.",
+        "coordinate": "30004:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:quiet-places",
+        "now": 1794517200,
+        "events": [
+          {
+            "kind": 30004,
+            "created_at": 1794517100,
+            "tags": [
+              [
+                "d",
+                "quiet-places"
+              ],
+              [
+                "title",
+                "Quiet places"
+              ],
+              [
+                "description",
+                "Worlds worth sitting down in."
+              ],
+              [
+                "a",
+                "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:example-museum"
+              ],
+              [
+                "a",
+                "37300:9f291ef1d9b69e3f1bec4935f0fc53b2e471830509adcf8128076406bc5b6bd6:grove"
+              ],
+              [
+                "alt",
+                "A list of spatial worlds: Quiet places"
+              ]
+            ],
+            "content": "",
+            "pubkey": "01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6",
+            "id": "b5263113261d55d8853c9154792f75d9a4bd82ac860578a18bed72e583493878",
+            "sig": "9fa1da7fbf5c50a821bb0b7a8662eafb110ec95dc55fd480ad618664061a257245d43e2619434d66eba67905069c66ac23b0fcf95f3bdde8a93784bee164c0f4"
+          },
+          {
+            "kind": 30004,
+            "created_at": 1794517800,
+            "tags": [
+              [
+                "d",
+                "quiet-places"
+              ],
+              [
+                "title",
+                "Quiet places, ten minutes ahead"
+              ],
+              [
+                "description",
+                "Worlds worth sitting down in."
+              ],
+              [
+                "a",
+                "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:example-museum"
+              ],
+              [
+                "a",
+                "37300:9f291ef1d9b69e3f1bec4935f0fc53b2e471830509adcf8128076406bc5b6bd6:grove"
+              ],
+              [
+                "alt",
+                "A list of spatial worlds: Quiet places, ten minutes ahead"
+              ]
+            ],
+            "content": "",
+            "pubkey": "01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6",
+            "id": "133058651e8a154d0aee739a76f28a5857d558961875427a79758ee2314f9bb2",
+            "sig": "09be880149fc9308bff5f69ff8ab3c19f871dbc7ebfdd4bfe8abbefcfe7811050b17a84a25faacf7164a0da70f1299d86124a6761c7acc32ddd4fab3359a3198"
+          }
+        ],
+        "expect": {
+          "chosen": "133058651e8a154d0aee739a76f28a5857d558961875427a79758ee2314f9bb2",
+          "title": "Quiet places, ten minutes ahead",
+          "futureDated": []
+        }
+      },
+      {
+        "name": "601_seconds_ahead_is_left_out",
+        "description": "A copy dated 601 seconds ahead is left out before choosing, and said; the copy before it stands.",
+        "coordinate": "30004:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:quiet-places",
+        "now": 1794517200,
+        "events": [
+          {
+            "kind": 30004,
+            "created_at": 1794517100,
+            "tags": [
+              [
+                "d",
+                "quiet-places"
+              ],
+              [
+                "title",
+                "Quiet places"
+              ],
+              [
+                "description",
+                "Worlds worth sitting down in."
+              ],
+              [
+                "a",
+                "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:example-museum"
+              ],
+              [
+                "a",
+                "37300:9f291ef1d9b69e3f1bec4935f0fc53b2e471830509adcf8128076406bc5b6bd6:grove"
+              ],
+              [
+                "alt",
+                "A list of spatial worlds: Quiet places"
+              ]
+            ],
+            "content": "",
+            "pubkey": "01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6",
+            "id": "b5263113261d55d8853c9154792f75d9a4bd82ac860578a18bed72e583493878",
+            "sig": "9fa1da7fbf5c50a821bb0b7a8662eafb110ec95dc55fd480ad618664061a257245d43e2619434d66eba67905069c66ac23b0fcf95f3bdde8a93784bee164c0f4"
+          },
+          {
+            "kind": 30004,
+            "created_at": 1794517801,
+            "tags": [
+              [
+                "d",
+                "quiet-places"
+              ],
+              [
+                "title",
+                "Quiet places, a second too far ahead"
+              ],
+              [
+                "description",
+                "Worlds worth sitting down in."
+              ],
+              [
+                "a",
+                "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:example-museum"
+              ],
+              [
+                "a",
+                "37300:9f291ef1d9b69e3f1bec4935f0fc53b2e471830509adcf8128076406bc5b6bd6:grove"
+              ],
+              [
+                "alt",
+                "A list of spatial worlds: Quiet places, a second too far ahead"
+              ]
+            ],
+            "content": "",
+            "pubkey": "01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6",
+            "id": "4c0c989e9b20fe2f8f57de0fd6ac6d2d7a0466d91e69f4b2b6487ae5772568ad",
+            "sig": "9ccb3e899136c10ce5c1657ce9266cbec76d3357efe9c95fe9308c8a6bbdbe8b94baa5e36f60d9dcb7720cca346e77b5b3ac3b21ecb44fb01a7156c71e520472"
+          }
+        ],
+        "expect": {
+          "chosen": "b5263113261d55d8853c9154792f75d9a4bd82ac860578a18bed72e583493878",
+          "title": "Quiet places",
+          "futureDated": [
+            "4c0c989e9b20fe2f8f57de0fd6ac6d2d7a0466d91e69f4b2b6487ae5772568ad"
+          ]
+        }
+      },
+      {
+        "name": "only_a_future_copy",
+        "description": "With nothing but a copy dated too far ahead, there is no list yet, and the reader says why.",
+        "coordinate": "30004:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:quiet-places",
+        "now": 1794517200,
+        "events": [
+          {
+            "kind": 30004,
+            "created_at": 1794517801,
+            "tags": [
+              [
+                "d",
+                "quiet-places"
+              ],
+              [
+                "title",
+                "Quiet places, a second too far ahead"
+              ],
+              [
+                "description",
+                "Worlds worth sitting down in."
+              ],
+              [
+                "a",
+                "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:example-museum"
+              ],
+              [
+                "a",
+                "37300:9f291ef1d9b69e3f1bec4935f0fc53b2e471830509adcf8128076406bc5b6bd6:grove"
+              ],
+              [
+                "alt",
+                "A list of spatial worlds: Quiet places, a second too far ahead"
+              ]
+            ],
+            "content": "",
+            "pubkey": "01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6",
+            "id": "4c0c989e9b20fe2f8f57de0fd6ac6d2d7a0466d91e69f4b2b6487ae5772568ad",
+            "sig": "9ccb3e899136c10ce5c1657ce9266cbec76d3357efe9c95fe9308c8a6bbdbe8b94baa5e36f60d9dcb7720cca346e77b5b3ac3b21ecb44fb01a7156c71e520472"
+          }
+        ],
+        "expect": {
+          "chosen": null,
+          "futureDated": [
+            "4c0c989e9b20fe2f8f57de0fd6ac6d2d7a0466d91e69f4b2b6487ae5772568ad"
+          ]
+        }
+      },
+      {
+        "name": "a_future_copy_beside_a_current_one",
+        "description": "A copy signed with a clock a year fast leaves the honest current copy standing.",
+        "coordinate": "30004:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:quiet-places",
+        "now": 1794517200,
+        "events": [
+          {
+            "kind": 30004,
+            "created_at": 1826053200,
+            "tags": [
+              [
+                "d",
+                "quiet-places"
+              ],
+              [
+                "title",
+                "Quiet places, from next year"
+              ],
+              [
+                "description",
+                "Worlds worth sitting down in."
+              ],
+              [
+                "a",
+                "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:example-museum"
+              ],
+              [
+                "a",
+                "37300:9f291ef1d9b69e3f1bec4935f0fc53b2e471830509adcf8128076406bc5b6bd6:grove"
+              ],
+              [
+                "alt",
+                "A list of spatial worlds: Quiet places, from next year"
+              ]
+            ],
+            "content": "",
+            "pubkey": "01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6",
+            "id": "46f6c92ba3850a33b4f192077c7e05791a9f4b0e4eaaa07c9f66e69cd4d92357",
+            "sig": "af43120bacf4d95fd192ddceb7a3f7fc466ca41090996af490c0b6188f6683cec983b807c48dc7cbc0cffb07fce15d2263f00d75b9112a8f17300cc0548c4f13"
+          },
+          {
+            "kind": 30004,
+            "created_at": 1794430800,
+            "tags": [
+              [
+                "d",
+                "quiet-places"
+              ],
+              [
+                "title",
+                "Quiet places, yesterday"
+              ],
+              [
+                "description",
+                "Worlds worth sitting down in."
+              ],
+              [
+                "a",
+                "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:example-museum"
+              ],
+              [
+                "a",
+                "37300:9f291ef1d9b69e3f1bec4935f0fc53b2e471830509adcf8128076406bc5b6bd6:grove"
+              ],
+              [
+                "alt",
+                "A list of spatial worlds: Quiet places, yesterday"
+              ]
+            ],
+            "content": "",
+            "pubkey": "01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6",
+            "id": "322cc2fd31b9040e93cc9f0754ad277f1fc45ac7a8bf0c4968e5de74a8232037",
+            "sig": "1667fa12703301eaba5efd9f42a98769311bed7784546c7b99a3820faa2431e1125f058e6aea1e125015ce6ba63b7f6cd47e75c0e2ae5137fe28933da3822925"
+          },
+          {
+            "kind": 30004,
+            "created_at": 1794517100,
+            "tags": [
+              [
+                "d",
+                "quiet-places"
+              ],
+              [
+                "title",
+                "Quiet places"
+              ],
+              [
+                "description",
+                "Worlds worth sitting down in."
+              ],
+              [
+                "a",
+                "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:example-museum"
+              ],
+              [
+                "a",
+                "37300:9f291ef1d9b69e3f1bec4935f0fc53b2e471830509adcf8128076406bc5b6bd6:grove"
+              ],
+              [
+                "alt",
+                "A list of spatial worlds: Quiet places"
+              ]
+            ],
+            "content": "",
+            "pubkey": "01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6",
+            "id": "b5263113261d55d8853c9154792f75d9a4bd82ac860578a18bed72e583493878",
+            "sig": "9fa1da7fbf5c50a821bb0b7a8662eafb110ec95dc55fd480ad618664061a257245d43e2619434d66eba67905069c66ac23b0fcf95f3bdde8a93784bee164c0f4"
+          }
+        ],
+        "expect": {
+          "chosen": "b5263113261d55d8853c9154792f75d9a4bd82ac860578a18bed72e583493878",
+          "title": "Quiet places",
+          "futureDated": [
+            "46f6c92ba3850a33b4f192077c7e05791a9f4b0e4eaaa07c9f66e69cd4d92357"
+          ]
+        }
+      },
+      {
+        "name": "another_key_is_not_the_list",
+        "description": "A newer copy under the same d from another key is passed over: the coordinate fixes the key.",
+        "coordinate": "30004:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:quiet-places",
+        "now": 1794517200,
+        "events": [
+          {
+            "kind": 30004,
+            "created_at": 1794517100,
+            "tags": [
+              [
+                "d",
+                "quiet-places"
+              ],
+              [
+                "title",
+                "Quiet places"
+              ],
+              [
+                "description",
+                "Worlds worth sitting down in."
+              ],
+              [
+                "a",
+                "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:example-museum"
+              ],
+              [
+                "a",
+                "37300:9f291ef1d9b69e3f1bec4935f0fc53b2e471830509adcf8128076406bc5b6bd6:grove"
+              ],
+              [
+                "alt",
+                "A list of spatial worlds: Quiet places"
+              ]
+            ],
+            "content": "",
+            "pubkey": "01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6",
+            "id": "b5263113261d55d8853c9154792f75d9a4bd82ac860578a18bed72e583493878",
+            "sig": "9fa1da7fbf5c50a821bb0b7a8662eafb110ec95dc55fd480ad618664061a257245d43e2619434d66eba67905069c66ac23b0fcf95f3bdde8a93784bee164c0f4"
+          },
+          {
+            "kind": 30004,
+            "created_at": 1794517200,
+            "tags": [
+              [
+                "d",
+                "quiet-places"
+              ],
+              [
+                "title",
+                "Quiet places, by someone else"
+              ],
+              [
+                "description",
+                "Worlds worth sitting down in."
+              ],
+              [
+                "a",
+                "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:example-museum"
+              ],
+              [
+                "a",
+                "37300:9f291ef1d9b69e3f1bec4935f0fc53b2e471830509adcf8128076406bc5b6bd6:grove"
+              ],
+              [
+                "alt",
+                "A list of spatial worlds: Quiet places, by someone else"
+              ]
+            ],
+            "content": "",
+            "pubkey": "9f291ef1d9b69e3f1bec4935f0fc53b2e471830509adcf8128076406bc5b6bd6",
+            "id": "df3c4455be2120dcce5be4a8d6dad33dc73a4d874d265bec68a108c0c19d565e",
+            "sig": "28e406f4277c17ba58855b1965f9bd1af951821864b2671b6acd3381a7d58f40b8af138032a7393ca497a22d3ea7720ed25ada747bdd103a4fa144136d600d53"
+          }
+        ],
+        "expect": {
+          "chosen": "b5263113261d55d8853c9154792f75d9a4bd82ac860578a18bed72e583493878",
+          "title": "Quiet places",
+          "futureDated": []
+        }
+      },
+      {
+        "name": "a_bad_signature_is_passed_over",
+        "description": "A newer copy whose signature doesn't check is passed over.",
+        "coordinate": "30004:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:quiet-places",
+        "now": 1794517200,
+        "events": [
+          {
+            "kind": 30004,
+            "created_at": 1794430800,
+            "tags": [
+              [
+                "d",
+                "quiet-places"
+              ],
+              [
+                "title",
+                "Quiet places, yesterday"
+              ],
+              [
+                "description",
+                "Worlds worth sitting down in."
+              ],
+              [
+                "a",
+                "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:example-museum"
+              ],
+              [
+                "a",
+                "37300:9f291ef1d9b69e3f1bec4935f0fc53b2e471830509adcf8128076406bc5b6bd6:grove"
+              ],
+              [
+                "alt",
+                "A list of spatial worlds: Quiet places, yesterday"
+              ]
+            ],
+            "content": "",
+            "pubkey": "01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6",
+            "id": "322cc2fd31b9040e93cc9f0754ad277f1fc45ac7a8bf0c4968e5de74a8232037",
+            "sig": "1667fa12703301eaba5efd9f42a98769311bed7784546c7b99a3820faa2431e1125f058e6aea1e125015ce6ba63b7f6cd47e75c0e2ae5137fe28933da3822925"
+          },
+          {
+            "kind": 30004,
+            "created_at": 1794517190,
+            "tags": [
+              [
+                "d",
+                "quiet-places"
+              ],
+              [
+                "title",
+                "Altered after signing"
+              ]
+            ],
+            "content": "",
+            "pubkey": "01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6",
+            "id": "22b906707737b417c92972caabd11a9b61b8552741aef1470ca6563a90ab4fca",
+            "sig": "c675d319cf581c4f1a930b3098d0ce34388bb91222639c9bcf628d5ade9cfb20ac0a6a9dcf1b90590b4bb4c121cf07f884eb7c7e0a2cae483c38deb09b5feb3f"
+          }
+        ],
+        "expect": {
+          "chosen": "322cc2fd31b9040e93cc9f0754ad277f1fc45ac7a8bf0c4968e5de74a8232037",
+          "title": "Quiet places, yesterday",
+          "futureDated": []
+        }
+      },
+      {
+        "name": "a_tie_goes_to_the_smallest_id",
+        "description": "Two copies with the same created_at: the one with the smaller id (NIP-01).",
+        "coordinate": "30004:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:quiet-places",
+        "now": 1794517200,
+        "events": [
+          {
+            "kind": 30004,
+            "created_at": 1794517150,
+            "tags": [
+              [
+                "d",
+                "quiet-places"
+              ],
+              [
+                "title",
+                "Tied, one"
+              ],
+              [
+                "description",
+                "Worlds worth sitting down in."
+              ],
+              [
+                "a",
+                "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:example-museum"
+              ],
+              [
+                "a",
+                "37300:9f291ef1d9b69e3f1bec4935f0fc53b2e471830509adcf8128076406bc5b6bd6:grove"
+              ],
+              [
+                "alt",
+                "A list of spatial worlds: Tied, one"
+              ]
+            ],
+            "content": "",
+            "pubkey": "01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6",
+            "id": "cd231dc6e159b12363b8c6733d69fe397e97c207f7b833bd7b0bec41a45fe68f",
+            "sig": "937dcdfdbdadb3eb3723f60836ba6a2b7280d37542ac424cf3d4e081b83f21d50baf5eaf88b3f989a72ece8b844731d1fc37da6fdfe5e1c2aaa549593a98fb23"
+          },
+          {
+            "kind": 30004,
+            "created_at": 1794517150,
+            "tags": [
+              [
+                "d",
+                "quiet-places"
+              ],
+              [
+                "title",
+                "Tied, two"
+              ],
+              [
+                "description",
+                "Worlds worth sitting down in."
+              ],
+              [
+                "a",
+                "37300:01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6:example-museum"
+              ],
+              [
+                "a",
+                "37300:9f291ef1d9b69e3f1bec4935f0fc53b2e471830509adcf8128076406bc5b6bd6:grove"
+              ],
+              [
+                "alt",
+                "A list of spatial worlds: Tied, two"
+              ]
+            ],
+            "content": "",
+            "pubkey": "01b5370e39784301c3e347b0130266ebb005c5c6141be582e32cda7c367285c6",
+            "id": "f398e1c63a22d14cb3b6dc31decee109299dd9a8c5f786d965dc62f19b8d6089",
+            "sig": "3ff9199ee6522376aff5a65636a5716b073ee8ba7f799f6bf769e13f3f9a21c447526b74950cbf1f972c1f11727bf881bdba3f4cd0a1a092d7edef2577370754"
+          }
+        ],
+        "expect": {
+          "chosen": "cd231dc6e159b12363b8c6733d69fe397e97c207f7b833bd7b0bec41a45fe68f",
+          "title": "Tied, one",
+          "futureDated": []
+        }
+      }
+    ]
+  }
 }

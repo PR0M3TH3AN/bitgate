@@ -55,6 +55,23 @@ describe("NSWP's own list vectors", () => {
   }
 });
 
+describe("NSWP's own choosing vectors", () => {
+  it("are present in the copy", () => {
+    expect(nswp.choosing?.vectors?.length ?? 0).toBeGreaterThan(0);
+  });
+
+  for (const vector of nswp.choosing?.vectors ?? []) {
+    it(`choose: ${vector.name}`, () => {
+      const result = resolveCurationSet(vector.events, { coordinate: vector.coordinate, now: vector.now, verify: verifyEvent });
+      expect(result.ok ? result.id : null).toBe(vector.expect.chosen);
+      expect(result.futureDated).toEqual(vector.expect.futureDated);
+      if (vector.expect.chosen !== null && result.ok) {
+        expect(result.list.title).toBe(vector.expect.title);
+      }
+    });
+  }
+});
+
 /** What a reader made of a list, in the vectors' terms. */
 function observed(result) {
   if (!result.ok) {
@@ -95,6 +112,7 @@ describe("curation-set governance vectors", () => {
     expect(resolveCurationSet([event], /** @type {any} */ ({ pubkey: ours.keys.host, d: "bitportal" }))).toEqual({
       ok: false,
       reason: "no_verifier",
+      futureDated: [],
     });
     expect(readCurationSet(event, { verify: () => { throw new Error("boom"); } })).toEqual({
       ok: false,

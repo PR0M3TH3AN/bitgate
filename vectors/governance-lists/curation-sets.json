@@ -320,6 +320,49 @@
       }
     },
     {
+      "name": "two-d-tags-is-not-a-candidate",
+      "note": "A copy must carry exactly one d, equal to the list's; a newer copy with two is passed over.",
+      "query": {
+        "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+        "d": "bitportal"
+      },
+      "events": [
+        {
+          "id": "5b47a4f6fc88daf69fbdfc07361d17763e0072d57e959a3d2ce56aed3be98776",
+          "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+          "created_at": 1763700000,
+          "kind": 30004,
+          "tags": [
+            ["d","bitportal"],
+            ["a","37300:f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9:grove"]
+          ],
+          "content": "",
+          "sig": "94a51173a7ddc5aba31e6031336f778152ad34ec06c249f349caaffbf9937eba902ce9df0d50a7d69eab85371830ffbbab5b71c3ff888bed68d84ec61d2ce543"
+        },
+        {
+          "id": "6a31bdb42a9c1ad072e205bcf0035df599e380206fdcbcd1df2147a8d09e42cd",
+          "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+          "created_at": 1763700300,
+          "kind": 30004,
+          "tags": [
+            ["d","bitportal"],
+            ["a","37300:c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5:arcade:night"],
+            ["d","another"]
+          ],
+          "content": "",
+          "sig": "d6e71c9a9a08a2c260fa379815d62c963d8e77ce4006381451099304a47183b23cf4a97205e5425bcb001d22d3ff73ec126cf2c19500c5a8fe6fcffc4c4dd0f4"
+        }
+      ],
+      "expect": {
+        "ok": true,
+        "curator": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+        "d": "bitportal",
+        "title": "bitportal",
+        "worlds": ["37300:f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9:grove"],
+        "warnings": []
+      }
+    },
+    {
       "name": "another-d-is-not-found",
       "note": "The host's other list does not answer for this one.",
       "query": {
