@@ -7,6 +7,18 @@ public API changes with it.
 
 ## [Unreleased]
 
+### Changed — the typecheck reads sources
+
+- `npm run lint`, `check:types` and `typecheck` now use `tsconfig.check.json`
+  and `packages/widget/tsconfig.check.json`. These map every `@bitgate/*`
+  import to its source.
+- Stale built types (`dist/types`) can no longer fail the typecheck before
+  `npm run build:types` has run.
+- `scripts/check-types-read-sources.mjs`, part of `check:types`, fails if
+  either typecheck reads a built file. It plants decoys where none exist, so
+  it is never vacuous.
+- The declaration builds (`tsconfig.types.json`) are unchanged.
+
 ### Changed — named lists read listings by BitUnlock's rule
 
 - Listing entries in `listings-allowed` and `listings-blocked` are read from

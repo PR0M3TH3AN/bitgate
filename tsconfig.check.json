@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@bitgate/bitvid-compat/profile": [
+        "./packages/bitvid-compat/src/profile.js"
+      ],
+      "@bitgate/testing/conformance": [
+        "./packages/testing/src/conformance.js"
+      ],
+      "@bitgate/*": [
+        "./packages/*/src/index.js"
+      ]
+    }
+  }
+}
