@@ -187,3 +187,4 @@ None of it needs the licence decision to be built. Vendoring it into MIT project
 
   The shadow-first way in (item 6) fits both.
 - **Per-world lists** were asked for next. The answer and its design are in `2026-11-21-lists-answer.md` beside this file, and the wire format will be in `docs/governance-lists.md` (it lands with the per-world lists change).
+- **The licence is now MIT.** The owner decided it on 2026-11-21, and it was done by pull request; see `docs/license-and-provenance.md`. Item 3's first blocker is cleared.

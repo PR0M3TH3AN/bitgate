@@ -1,6 +1,7 @@
 {
   "name": "@bitgate/site",
   "version": "0.1.0",
+  "license": "MIT",
   "private": true,
   "type": "module",
   "description": "BitGate landing page, integration guide, and live demo — a plain static site consuming the built widget.",

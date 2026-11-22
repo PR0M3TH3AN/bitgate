@@ -35,7 +35,7 @@ const options = {
   minify: true,
   legalComments: "inline",
   banner: {
-    js: "/*! BitGate widget — GPL-3.0-or-later — https://github.com/PR0M3TH3AN/Nostr-Governance */",
+    js: "/*! BitGate widget — MIT — https://github.com/PR0M3TH3AN/bitgate */",
   },
 };
 

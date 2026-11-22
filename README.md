@@ -280,4 +280,4 @@ node scripts/build-characterization-corpus.mjs
 
 ## License
 
-GPL-3.0-or-later. See [`docs/license-and-provenance.md`](docs/license-and-provenance.md).
+MIT. See [`LICENSE`](LICENSE) and, for where the code came from, [`docs/license-and-provenance.md`](docs/license-and-provenance.md).

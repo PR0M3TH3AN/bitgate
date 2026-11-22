@@ -7,6 +7,15 @@ public API changes with it.
 
 ## [Unreleased]
 
+### Changed — relicensed to MIT
+
+BitGate is MIT from 2026-11-21; it was GPL-3.0-or-later. The change covers
+`LICENSE`, a `license` field in every package, the built-file banners, the
+README and the site footers. The owner decided it so that BitGate can be
+vendored into the MIT projects it serves (BitLogin, BitPortal, the NSWP kit).
+Provenance, and why the owner alone could relicense, is recorded in
+[docs/license-and-provenance.md](docs/license-and-provenance.md).
+
 ### Changed — scoped lists, after the NSWP kit's review
 
 - **Who may sign:** a reader may be given the subject's root (`root`), one
