@@ -1,0 +1,349 @@
+{
+  "description": "NIP-51 curation sets (kind 30004, NSWP-08) read as governance input (docs/governance-lists.md). `read` cases are one event; `resolve` cases are what relays returned for a list's coordinate. Structure is pinned by NSWP's own vectors in vectors/nswp/lists.json. Secret keys 1, 2 and 3 are public test keys.",
+  "format": "bitgate-curation-set-vectors/1",
+  "keys": {
+    "host": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+    "otherCurator": "c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5",
+    "maker": "f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9"
+  },
+  "read": [
+    {
+      "name": "host-allow-list",
+      "note": "A host's list under d=bitportal: its worlds, in order. Anything that is not a world is passed over.",
+      "event": {
+        "id": "0fe63f5616ce0e23377f1f5eb46a11e22410fcc6628e979d9dd0bbd799765e27",
+        "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+        "created_at": 1763700000,
+        "kind": 30004,
+        "tags": [
+          ["d","bitportal"],
+          ["title","Shown here"],
+          ["a","37300:f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9:grove"],
+          ["a","37300:f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9:example museum"],
+          ["a","30023:f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9:an-article"],
+          ["a","37300:c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5:arcade:night"],
+          ["e","0000000000000000000000000000000000000000000000000000000000000000"]
+        ],
+        "content": "",
+        "sig": "92d25c695f1ea6c12d3caa2bfc524305340eddfc54cb7aec266fc4964a523fd61affe9f132f8384410c5cadda9d002adf4af2948ab0f7eee051dfd2226a0d3de"
+      },
+      "expect": {
+        "ok": true,
+        "curator": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+        "d": "bitportal",
+        "title": "Shown here",
+        "worlds": ["37300:f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9:grove","37300:f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9:example museum","37300:c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5:arcade:night"],
+        "warnings": []
+      }
+    },
+    {
+      "name": "starter-set",
+      "note": "A curator's starter set: any d. Without a title the title is the d.",
+      "event": {
+        "id": "e11a6e2be7941c42f456296c2aca7df6e9ec6fe9e7f20554427249803e942fe2",
+        "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+        "created_at": 1763700000,
+        "kind": 30004,
+        "tags": [
+          ["d","bitportal-starter"],
+          ["a","37300:f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9:example museum"]
+        ],
+        "content": "",
+        "sig": "af946d133f7d01bb13a4c1f8218eaf12754f82f31d81156cbfc65235b0176efed65f8bb267c376329c6e27903fd9e4eb31284fb0c8544d37f52a9dfebae57d77"
+      },
+      "expect": {
+        "ok": true,
+        "curator": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+        "d": "bitportal-starter",
+        "title": "bitportal-starter",
+        "worlds": ["37300:f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9:example museum"],
+        "warnings": []
+      }
+    },
+    {
+      "name": "empty-list",
+      "note": "A list with no worlds is still a list: as an allowlist it shows nothing.",
+      "event": {
+        "id": "294861ce0bf80c09baefa1b75f0879dc890d221366329c4e9221191515ce2ae7",
+        "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+        "created_at": 1763700000,
+        "kind": 30004,
+        "tags": [
+          ["d","bitportal"]
+        ],
+        "content": "",
+        "sig": "998bb18ad0a09ec25cd277cca0aaa6cfce4508fbf4c62439b0caca9454e665238f390b45e77d73d363e7fffdcad2ba981371708a4bc080cb9997dd2af0728f5c"
+      },
+      "expect": {
+        "ok": true,
+        "curator": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+        "d": "bitportal",
+        "title": "bitportal",
+        "worlds": [],
+        "warnings": []
+      }
+    },
+    {
+      "name": "leading-zero-kind",
+      "note": "NSWP reads the kind as a number, so 037300 is a world, written back as 37300.",
+      "event": {
+        "id": "026b824c5f1f2c69d46d932d156d64c24389e8314807920ad6a20fb5d96e736e",
+        "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+        "created_at": 1763700000,
+        "kind": 30004,
+        "tags": [
+          ["d","bitportal"],
+          ["a","037300:f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9:grove"]
+        ],
+        "content": "",
+        "sig": "4b7a4fe302012d3219141b4c8120b4e0dcff2b415dc5c2cbbe6537ffb7618a05bf19be63d02a5b078200449ac054ee38bc7cb8daa0a8414d95dc181e67685260"
+      },
+      "expect": {
+        "ok": true,
+        "curator": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+        "d": "bitportal",
+        "title": "bitportal",
+        "worlds": ["37300:f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9:grove"],
+        "warnings": []
+      }
+    },
+    {
+      "name": "unsigned",
+      "note": "Governance needs a signature: an unsigned list is not read.",
+      "event": {
+        "id": "5b47a4f6fc88daf69fbdfc07361d17763e0072d57e959a3d2ce56aed3be98776",
+        "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+        "created_at": 1763700000,
+        "kind": 30004,
+        "tags": [
+          ["d","bitportal"],
+          ["a","37300:f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9:grove"]
+        ],
+        "content": ""
+      },
+      "expect": {
+        "ok": false,
+        "reason": "invalid",
+        "errors": ["not_signed"]
+      }
+    },
+    {
+      "name": "tampered",
+      "note": "A world added after signing.",
+      "event": {
+        "id": "5b47a4f6fc88daf69fbdfc07361d17763e0072d57e959a3d2ce56aed3be98776",
+        "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+        "created_at": 1763700000,
+        "kind": 30004,
+        "tags": [
+          ["d","bitportal"],
+          ["a","37300:f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9:grove"],
+          ["a","37300:c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5:arcade:night"]
+        ],
+        "content": "",
+        "sig": "94a51173a7ddc5aba31e6031336f778152ad34ec06c249f349caaffbf9937eba902ce9df0d50a7d69eab85371830ffbbab5b71c3ff888bed68d84ec61d2ce543"
+      },
+      "expect": {
+        "ok": false,
+        "reason": "bad_signature"
+      }
+    },
+    {
+      "name": "d-too-long",
+      "note": "A d over 128 characters is an error, as in NSWP.",
+      "event": {
+        "id": "fb1b0f2cb07a42dd22397c82c45e54675aba59506c39ec59a74c48da2ff6dcff",
+        "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+        "created_at": 1763700000,
+        "kind": 30004,
+        "tags": [
+          ["d","xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"],
+          ["a","37300:f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9:grove"]
+        ],
+        "content": "",
+        "sig": "d2904dd24b8cb6590ca5b637cb87dc9610261c92a85b28efc4d2bb83a7ce631b2c86cdd46877ce8b31fc3589c583f070811817ad03ea60fcf31fbff62058d7a6"
+      },
+      "expect": {
+        "ok": false,
+        "reason": "invalid",
+        "errors": ["value_too_long"]
+      }
+    },
+    {
+      "name": "wrong-kind",
+      "note": "Only kind 30004.",
+      "event": {
+        "id": "5b47a4f6fc88daf69fbdfc07361d17763e0072d57e959a3d2ce56aed3be98776",
+        "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+        "created_at": 1763700000,
+        "kind": 30000,
+        "tags": [
+          ["d","bitportal"],
+          ["a","37300:f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9:grove"]
+        ],
+        "content": "",
+        "sig": "94a51173a7ddc5aba31e6031336f778152ad34ec06c249f349caaffbf9937eba902ce9df0d50a7d69eab85371830ffbbab5b71c3ff888bed68d84ec61d2ce543"
+      },
+      "expect": {
+        "ok": false,
+        "reason": "invalid",
+        "errors": ["wrong_kind"]
+      }
+    }
+  ],
+  "resolve": [
+    {
+      "name": "newest-copy-from-the-same-key",
+      "note": "A newer copy replaces an older one when the same key signed it.",
+      "query": {
+        "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+        "d": "bitportal"
+      },
+      "events": [
+        {
+          "id": "5b47a4f6fc88daf69fbdfc07361d17763e0072d57e959a3d2ce56aed3be98776",
+          "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+          "created_at": 1763700000,
+          "kind": 30004,
+          "tags": [
+            ["d","bitportal"],
+            ["a","37300:f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9:grove"]
+          ],
+          "content": "",
+          "sig": "94a51173a7ddc5aba31e6031336f778152ad34ec06c249f349caaffbf9937eba902ce9df0d50a7d69eab85371830ffbbab5b71c3ff888bed68d84ec61d2ce543"
+        },
+        {
+          "id": "6f006c2f40c1451bf358678d97f1411890ce4537ceb7d06b4a20b9db9e9d6470",
+          "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+          "created_at": 1763700060,
+          "kind": 30004,
+          "tags": [
+            ["d","bitportal"],
+            ["a","37300:f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9:grove"],
+            ["a","37300:f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9:example museum"]
+          ],
+          "content": "",
+          "sig": "e236c99eaa884f86d379c6881f05fa55fe27f6cbd43cfcb83618124e67c438e7903a423c9e369014b8972a3720f5ffcd133470b58f218412e18fc93efcfe815a"
+        }
+      ],
+      "expect": {
+        "ok": true,
+        "curator": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+        "d": "bitportal",
+        "title": "bitportal",
+        "worlds": ["37300:f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9:grove","37300:f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9:example museum"],
+        "warnings": []
+      }
+    },
+    {
+      "name": "another-key-is-not-a-candidate",
+      "note": "The coordinate fixes the key: another curator's list under the same d is not this list.",
+      "query": {
+        "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+        "d": "bitportal"
+      },
+      "events": [
+        {
+          "id": "5b47a4f6fc88daf69fbdfc07361d17763e0072d57e959a3d2ce56aed3be98776",
+          "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+          "created_at": 1763700000,
+          "kind": 30004,
+          "tags": [
+            ["d","bitportal"],
+            ["a","37300:f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9:grove"]
+          ],
+          "content": "",
+          "sig": "94a51173a7ddc5aba31e6031336f778152ad34ec06c249f349caaffbf9937eba902ce9df0d50a7d69eab85371830ffbbab5b71c3ff888bed68d84ec61d2ce543"
+        },
+        {
+          "id": "ea6998f6d0453a8660ab3e5ca4dd5ba29cb04bf4c4fcb868a3d9565aa8f0efc3",
+          "pubkey": "c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5",
+          "created_at": 1763700120,
+          "kind": 30004,
+          "tags": [
+            ["d","bitportal"],
+            ["a","37300:c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5:arcade:night"]
+          ],
+          "content": "",
+          "sig": "3739d81cc8822778d5e132835934389a1d1d73d6d62c8668f4e67225f4e54441b23a7a74f90cfe15518d43d6e1698f0995f594207b3abec69a1b876cfc6def31"
+        }
+      ],
+      "expect": {
+        "ok": true,
+        "curator": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+        "d": "bitportal",
+        "title": "bitportal",
+        "worlds": ["37300:f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9:grove"],
+        "warnings": []
+      }
+    },
+    {
+      "name": "forged-newer-is-not-a-candidate",
+      "note": "A newer copy under the host's key without the host's signature changes nothing.",
+      "query": {
+        "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+        "d": "bitportal"
+      },
+      "events": [
+        {
+          "id": "5b47a4f6fc88daf69fbdfc07361d17763e0072d57e959a3d2ce56aed3be98776",
+          "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+          "created_at": 1763700000,
+          "kind": 30004,
+          "tags": [
+            ["d","bitportal"],
+            ["a","37300:f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9:grove"]
+          ],
+          "content": "",
+          "sig": "94a51173a7ddc5aba31e6031336f778152ad34ec06c249f349caaffbf9937eba902ce9df0d50a7d69eab85371830ffbbab5b71c3ff888bed68d84ec61d2ce543"
+        },
+        {
+          "id": "fa6e09b6cdfd5902c456b2b5ff643a5dee68af2b4ebd50fdbd2a28a605be3044",
+          "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+          "created_at": 1763700180,
+          "kind": 30004,
+          "tags": [
+            ["d","bitportal"],
+            ["a","37300:c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5:arcade:night"]
+          ],
+          "content": "",
+          "sig": "94a51173a7ddc5aba31e6031336f778152ad34ec06c249f349caaffbf9937eba902ce9df0d50a7d69eab85371830ffbbab5b71c3ff888bed68d84ec61d2ce543"
+        }
+      ],
+      "expect": {
+        "ok": true,
+        "curator": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+        "d": "bitportal",
+        "title": "bitportal",
+        "worlds": ["37300:f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9:grove"],
+        "warnings": []
+      }
+    },
+    {
+      "name": "another-d-is-not-found",
+      "note": "The host's other list does not answer for this one.",
+      "query": {
+        "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+        "d": "bitportal"
+      },
+      "events": [
+        {
+          "id": "8f59d185399e324cd2e48212292bda7a63d75dfd039de1a48b20ece955d3f2de",
+          "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+          "created_at": 1763700240,
+          "kind": 30004,
+          "tags": [
+            ["d","bitportal-starter"],
+            ["a","37300:c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5:arcade:night"]
+          ],
+          "content": "",
+          "sig": "43532a3d73370defda0e56c37d13d1c49243640ea3734ea6912ff8c21e8a51e854a4935d42c35d11e83c8c393cff9af66c26486d0fbe8820a83ff219833e0351"
+        }
+      ],
+      "expect": {
+        "ok": false,
+        "reason": "not_found"
+      }
+    }
+  ]
+}

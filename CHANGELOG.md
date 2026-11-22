@@ -7,6 +7,18 @@ public API changes with it.
 
 ## [Unreleased]
 
+### Added — curation sets (kind 30004, NSWP-08) as input
+
+- **`parseCurationSet`, `readCurationSet`, `resolveCurationSet` and
+  `curationSetToContribution`** (`@bitgate/nostr`). BitPortal's host allow
+  list, its starter set and any NSWP-08 list of worlds become `address-allow`
+  input as they are, without being re-published.
+- The structure matches NSWP's own reader and is held to NSWP's vectors,
+  copied unchanged (CC0) and pinned by hash in `vectors/nswp/`.
+- Reading for governance requires a signature check. The current copy is
+  chosen by the list's own key.
+- BitGate's vectors: `vectors/governance-lists/curation-sets.json`.
+
 ### Changed — relicensed to MIT
 
 BitGate is MIT from 2026-11-21; it was GPL-3.0-or-later. The change covers
