@@ -7,7 +7,7 @@ two cannot drift apart without a test failing.
 
 | File | NSWP path | NSWP commit | sha256 |
 | --- | --- | --- | --- |
-| `lists.json` | `vectors/lists.json` (NSWP-08, lists of worlds, with `choosing`) | `7c7111863a6665d97f3663c053395a9bdc819307` | `14e761ae5592632c9961b78b206e41efc9ead00e8a2bbec405ce6af16bb4e57b` |
+| `lists.json` | `vectors/lists.json` (NSWP-08, lists of worlds, with `choosing`) | `2050ce6d2e1eca18e845c8c4ffe8acaa8feaba04` | `2d0e39ee32c6c600ae130806e18db94392b64c1dde93259cde61a690a8567e9e` |
 
 To update: copy the newer file from NSWP, then change the commit and hash in
 this table. `tests/vectors/curation-sets.test.js` checks the hash, so a file
