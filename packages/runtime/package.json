@@ -1,6 +1,7 @@
 {
   "name": "@bitgate/runtime",
   "version": "0.1.0",
+  "license": "MIT",
   "type": "module",
   "main": "src/index.js",
   "types": "dist/types/index.d.ts",

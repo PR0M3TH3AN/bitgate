@@ -335,9 +335,9 @@ served from.
 
 ### Already tracked here, now with a second consumer waiting
 
-- **Relicense to MIT** (BitBlocks convention D11; accepted as the target, not
-  yet done). BitPortal is MIT and will not vendor BitGate until this ships. It
-  is the only thing blocking BitPortal Phase 3b.
+- **[DONE 2026-11-21] Relicense to MIT** (BitBlocks convention D11). The owner
+  decided it, and BitGate is MIT from that date; see `docs/license-and-provenance.md`.
+  This cleared BitPortal's block on vendoring BitGate (Phase 3b).
 - A released `bitgate.js` with an integrity manifest (Priority 1). The
   standalone bundle builds but is not published anywhere a consumer can pin.
 - The shared BitViewer v1 context, including `setViewer(viewer)` (Priority 3;

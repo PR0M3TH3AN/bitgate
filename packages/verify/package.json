@@ -1,6 +1,7 @@
 {
   "name": "@bitgate/verify",
   "version": "0.1.0",
+  "license": "MIT",
   "type": "module",
   "description": "Optional NIP-01 event signature verification for BitGate.",
   "main": "src/index.js",

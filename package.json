@@ -1,6 +1,7 @@
 {
   "name": "bitgate",
   "version": "0.1.0",
+  "license": "MIT",
   "private": true,
   "type": "module",
   "description": "Headless Nostr governance SDK for decentralized moderation and access control",

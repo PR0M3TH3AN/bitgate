@@ -1,46 +1,43 @@
 # License and Provenance
 
-## Reality check
+## License
 
-BitVid is GPL-3.0-or-later. Direct ports of BitVid logic or structure into this
-repository create a derivative-work obligation. Do not pretend extracted
-behavior is clean-room MIT unless it truly is independent work.
+BitGate is **MIT** ([`LICENSE`](../LICENSE)), from 2026-11-21. Every package's
+`license` field says the same, and so do the banners on the built
+`bitgate.js` files.
 
-BitRoad is MIT and is used here only as a target/model reference.
+Before that date the repository was GPL-3.0-or-later. Copies taken under the
+GPL before the change keep the terms they were taken under. Everything from
+the relicense commit onward is MIT.
 
-## Working stance for this repo
+## Why the change could be made
 
-Until a lawyer-ready SPDX audit is done, treat the repository as:
+The owner decided it on 2026-11-21. BitLogin, BitPortal and the NSWP kit are
+MIT, and GPL code could not be vendored into them.
 
-1. **Tooling / scaffolding** — original workspace layout, CI, docs structure.
-2. **Likely GPL-encumbered governance behavior** — anything characterized from
-   BitVid moderation thresholds, trust seeds, admin lists, report dedupe, mute
-   expiry, and related evaluator precedence.
-3. **MIT-compatible address concepts** — BitRoad coordinate shapes, used as
-   consumer validation cases rather than copied UI/runtime code.
+GPL code can only be relicensed by the people who hold its copyright. Two
+bodies of work matter here, and the record was checked from git history before
+the change (not a legal opinion):
 
-## Package boundary intention
+- **BitGate itself.** Every commit is the owner's.
+- **BitVid** (GPL-3.0-or-later), whose moderation behaviour BitGate was
+  characterized from: thresholds, trust seeds, admin lists, report
+  deduplication, mute expiry, and evaluator precedence. Its human authors are
+  the owner, under two names; the second name uses the owner's own email
+  addresses. One other person made a single commit, about video playback
+  (webtorrent), which nothing here derives from. The remaining commits are
+  automated agents working on the owner's behalf.
 
-| Package | Intention |
-| --- | --- |
-| `@bitgate/core` | Clean API surface + pure evaluator. Avoid BitVid names. |
-| `@bitgate/nostr` | Codecs. Legacy BitVid codec is provenance-sensitive. |
-| `@bitgate/runtime` | Transport/storage orchestration. |
-| `@bitgate/bitvid-compat` | Explicit BitVid-facing adapter. Most provenance-exposed. |
-| `@bitgate/testing` | Fakes and fixture loaders. |
+No file in this repository came from another person under the GPL.
 
-## Rules
+**BitRoad** is MIT and is used only as a target and model reference.
 
-- No direct imports from BitVid or BitRoad source trees.
-- Fixtures copied into this repo must record the source commit in README or metadata.
-- If a module is ported from BitVid rather than rewritten cleanly, document it in
-  the PR and keep SPDX compatible with GPL-3.0-or-later.
-- Do not dual-license the whole monorepo casually. Prefer one root LICENSE once
-  chosen, and call out adapter exceptions only if they are scoped carefully.
+## Rules that still apply
 
-## Open decision (checkpoint 0)
-
-Root license has not been finalized in this bootstrap.
-Recommended default for continued extraction work: **GPL-3.0-or-later**.
-
-Decision needed from owner before publishing packages.
+- No direct imports from BitVid or BitRoad source trees. This is enforced by
+  `scripts/verify-no-reference-imports.mjs`, part of `npm run lint`.
+- Fixtures copied into this repository record their source in their README or
+  metadata.
+- Code from anyone other than the owner, brought in from another project, is
+  checked for its licence first. Anything that isn't MIT-compatible stays out.
+- One root licence; packages do not carry their own different licences.

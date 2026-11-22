@@ -1,6 +1,7 @@
 {
   "name": "@bitgate/example-commerce",
   "version": "0.1.0",
+  "license": "MIT",
   "type": "module",
   "private": true,
   "description": "Proof-of-fit: the governance engine driving a marketplace, using only the public API.",

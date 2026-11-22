@@ -29,7 +29,7 @@ const options = {
   minify: true,
   legalComments: "inline",
   banner: {
-    js: "/*! BitGate (headless standalone) — GPL-3.0-or-later — https://github.com/PR0M3TH3AN/Nostr-Governance */",
+    js: "/*! BitGate (headless standalone) — MIT — https://github.com/PR0M3TH3AN/bitgate */",
   },
 };
 
